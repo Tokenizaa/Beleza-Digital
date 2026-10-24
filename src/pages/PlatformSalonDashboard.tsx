@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { AdminPage } from './AdminPage';
+import { UnifiedAdminDashboard } from './UnifiedAdminDashboard';
 
 export function PlatformSalonDashboard() {
   const [authorized, setAuthorized] = useState(false);
@@ -8,7 +8,7 @@ export function PlatformSalonDashboard() {
 
   useEffect(() => {
     if (!supabase) {
-      window.location.replace('/plataforma/login');
+      window.location.replace('/plataforma/acesso?mode=login');
       return;
     }
     let active = true;
@@ -16,7 +16,7 @@ export function PlatformSalonDashboard() {
     const verify = async () => {
       const { data: { session } } = await client.auth.getSession();
       if (!session) {
-        if (active) window.location.replace('/plataforma/login');
+        if (active) window.location.replace('/plataforma/acesso?mode=login');
         return;
       }
       const { data: admin, error } = await client.from('platform_admins')
@@ -26,6 +26,8 @@ export function PlatformSalonDashboard() {
         setChecking(false);
         return;
       }
+      // Se o usuário está cadastrado como platform_admin, vai para o painel mestre.
+      // Caso contrário (establishment_admin), abre o painel do salão.
       if (admin) {
         window.location.replace('/plataforma/admin');
         return;
@@ -44,5 +46,10 @@ export function PlatformSalonDashboard() {
   if (checking || !authorized) {
     return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">Verificando acesso ao salão…</main>;
   }
-  return <AdminPage embeddedInUnifiedAdmin onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign('/'); }} />;
+  // Renderiza o painel unificado com sidebar única (gestão do salão). O wrapper já validou a sessão Supabase.
+  return <UnifiedAdminDashboard
+    initialSection="salao-dashboard"
+    preAuthenticated
+    onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign('/'); }}
+  />;
 }

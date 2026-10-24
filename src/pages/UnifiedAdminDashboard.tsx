@@ -36,6 +36,7 @@ import {
   Eye,
   Store
 } from 'lucide-react';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 export type UnifiedAdminSection =
   // Módulo 1: Gestão do Salão
@@ -63,11 +64,14 @@ export type UnifiedAdminSection =
 interface UnifiedAdminDashboardProps {
   initialSection?: UnifiedAdminSection;
   onBackToApp?: () => void;
+  /** Quando verdadeiro, o painel já foi autorizado pelo wrapper de rota (Supabase) e salta o gate de login interno. */
+  preAuthenticated?: boolean;
 }
 
 export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   initialSection = 'salao-dashboard',
   onBackToApp,
+  preAuthenticated = false,
 }) => {
   const { establishment, allEstablishments, session, platformConfig, store } = useStore();
 
@@ -88,34 +92,48 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   };
 
   // Auth State
-  const isAuthorized =
-    session?.role === 'super_admin' ||
-    session?.role === 'establishment_admin';
+  const {
+    isAuthenticated: storeIsAuthenticated,
+    login,
+    logout,
+    isSupabaseConfigured,
+    userRole,
+  } = useStore();
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(Boolean(isAuthorized));
+  // Derived auth state: user is authorized if they have a session with appropriate role
+  const isAuthorized =
+    userRole === 'super_admin' ||
+    userRole === 'establishment_admin';
+
+  const [isAuthenticated, setIsAuthenticatedState] = useState<boolean>(
+    preAuthenticated || storeIsAuthenticated || Boolean(isAuthorized)
+  );
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Template Showcase preview state
   const [selectedShowcaseTemplate, setSelectedShowcaseTemplate] = useState<SiteVariationId>('ouro-classico');
 
-  // Handle Login (sem PIN — autenticação via Supabase Auth)
+  // Handle Login (via Supabase Auth quando configurado; sessão local da store como mecanismo da plataforma)
   const handleLogin = (isSuper: boolean) => {
     setAuthError(null);
     try {
-      if (isSuper) {
-        store.loginSuperAdmin();
+      const role = isSuper ? 'super_admin' : 'establishment_admin';
+      const result = login(role, isSuper ? undefined : session?.establishmentId);
+      if (result.success && result.session) {
+        setIsAuthenticatedState(true);
       } else {
-        store.loginLocalAdmin('', establishment.id);
+        setAuthError(result.message || 'Não foi possível estabelecer a sessão. Verifique suas permissões.');
       }
-      setIsAuthenticated(true);
-    } catch {
-      setAuthError('Não foi possível estabelecer a sessão. Verifique suas permissões no Supabase Auth.');
+    } catch (err) {
+      setAuthError(
+        'Não foi possível estabelecer a sessão. Verifique suas permissões no Supabase Auth.'
+      );
     }
   };
 
   const handleLogout = () => {
-    store.logout();
-    setIsAuthenticated(false);
+    logout(); // encerra sessão da store e do Supabase (quando configurado)
+    setIsAuthenticatedState(false);
   };
 
   const handleSelectEstablishment = (estId: string) => {
@@ -188,7 +206,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             )}
             <button
               onClick={() => handleLogin(false)}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
             >
               Entrar como Administrador do Estabelecimento
             </button>
@@ -438,7 +456,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           {/* Logo & Platform Brand */}
           <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-neutral-950 font-black shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-neutral-950 font-black shadow-md">
                 <Store className="w-5 h-5" />
               </div>
               <div>

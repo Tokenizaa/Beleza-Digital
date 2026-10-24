@@ -266,7 +266,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                 showToast('Acesso negado. Apenas super_adins podem acessar este painel.');
               }
             }}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
+            className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
           >
             Acessar Painel Master
           </button>
@@ -311,7 +311,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
       )}
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-neutral-900 via-neutral-900/90 to-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
             <ShieldCheck className="w-8 h-8" />
@@ -1037,7 +1037,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
 
               <button
                 type="submit"
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold shadow-md transition-all cursor-pointer"
               >
                 Concluir Cadastro
               </button>
@@ -1221,7 +1221,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
             <div className="pt-4 border-t border-neutral-800 flex justify-end">
               <button
                 type="submit"
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold shadow-md transition-all cursor-pointer"
               >
                 Salvar Configurações
               </button>

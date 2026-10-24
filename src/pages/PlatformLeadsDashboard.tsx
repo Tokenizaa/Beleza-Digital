@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { LeadsDashboard } from './LeadsDashboard';
+import { UnifiedAdminDashboard } from './UnifiedAdminDashboard';
 
 export function PlatformLeadsDashboard() {
   const [authorized, setAuthorized] = useState(false);
@@ -8,7 +8,7 @@ export function PlatformLeadsDashboard() {
 
   useEffect(() => {
     if (!supabase) {
-      window.location.replace('/plataforma/login');
+      window.location.replace('/plataforma/acesso?mode=login');
       return;
     }
     let active = true;
@@ -16,14 +16,14 @@ export function PlatformLeadsDashboard() {
     const verify = async () => {
       const { data: { session } } = await client.auth.getSession();
       if (!session) {
-        if (active) window.location.replace('/plataforma/login');
+        if (active) window.location.replace('/plataforma/acesso?mode=login');
         return;
       }
       const { data, error } = await client.from('platform_admins')
         .select('user_id').eq('user_id', session.user.id).maybeSingle();
       if (!active) return;
       if (error || !data) {
-        window.location.replace('/plataforma/login');
+        window.location.replace('/plataforma/acesso?mode=login');
         return;
       }
       setAuthorized(true);
@@ -40,5 +40,10 @@ export function PlatformLeadsDashboard() {
   if (checking || !authorized) {
     return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">Verificando acesso administrativo…</main>;
   }
-  return <LeadsDashboard />;
+  // Renderiza o painel unificado com sidebar única (prospecção/leads). O wrapper já validou a sessão Supabase.
+  return <UnifiedAdminDashboard
+    initialSection="prospeccao-hoje"
+    preAuthenticated
+    onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign('/'); }}
+  />;
 }

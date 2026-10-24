@@ -1,16 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Lê variáveis de ambiente funcionando tanto no Vite (import.meta.env preenchido)
+// quanto em Node/tsx (process.env), permitindo executar testes de unidade fora do Vite.
+function envVar(...keys: string[]): string | undefined {
+  for (const key of keys) {
+    let value: string | undefined;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      value = (import.meta.env as any)?.[key];
+    } catch {}
+    if (value) return value;
+    value = process.env[key];
+    if (value) return value;
+  }
+  return undefined;
+}
+
 const supabaseUrl =
-  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
-  (import.meta.env.SUPABASE_URL as string | undefined) ||
-  '';
+  envVar('VITE_SUPABASE_URL', 'SUPABASE_URL') || '';
 
 const supabasePublishableKey =
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
-  (import.meta.env.SUPABASE_ANON_KEY as string | undefined) ||
-  (import.meta.env.SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
-  '';
+  envVar(
+    'VITE_SUPABASE_PUBLISHABLE_KEY',
+    'VITE_SUPABASE_ANON_KEY',
+    'SUPABASE_ANON_KEY',
+    'SUPABASE_PUBLISHABLE_KEY'
+  ) || '';
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
 

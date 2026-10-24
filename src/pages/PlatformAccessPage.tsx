@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Building2, CircleAlert, CreditCard, LogIn, LogOut, UserPlus } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { ProspectingConsole } from './ProspectingConsole';
 
 type Plan = {
   id: string;
@@ -78,12 +77,11 @@ export function PlatformAccessPage() {
   }, []);
 
   useEffect(() => {
-    // Keep login mode on the access screen so a persisted previous session can
-    // be explicitly switched instead of immediately redirecting away.
-    if (sessionEmail && isPlatformAdmin && mode !== 'login' && window.location.pathname !== '/plataforma/admin') {
+    // Redirect platform admins to the admin panel immediately when detected
+    if (sessionEmail && isPlatformAdmin && window.location.pathname !== '/plataforma/admin') {
       window.location.replace('/plataforma/admin');
     }
-  }, [sessionEmail, isPlatformAdmin, mode]);
+  }, [sessionEmail, isPlatformAdmin]);
 
   useEffect(() => {
     if (!supabase || !sessionEmail || isPlatformAdmin) return;
@@ -213,15 +211,23 @@ export function PlatformAccessPage() {
               <button type="button" disabled={busy} onClick={logout} className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:text-white disabled:opacity-50">
                 <LogOut size={16} /> Trocar de conta
               </button>
-              {isPlatformAdmin ? <><div className="rounded-xl border border-emerald-800 p-4"><p className="font-medium">Administrador geral ativo</p><p className="mt-1 text-sm text-neutral-400">Esta conta tem permissão administrativa geral da plataforma.</p></div><ProspectingConsole /></> : <><div className="rounded-xl border border-neutral-800 p-4"><p className="font-medium">Contratação e ativação</p><p className="mt-1 text-sm text-neutral-400">Escolha um plano ativo para gerar uma cobrança PIX. Seu salão permanece como rascunho até a confirmação do pagamento.</p></div>
-              {plans.length === 0 ? <p className="text-sm text-neutral-400">Nenhum plano está publicado para contratação no momento.</p> : plans.map((plan) => (
-                <div key={plan.id} className="flex items-center justify-between gap-4 rounded-xl border border-neutral-800 p-4">
-                  <div><p className="font-medium">{plan.name}</p><p className="mt-1 text-sm text-neutral-400">{plan.description || `${plan.access_days} dias de acesso`}</p><p className="mt-1 text-xs text-neutral-500">Agenda até {plan.max_booking_horizon_days} dias à frente</p><p className="mt-2 font-semibold">{formatPrice(plan.price_brl_cents)} <span className="text-xs font-normal text-neutral-500">/ {plan.billing_period === 'one_time' ? 'pagamento único' : plan.billing_period === 'monthly' ? 'mês (renovação não automática)' : 'ano (renovação não automática)'}</span></p></div>
-                  <button disabled={busy} onClick={() => startPayment(plan.id)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-50"><CreditCard size={16} /> Contratar</button>
+              {isPlatformAdmin ? (
+                <div className="rounded-xl border border-emerald-800 p-4">
+                  <p className="font-medium">Administrador geral ativo</p>
+                  <p className="mt-1 text-sm text-neutral-400">Esta conta tem permissão administrativa geral da plataforma.</p>
+                  <p className="mt-3 text-sm text-amber-300">Redirecionando para o painel administrativo...</p>
                 </div>
-              ))}
-              {payment && <div className="space-y-3 rounded-xl border border-emerald-800 p-4"><p className="font-medium">Pagamento PIX</p>{payment.qr_url && <img src={payment.qr_url} alt="QR Code PIX" className="mx-auto max-h-56 rounded-lg bg-white p-2" />}{payment.pix_copy_paste && <><textarea readOnly value={payment.pix_copy_paste} className="w-full rounded-lg bg-neutral-950 p-3 text-xs" /><button onClick={() => navigator.clipboard.writeText(payment?.pix_copy_paste || '')} className="rounded-lg border border-neutral-700 px-3 py-2 text-sm">Copiar código PIX</button></>}{payment.checkout_url && <a className="block text-sm text-amber-300 underline" href={payment.checkout_url} target="_blank" rel="noreferrer">Abrir checkout VenoPag</a>}</div>}
-              </>}
+              ) : (
+                <>
+                  {plans.length === 0 ? <p className="text-sm text-neutral-400">Nenhum plano está publicado para contratação no momento.</p> : plans.map((plan) => (
+                    <div key={plan.id} className="flex items-center justify-between gap-4 rounded-xl border border-neutral-800 p-4">
+                      <div><p className="font-medium">{plan.name}</p><p className="mt-1 text-sm text-neutral-400">{plan.description || `${plan.access_days} dias de acesso`}</p><p className="mt-1 text-xs text-neutral-500">Agenda até {plan.max_booking_horizon_days} dias à frente</p><p className="mt-2 font-semibold">{formatPrice(plan.price_brl_cents)} <span className="text-xs font-normal text-neutral-500">/ {plan.billing_period === 'one_time' ? 'pagamento único' : plan.billing_period === 'monthly' ? 'mês (renovação não automática)' : 'ano (renovação não automática)'}</span></p></div>
+                      <button disabled={busy} onClick={() => startPayment(plan.id)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-50"><CreditCard size={16} /> Contratar</button>
+                    </div>
+                  ))}
+                  {payment && <div className="space-y-3 rounded-xl border border-emerald-800 p-4"><p className="font-medium">Pagamento PIX</p>{payment.qr_url && <img src={payment.qr_url} alt="QR Code PIX" className="mx-auto max-h-56 rounded-lg bg-white p-2" />}{payment.pix_copy_paste && <><textarea readOnly value={payment.pix_copy_paste} className="w-full rounded-lg bg-neutral-950 p-3 text-xs" /><button onClick={() => navigator.clipboard.writeText(payment?.pix_copy_paste || '')} className="rounded-lg border border-neutral-700 px-3 py-2 text-sm">Copiar código PIX</button></>}{payment.checkout_url && <a className="block text-sm text-amber-300 underline" href={payment.checkout_url} target="_blank" rel="noreferrer">Abrir checkout VenoPag</a>}</div>}
+                </>
+              )}
               <button onClick={logout} className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"><LogOut size={16} /> Sair</button>
             </div>
           ) : (

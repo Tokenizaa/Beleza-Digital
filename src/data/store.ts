@@ -12,6 +12,7 @@ import {
   PlatformConfig,
   UserRole,
 } from '../types';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import {
   INITIAL_ESTABLISHMENT_YESHUA,
   INITIAL_ESTABLISHMENT_DEMO,
@@ -1111,6 +1112,22 @@ export const store = {
     return { success: true, session };
   },
 
+  login(
+    role: UserRole,
+    establishmentId?: string
+  ): { success: boolean; session?: AuthSession; message?: string } {
+    // Quando o Supabase estiver configurado, a autenticação deve fluir por ele.
+    // Aqui apenas registramos a sessão na store e deixamos o componente chamador
+    // conduzir o signIn do Supabase quando aplicável.
+    if (role === 'super_admin') {
+      return this.loginSuperAdmin();
+    }
+    if (role === 'establishment_admin') {
+      return this.loginLocalAdmin('', establishmentId);
+    }
+    return { success: false, message: 'Papel de usuário não suportado para login administrativo.' };
+  },
+
   logout(): void {
     if (currentSession) {
       this.addAuditLog({
@@ -1127,6 +1144,12 @@ export const store = {
     try {
       sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
     } catch {}
+    // Encerra a sessão do Supabase quando configurada, evitando sessões órfãs.
+    if (supabase) {
+      void supabase.auth.signOut().catch((err) => {
+        console.warn('Erro ao encerrar sessão Supabase no logout:', err);
+      });
+    }
     notify();
   },
 
@@ -1313,6 +1336,13 @@ export function useStore() {
     auditLogs: store.getAuditLogs(),
     platformMetrics: store.getPlatformMetrics(),
     platformConfig: store.getPlatformConfig(),
+
+    // Contrato de autenticação unificado
+    isAuthenticated: Boolean(currentSession),
+    userRole: currentSession?.role ?? null,
+    isSupabaseConfigured,
+    login: store.login.bind(store),
+    logout: store.logout.bind(store),
 
     store,
   };

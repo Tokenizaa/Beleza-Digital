@@ -190,7 +190,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 setPinError(true);
               }
             }}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
+            className="w-full py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
           >
             Entrar no Painel do Estabelecimento
           </button>
@@ -920,7 +920,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   setBlockSlotModalDate(adminSelectedDate);
                   setIsBlockSlotModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-xs shadow-md transition-all cursor-pointer shrink-0"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shadow-md transition-all cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Criar Agendamento</span>
@@ -1384,7 +1384,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white shadow-xs">
+                <span className="p-2 rounded-xl bg-amber-500 text-white shadow-xs">
                   <Instagram className="w-5 h-5" />
                 </span>
                 <h3 className="text-lg font-bold font-display text-neutral-100">
@@ -1401,7 +1401,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 setEditingInstagram(null);
                 setIsInstagramModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 hover:opacity-95 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer self-start sm:self-auto"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" />
               <span>+ Embedar Novo Post / Reel</span>
@@ -1411,7 +1411,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           {/* Quick info about company's Instagram account */}
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shrink-0">
+              <div className="w-12 h-12 rounded-full p-[2px] bg-amber-500 shrink-0">
                 <img
                   src="/logo.jpg"
                   alt="avatar"
