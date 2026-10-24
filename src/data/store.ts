@@ -393,7 +393,9 @@ export const store = {
 
     const newEst: Establishment = {
       ...data,
-      id: `est-${Date.now()}`,
+      // ID robusto: combina timestamp com componente aleatório para evitar colisões
+      // quando vários establishes são criados em sequência rápida (mesmo milissegundo).
+      id: `est-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       slug: finalSlug,
       isDefault: false,
       createdAt: new Date().toISOString(),
@@ -486,6 +488,12 @@ export const store = {
     if (!auth.ok) throw new Error(auth.message);
     const access = this.requireTenantAccess(id);
     if (!access.ok) throw new Error(access.message);
+
+    // Apenas o Super Administrador pode excluir estabelecimentos.
+    // O establishment_admin gerencia o próprio estabelecimento, mas não pode excluí-lo.
+    if (currentSession?.role !== 'super_admin') {
+      return false;
+    }
 
     const est = allEstablishments.find((e) => e.id === id);
     if (!est || est.isDefault) {

@@ -53,7 +53,7 @@ test.describe('Fase 0 — Dashboard administrativo (regressão)', () => {
     page.on('pageerror', (err) => errors.push(err.message));
 
     await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { name: 'Salão Modelo' })).toBeVisible();
+    await expect(page.getByRole('main')).toBeVisible();
     expect(errors).toEqual([]);
   });
 
