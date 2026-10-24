@@ -164,7 +164,9 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     setCrmLoading(false);
   };
 
-  useEffect(() => { void loadCompanies(); }, []);
+  useEffect(() => {
+    if (activeTab === 'empresas' || activeTab === 'hoje') void loadCompanies();
+  }, [activeTab]);
 
   const persistCrmState = async (companyId: string, patch: Record<string, unknown>): Promise<boolean> => {
     if (!supabase) {
