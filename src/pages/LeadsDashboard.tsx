@@ -196,7 +196,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   const [selectedCompany, setSelectedCompany] = useState<LeadCompany | null>(null);
   const [proposalCopied, setProposalCopied] = useState(false);
 
-  // CRM changes remain in memory until the authenticated server-side persistence API is connected.
+  // CRM stage and template changes are persisted in prospecting_crm_state.
 
   // Metrics calculation
   const metrics = useMemo(() => {
@@ -256,7 +256,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       segment: searchNiche.trim(),
       region: `${searchCity.trim()} - ${searchState.trim()}`,
       country_code: 'BR',
-      source_provider: 'google-maps-python-playwright',
+      source_provider: 'google-maps-cloudflare-browser-playwright',
       source_config: { source: 'google-maps-public-listings' },
       qualification_rules: { minimum_score: 50 },
       schedule: { interval_minutes: 1440 },
@@ -270,7 +270,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       setSearchSuccessMessage('Não foi possível registrar a busca no banco. Verifique as permissões de campanhas e a configuração do worker.');
       return;
     }
-    setSearchSuccessMessage('Busca registrada na fila. O serviço privado Python/Playwright processará a pesquisa; atualize a lista para consultar os resultados persistidos.');
+    setSearchSuccessMessage('Busca registrada. O Worker do Cloudflare processará a campanha na próxima execução agendada (até cerca de 5 minutos). Os resultados aparecerão em CRM / Empresas após a coleta e a persistência; esta confirmação não significa que a raspagem já terminou.');
   };
 
   // Generate proposal link for a lead
@@ -740,7 +740,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                   >
                     {isSearching ? (
                       <>
-                        <RotateCw className="h-4 w-4 animate-spin" /> Buscando estabelecimentos na região...
+                        <RotateCw className="h-4 w-4 animate-spin" /> Registrando busca...
                       </>
                     ) : (
                       <>
@@ -749,7 +749,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                     )}
                   </button>
                   <p className="text-center text-[11px] text-neutral-500 mt-2">
-                    Coleta dados comerciais públicos, analisa presença digital e prepara as propostas nos 4 modelos de site.
+                    A busca é processada pelo Worker do Cloudflare. Os resultados só aparecem após a coleta real e a gravação no banco.
                   </p>
                 </div>
               </div>
