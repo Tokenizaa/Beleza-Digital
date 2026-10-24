@@ -166,18 +166,28 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
   useEffect(() => { void loadCompanies(); }, []);
 
-  const persistCrmState = async (companyId: string, patch: Record<string, unknown>) => {
-    if (!supabase) return;
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user.id;
+  const persistCrmState = async (companyId: string, patch: Record<string, unknown>): Promise<boolean> => {
+    if (!supabase) {
+      setCrmError('Banco indisponível. A alteração não foi aplicada.');
+      return false;
+    }
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session?.user.id) {
+      setCrmError('Sessão administrativa ausente ou expirada. Entre novamente antes de alterar o CRM.');
+      return false;
+    }
     const { error } = await supabase.from('prospecting_crm_state').upsert({
       candidate_id: companyId,
       ...patch,
-      updated_by: userId || null,
+      updated_by: sessionData.session.user.id,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'candidate_id' });
-    if (error) setCrmError('A alteração não foi salva. Verifique sua sessão administrativa e tente novamente.');
-    else setCrmError(null);
+    if (error) {
+      setCrmError('A alteração não foi salva no banco. Nenhuma alteração local foi aplicada; verifique as permissões da tabela prospecting_crm_state.');
+      return false;
+    }
+    setCrmError(null);
+    return true;
   };
 
   const searchHistory: Array<{ niche: string; location: string; count: number; date: string }> = [];
@@ -210,22 +220,20 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   }, [companies]);
 
   // Handle stage change
-  const handleStageChange = (companyId: string, newStage: LeadStage) => {
-    void persistCrmState(companyId, { stage: newStage });
-    setCompanies((prev) =>
-      prev.map((c) => (c.id === companyId ? { ...c, stage: newStage } : c))
-    );
+  const handleStageChange = async (companyId: string, newStage: LeadStage) => {
+    const saved = await persistCrmState(companyId, { stage: newStage });
+    if (!saved) return;
+    setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, stage: newStage } : c)));
     if (selectedCompany?.id === companyId) {
       setSelectedCompany((prev) => (prev ? { ...prev, stage: newStage } : null));
     }
   };
 
   // Change Template for proposal
-  const handleTemplateChange = (companyId: string, template: LeadCompany['selectedTemplate']) => {
-    void persistCrmState(companyId, { selected_template: template });
-    setCompanies((prev) =>
-      prev.map((c) => (c.id === companyId ? { ...c, selectedTemplate: template } : c))
-    );
+  const handleTemplateChange = async (companyId: string, template: LeadCompany['selectedTemplate']) => {
+    const saved = await persistCrmState(companyId, { selected_template: template });
+    if (!saved) return;
+    setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, selectedTemplate: template } : c)));
     if (selectedCompany?.id === companyId) {
       setSelectedCompany((prev) => (prev ? { ...prev, selectedTemplate: template } : null));
     }
