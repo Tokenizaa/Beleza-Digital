@@ -1,7 +1,7 @@
 name = "barbearia-yeshua-prospecting-scheduler"
 main = "workers/prospecting-scheduler/src/index.ts"
 compatibility_date = "2026-10-20"
-workers_dev = false
+workers_dev = true
 compatibility_flags = ["nodejs_compat"]
 
 [triggers]

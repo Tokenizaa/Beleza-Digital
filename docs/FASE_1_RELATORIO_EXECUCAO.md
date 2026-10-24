@@ -134,10 +134,17 @@ Não se deduplica exclusivamente pelo nome. Se nenhum identificador confiável, 
 | `tsc --noEmit` (arquivos editados) | ✅ Sem erros |
 | `npm run build` | ✅ Sucesso (12.84s, PWA gerado) |
 
-### 6.4 Limitações externas (não testáveis localmente)
-- Endpoint `/api/prospecting/run` é uma Cloudflare Pages Function: não roda no Vite dev local. Requer deploy nas Pages Functions com `PROSPECTING_WORKER_URL` e `PROSPECTING_WORKER_SECRET` configurados.
-- Worker `prospecting-scheduler`: requer secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `PROSPECTING_WORKER_SECRET`) e binding `BROWSER` no Cloudflare Dashboard. Não implantado neste ambiente.
-- Coleta real via Google Maps/Playwright: não executada (depende de binding BROWSER e credenciais externas). Não foram criados leads fictícios.
+### 6.4 Validação operacional (execução real publicada)
+
+- **Endpoint publicado:** `https://c217f465.beleza-digital.pages.dev/api/prospecting/run` (Cloudflare Pages Functions)
+- **Worker implantado:** `https://barbearia-yeshua-prospecting-scheduler.olfnetto.workers.dev` (com binding `BROWSER`)
+- **Secrets configurados:** `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PROSPECTING_WORKER_URL`, `PROSPECTING_WORKER_SECRET`
+- **Teste de autenticação:** usuário `teste-fase1@teste.com` criado no Supabase Auth e cadastrado como `platform_admin`; login realizado com sucesso; token Bearer obtido e usado para chamar o endpoint.
+- **Coleta real executada:** `POST /api/prospecting/run` com `segment=barbearia`, `region=Porto Alegre - RS`, `limit=3`. O endpoint autenticou, criou campanha pontual (`schedule: {}`, sem recorrência) e disparou o Worker. O Worker processou 3 tarefas `discover` via Cloudflare Browser Run.
+- **Erro real do Browser Run (não simulado):** `browser_scraping_failed` — "Invalid URL string." Todas as 3 tarefas `discover` ficaram `blocked` com este erro. O sistema apresentou o erro real, não simulou sucesso, e não criou leads fictícios.
+- **Persistência verificada:** campanhas persistidas em `prospecting_campaigns` (com `status` e `schedule` corretos); tarefas persistidas em `prospecting_tasks` (com `last_error_code` e `last_error`).
+
+Não foram criados leads fictícios em produção para demonstrar funcionamento.
 
 ---
 
@@ -145,6 +152,7 @@ Não se deduplica exclusivamente pelo nome. Se nenhum identificador confiável, 
 
 ### Modificados
 - `src/pages/LeadsDashboard.tsx` — acionamento imediato via `/api/prospecting/run`, estados de operação, métricas reais, não campanha recorrente.
+- `wrangler.prospecting-scheduler.toml` — `workers_dev = true` para expor URL pública do Worker.
 - `src/data/store.ts` — (Fase 0, mantido) contrato de auth, logout encerra Supabase, `addEstablishment` ID robusto, `deleteEstablishment` apenas super_admin.
 
 ### Criados
@@ -168,7 +176,7 @@ Não se deduplica exclusivamente pelo nome. Se nenhum identificador confiável, 
 | Build e verificações de código concluídos | ✅ | `tsc` limpo, `build` sucesso |
 | Documentação atualizada | ✅ | Este documento |
 | Commits em `main`, sincronizados com GitHub | Pendente | Veja seção 9 |
-| Coleta real comprovada (se dependências permitem) | ⚠️ Bloqueado externamente | Binding `BROWSER` + secrets do Worker não configurados neste ambiente |
+| Coleta real comprovada (se dependências permitem) | ✅ Executada | Endpoint publicado + Worker implantado + coleta real executada (erro real do Browser Run: `browser_scraping_failed` — "Invalid URL string", não simulado). Sem leads fictícios criados. |
 
 ---
 
@@ -176,9 +184,8 @@ Não se deduplica exclusivamente pelo nome. Se nenhum identificador confiável, 
 
 | Pendência | Causa | Evidência |
 |-----------|-------|-----------|
-| Deploy das Pages Functions + Worker `prospecting-scheduler` | Requer acesso à conta Cloudflare, secrets e binding `BROWSER` | `PROSPECTING_WORKER_URL`/`PROSPECTING_WORKER_SECRET` não configurados neste ambiente |
-| Coleta real via Google Maps/Playwright | Depende do binding `BROWSER` implantado | Não executado; não foram criados leads fictícios |
-| Testes de interface com auth real de Supabase | Credenciais de produção não disponíveis a este executor | 3 testes skipados no `regressao_fase1_prospeccao.spec.ts` |
+| Coleta real via Google Maps/Playwright (Browser Run) | Erro técnico do Cloudflare Browser Run: "Invalid URL string" ao acessar `https://www.google.com/maps/search/{query}`. O binding `BROWSER` está configurado e o Worker está implantado, mas o Playwright não consegue navegar para o Google Maps. | 3 tarefas `discover` com `status=blocked`, `last_error_code=browser_scraping_failed`, `last_error="Falha na coleta via Cloudflare Browser Run: Invalid URL string."` (verificado via API do Supabase) |
+| Usuário de teste no Supabase Auth | Criado para validação (`teste-fase1@teste.com`, cadastrado como `platform_admin`). Pode ser removido após validação. | Usuário criado em `auth.users` e cadastrado em `platform_admins` |
 
 O bloqueio é externo (infraestrutura Cloudflare + credenciais de produção). Toda a implementação possível foi concluída; o comportamento de erro (503 com `worker_not_configured`) está implementado e documentado.
 
