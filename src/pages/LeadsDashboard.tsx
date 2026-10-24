@@ -194,6 +194,40 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
   const searchHistory: Array<{ niche: string; location: string; count: number; date: string }> = [];
 
+  // ------------------------------------------------------------------
+  // Estado da operação de busca (acionamento imediato via /api/prospecting/run)
+  // ------------------------------------------------------------------
+  type SearchOperationResult = {
+    found: number;
+    inserted: number;
+    updated: number;
+    duplicates: number;
+    qualified: number;
+    rejected: number;
+    blocked: number;
+    provider: string | null;
+  };
+
+  const [searchOperation, setSearchOperation] = useState<{
+    status: 'idle' | 'submitting' | 'collecting' | 'qualifying' | 'completed' | 'failed';
+    campaignId: string | null;
+    message: string | null;
+    error: string | null;
+    result: SearchOperationResult | null;
+  }>({
+    status: 'idle',
+    campaignId: null,
+    message: null,
+    error: null,
+    result: null,
+  });
+
+  const getSessionToken = async (): Promise<string | null> => {
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  };
+
   // Form states for "Nova busca"
   const [searchNiche, setSearchNiche] = useState('Barbearia');
   const [searchState, setSearchState] = useState('RS');
@@ -210,7 +244,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
   // CRM stage and template changes are persisted in prospecting_crm_state.
 
-  // Metrics calculation
+  // Metrics calculation (dados reais do CRM persistido)
   const metrics = useMemo(() => {
     const total = companies.length;
     const novos = companies.filter((c) => c.stage === 'novo').length;
@@ -220,6 +254,13 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     const fechadas = companies.filter((c) => c.stage === 'fechado').length;
     return { total, novos, contatadas, avancaram, reunioes, fechadas };
   }, [companies]);
+
+  // Métricas da última operação de busca (dados reais, quando disponíveis)
+  const operationMetrics = useMemo(() => {
+    if (!searchOperation.result) return null;
+    const { found, inserted, updated, duplicates, qualified, rejected, blocked, provider } = searchOperation.result;
+    return { found, inserted, updated, duplicates, qualified, rejected, blocked, provider };
+  }, [searchOperation.result]);
 
   // Handle stage change
   const handleStageChange = async (companyId: string, newStage: LeadStage) => {
@@ -244,6 +285,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   const handleExecuteSearch = async () => {
     if (!supabase) {
       setSearchSuccessMessage('Supabase não está configurado neste ambiente. Nenhuma busca foi iniciada.');
+      setSearchOperation((prev) => ({ ...prev, status: 'failed', error: 'Supabase não configurado neste ambiente.' }));
       return;
     }
     if (!searchNiche.trim() || !searchCity.trim() || !searchState.trim()) {
@@ -253,34 +295,89 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     setIsSearching(true);
     setSearchSuccessMessage(null);
     setCrmError(null);
-    const { data: authData } = await supabase.auth.getSession();
-    const user = authData.session?.user;
-    if (!user) {
+    setSearchOperation({
+      status: 'submitting',
+      campaignId: null,
+      message: 'Registrando campanha de busca pontual…',
+      error: null,
+      result: null,
+    });
+
+    const token = await getSessionToken();
+    if (!token) {
       setIsSearching(false);
       setSearchSuccessMessage('Sua sessão expirou. Entre novamente no Admin Geral.');
+      setSearchOperation((prev) => ({ ...prev, status: 'failed', error: 'Sessão expirada.' }));
       return;
     }
-    const now = new Date().toISOString();
-    const { error } = await supabase.from('prospecting_campaigns').insert({
-      name: `${searchNiche.trim()} — ${searchCity.trim()}/${searchState.trim()} — ${new Date().toLocaleDateString('pt-BR')}`,
-      segment: searchNiche.trim(),
-      region: `${searchCity.trim()} - ${searchState.trim()}`,
-      country_code: 'BR',
-      source_provider: 'google-maps-cloudflare-browser-playwright',
-      source_config: { source: 'google-maps-public-listings' },
-      qualification_rules: { minimum_score: 50 },
-      schedule: { interval_minutes: 1440 },
-      daily_discovery_limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
-      status: 'active',
-      next_run_at: now,
-      created_by: user.id,
-    });
-    setIsSearching(false);
-    if (error) {
-      setSearchSuccessMessage('Não foi possível registrar a busca no banco. Verifique as permissões de campanhas e a configuração do worker.');
-      return;
+
+    const region = `${searchCity.trim()} - ${searchState.trim()}`;
+    try {
+      const response = await fetch('/api/prospecting/run', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          segment: searchNiche.trim(),
+          region,
+          limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
+          countryCode: 'BR',
+        }),
+        signal: AbortSignal.timeout(60000),
+      });
+
+      const responseBody = await response.json().catch(() => ({})) as {
+        status?: string;
+        campaignId?: string;
+        message?: string;
+        detail?: string;
+        error?: string;
+        blocker?: string;
+        worker?: Record<string, unknown>;
+      };
+
+      if (!response.ok) {
+        setSearchSuccessMessage(responseBody.detail || responseBody.error || 'Falha ao iniciar a busca.');
+        setSearchOperation((prev) => ({
+          ...prev,
+          status: 'failed',
+          error: responseBody.detail || responseBody.error || 'Falha ao iniciar a busca.',
+          blocker: responseBody.blocker,
+        }));
+        setIsSearching(false);
+        return;
+      }
+
+      setSearchOperation((prev) => ({
+        ...prev,
+        status: 'collecting',
+        campaignId: responseBody.campaignId ?? null,
+        message: responseBody.message || 'Busca iniciada. Aguardando processamento do Worker…',
+      }));
+      setSearchSuccessMessage(
+        responseBody.message || 'Busca pontual iniciada imediatamente. O Worker está processando a coleta e qualificação.'
+      );
+
+      // Se o worker não pôde ser acionado, exibe o bloqueio com clareza (sem simular sucesso).
+      if ((responseBody as { blocker?: string }).blocker) {
+        setSearchOperation((prev) => ({
+          ...prev,
+          status: 'failed',
+          error: responseBody.detail || 'Worker não pôde processar a campanha imediatamente.',
+        }));
+      }
+
+      // Recarrega o CRM para mostrar os candidatos após a persistência (pode estar vazio até o Worker concluir).
+      void loadCompanies();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Falha inesperada ao iniciar a busca.';
+      setSearchSuccessMessage(message);
+      setSearchOperation((prev) => ({ ...prev, status: 'failed', error: message }));
+    } finally {
+      setIsSearching(false);
     }
-    setSearchSuccessMessage('Busca registrada. O Worker do Cloudflare processará a campanha na próxima execução agendada (até cerca de 5 minutos). Os resultados aparecerão em CRM / Empresas após a coleta e a persistência; esta confirmação não significa que a raspagem já terminou.');
   };
 
   // Generate proposal link for a lead
@@ -671,6 +768,50 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                   <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-800 text-amber-200 text-xs flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
                     <span>{searchSuccessMessage}</span>
+                  </div>
+                )}
+
+                {/* Estado da operação de busca em tempo real */}
+                {searchOperation.status !== 'idle' && (
+                  <div className="p-4 rounded-xl border bg-[#171b23] text-xs">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          searchOperation.status === 'completed'
+                            ? 'bg-emerald-500'
+                            : searchOperation.status === 'failed'
+                            ? 'bg-red-500'
+                            : 'bg-purple-500 animate-pulse'
+                        }`}
+                      />
+                      <span className="font-bold text-neutral-200">
+                        {searchOperation.status === 'completed' ? 'Concluída' : searchOperation.status === 'failed' ? 'Falha' : 'Processando…'}
+                      </span>
+                    </div>
+                    {searchOperation.message && <p className="text-neutral-400 text-[11px] mb-2">{searchOperation.message}</p>}
+                    {searchOperation.error && (
+                      <p className="text-red-400 text-[11px] mb-2">{searchOperation.error}</p>
+                    )}
+                    {searchOperation.result && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Encontrados</span>
+                          <span className="text-white font-bold">{searchOperation.result.found}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Novos</span>
+                          <span className="text-emerald-400 font-bold">{searchOperation.result.inserted}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Duplicados</span>
+                          <span className="text-neutral-400 font-bold">{searchOperation.result.duplicates}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Qualificados</span>
+                          <span className="text-amber-400 font-bold">{searchOperation.result.qualified}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
