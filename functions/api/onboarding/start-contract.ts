@@ -108,7 +108,7 @@ export async function onRequestPost({ request, env }: Context) {
     prospectId: prospect.id,
     prospectName: prospect.business_name,
     demoToken: body.demoToken,
-    demoTokenHash: Array.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.demoToken)), b => b.toString(16).padStart(2, '0')).join(''),
+    demoTokenHash: Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.demoToken))), b => b.toString(16).padStart(2, '0')).join(''),
     selectedVersionId: versionId,
     siteProjectId: siteProject.id,
     message: 'Prossiga para o cadastro. O contexto da demonstração será preservado.',
