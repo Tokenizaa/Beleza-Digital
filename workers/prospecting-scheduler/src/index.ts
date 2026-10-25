@@ -604,6 +604,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         });
       }
     }
+    lastError = null;
     await browser?.close().catch(() => {});
   } catch (error) {
       await browser?.close().catch(() => {});
