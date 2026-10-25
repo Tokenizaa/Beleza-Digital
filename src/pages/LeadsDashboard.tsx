@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Search,
   Users,
@@ -56,8 +56,8 @@ export interface LeadCompany {
   whatsapp: string;
   websiteUrl: string;
   instagramUrl?: string;
-  rating: number;
-  reviewsCount: number;
+  rating: number | null;
+  reviewsCount: number | null;
   digitalDiagnosis: 'site_amador' | 'sem_site' | 'perfil_sem_foto' | 'site_desatualizado';
   opportunity: OpportunityLevel;
   stage: LeadStage;
@@ -119,7 +119,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     setCrmLoading(true);
     setCrmError(null);
     const [candidateResult, stateResult] = await Promise.all([
-      supabase.from('prospecting_candidates').select('id,business_name,category,city,region,address,phone,normalized_phone,website_url,normalized_website,qualification_score,status,source_url,created_at').order('created_at', { ascending: false }).limit(500),
+      supabase.from('prospecting_candidates').select('id,business_name,category,city,region,address,phone,normalized_phone,website_url,normalized_website,qualification_score,status,source_url,raw_evidence,created_at').order('created_at', { ascending: false }).limit(500),
       supabase.from('prospecting_crm_state').select('candidate_id,stage,selected_template,notes,follow_up_date'),
     ]);
     if (candidateResult.error) {
@@ -149,9 +149,9 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         phone,
         whatsapp: phone,
         websiteUrl,
-        rating: 0,
-        reviewsCount: 0,
-        digitalDiagnosis: websiteUrl ? 'site_desatualizado' : 'sem_site',
+        rating: typeof row.raw_evidence?.rating === 'number' ? row.raw_evidence.rating : null,
+        reviewsCount: typeof row.raw_evidence?.reviewsCount === 'number' ? row.raw_evidence.reviewsCount : null,
+        digitalDiagnosis: websiteUrl ? 'site_amador' : 'sem_site',
         opportunity: Number(row.qualification_score || 0) >= 70 ? 'alta' : Number(row.qualification_score || 0) >= 40 ? 'media' : 'baixa',
         stage: state?.stage || 'novo',
         selectedTemplate: (state?.selected_template || 'ouro-classico') as LeadTemplateKey,
@@ -201,8 +201,8 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     inserted: number;
     updated: number;
     duplicates: number;
-    qualified: number;
-    rejected: number;
+    qualified: number | null;
+    rejected: number | null;
     blocked: number;
     provider: string | null;
   };
@@ -259,7 +259,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   const [searchLimit, setSearchLimit] = useState(5);
   const [isSearching, setIsSearching] = useState(false);
   const [searchSuccessMessage, setSearchSuccessMessage] = useState<string | null>(null);
-  const [searchCreateCampaign, setSearchCreateCampaign] = useState(true);
+  const [searchCreateCampaign, setSearchCreateCampaign] = useState(false);
 
   // CRM Filter states
   const [crmSearchQuery, setCrmSearchQuery] = useState('');
@@ -383,6 +383,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         error?: string;
         blocker?: string;
         worker?: Record<string, unknown>;
+        executionId?: string;
       };
 
       // Atualizar estado imediatamente com resposta inicial
@@ -424,92 +425,88 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         }));
       }
 
-      // Polling: verificar status a cada 3 segundos enquanto a busca estiver em andamento e não tenha atingido o limite de tentativas
+      // Consultar o estado persistido da tarefa específica, nunca contadores globais.
+      const taskId = responseBody.executionId;
+      if (!taskId) {
+        setSearchExecution((prev) => ({ ...prev, status: 'failed', finishedAt: new Date().toISOString(), error: 'O servidor não retornou o identificador persistido da execução.' }));
+        setIsSearching(false);
+        return;
+      }
       let attempts = 0;
-      const maxAttempts = 30; // máximo de 1 minuto de polling
-      const poll = () => {
+      const maxAttempts = 120; // até 6 minutos; atingir o limite não significa que a tarefa terminou
+      const poll = async () => {
         attempts++;
+        try {
+          const pollResponse = await fetch(`/api/prospecting/overview?executionId=${encodeURIComponent(taskId)}`, {
+            headers: { authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(5000),
+          });
+          const pollBody = await pollResponse.json().catch(() => ({})) as {
+            status?: string;
+            execution?: { id?: string; taskStatus?: string; result?: Record<string, unknown> | null; error?: string | null };
+            error?: string;
+          };
+          if (pollResponse.ok && pollBody.status === 'ok' && pollBody.execution) {
+            const execution = pollBody.execution;
+            const taskStatus = execution.taskStatus;
+            const terminal = ['succeeded', 'blocked', 'dead_letter', 'cancelled'].includes(String(taskStatus));
+            const taskResult = execution.result ?? {};
+            const mappedStatus: SearchStatus =
+              taskStatus === 'succeeded' ? 'completed' :
+              taskStatus === 'blocked' ? 'blocked' :
+              taskStatus === 'dead_letter' ? 'failed' :
+              'running';
+            if (terminal) {
+              const result: SearchOperationResult = {
+                found: Number(taskResult.received ?? 0),
+                inserted: Number(taskResult.inserted ?? 0),
+                updated: 0,
+                duplicates: Number(taskResult.duplicates ?? 0),
+                qualified: typeof taskResult.qualified === 'number' ? taskResult.qualified : null,
+                rejected: typeof taskResult.rejected === 'number' ? taskResult.rejected : null,
+                blocked: mappedStatus === 'blocked' ? 1 : 0,
+                provider: typeof taskResult.provider === 'string' ? taskResult.provider : null,
+              };
+              setSearchOperation((prev) => ({
+                ...prev,
+                status: mappedStatus,
+                message: mappedStatus === 'completed' ? 'Coleta concluída. A qualificação e demais tarefas podem continuar na fila.' : 'A execução terminou sem sucesso.',
+                error: execution.error ?? null,
+                result,
+              }));
+              setSearchExecution((prev) => ({
+                ...prev,
+                status: mappedStatus,
+                finishedAt: new Date().toISOString(),
+                error: execution.error ?? undefined,
+                result,
+              }));
+              await loadCompanies();
+              setIsSearching(false);
+              executionRef.current = null;
+              return;
+            }
+          } else if (pollResponse.status === 404) {
+            setSearchExecution((prev) => ({ ...prev, status: 'failed', finishedAt: new Date().toISOString(), error: 'A execução não foi encontrada no banco.' }));
+            setIsSearching(false);
+            executionRef.current = null;
+            return;
+          }
+        } catch {
+          // Falha temporária de consulta não altera o estado persistido da execução.
+        }
+
         if (attempts >= maxAttempts) {
-          setSearchExecution((prev) => ({
-            ...prev,
-            status: 'completed_partial' as const,
-            finishedAt: new Date().toISOString(),
-            error: 'Limite de verificação atingido. Resultados podem ser incompletos.',
-          }));
+          setSearchSuccessMessage('A execução continua sem estado terminal confirmado. Consulte novamente; ela não foi marcada como concluída.');
           setIsSearching(false);
-          clearTimeout(executionRef.current);
           executionRef.current = null;
           return;
         }
-
-        // Fazer chamada leve para verificar status no backend
-        // Note: usamos o mesmo token e não reiniciamos a busca
-        try {
-          const pollResponse = await fetch(`/api/prospecting/overview`, {
-            headers: {
-              authorization: `Bearer ${token}`,
-            },
-            signal: AbortSignal.timeout(5000),
-          });
-
-          if (pollResponse.ok) {
-            const pollBody = await pollResponse.json().catch(() => ({}));
-            if (pollBody.status === 'ok' && pollBody.counts) {
-              const counts = pollBody.counts as {
-                activeCampaigns: number;
-                candidates: number;
-                pendingTasks: number;
-                blockedTasks: number;
-                deadLetterTasks: number;
-                sentMessages: number;
-                deliveredMessages: number;
-              };
-
-              // Atualizar UI com base nos contadores - isso reflete o que já foi persistido
-              setSearchOperation((prev) => {
-                const newResult: SearchOperationResult = {
-                  found: counts.candidates ?? 0,
-                  inserted: 0, // será preenchido quando tivermos dados específicos
-                  updated: 0,
-                  duplicates: 0,
-                  qualified: counts.candidates ? Math.round((counts.candidates * 0.6) as number) : 0, // estimativa baseada emScore >= 50
-                  rejected: 0,
-                  blocked: counts.blockedTasks ?? 0,
-                  provider: 'playwright-browser-run',
-                };
-                return {
-                  ...prev,
-                  status: 'completed' as const,
-                  result: newResult,
-                  message: initialMessage || 'Busca concluída.',
-                  campaignId: prev.campaignId,
-                };
-              });
-
-              // Se temos candidatos suficientes e nenhuma tarefa bloqueada, considerar concluída
-              if (counts.candidates && counts.candidates > 0 && (counts.blockedTasks ?? 0) === 0) {
-                setSearchExecution((prev) => ({
-                  ...prev,
-                  status: 'completed' as const,
-                  finishedAt: new Date().toISOString(),
-                }));
-                setIsSearching(false);
-                clearTimeout(executionRef.current);
-                executionRef.current = null;
-                return;
-              }
-            }
-          }
-        } catch (pollError) {
-          // Erro no polling, continuar tentando ou marcar como concluído parcial
-        }
-
-        // Polling próximo rodada em 3 segundos
-        executionRef.current = setTimeout(poll, 3000);
+        executionRef.current = window.setTimeout(() => { void poll(); }, 3000);
       };
 
       // Iniciar polling
-      executionRef.current = setTimeout(poll, 3000);
+      executionRef.current = window.setTimeout(() => { void poll(); }, 3000);
 
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha inesperada ao iniciar a busca.';
@@ -873,7 +870,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
                         <span className="text-[10px] text-neutral-400 flex items-center gap-1 font-medium ml-auto">
                           <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                          {company.rating.toFixed(1)} · {company.reviewsCount} avaliações
+                          {company.rating === null ? 'Sem avaliação capturada' : company.rating.toFixed(1)} · {company.reviewsCount === null ? 'contagem indisponível' : `${company.reviewsCount} avaliações`}
                         </span>
                       </div>
                     </div>
@@ -964,7 +961,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                         </div>
                         <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
                           <span className="text-neutral-500 block">Qualificados</span>
-                          <span className="text-amber-400 font-bold">{searchOperation.result.qualified}</span>
+                          <span className="text-amber-400 font-bold">{searchOperation.result.qualified ?? '—'}</span>
                         </div>
                         {searchOperation.result.blocked > 0 && (
                           <div className="bg-[#12151b] p-2 rounded border border-[#202530]">

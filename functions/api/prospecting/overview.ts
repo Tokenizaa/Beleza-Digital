@@ -53,6 +53,35 @@ export async function onRequestGet({ request, env }: Context) {
   const adminRows = await adminCheck.json() as unknown[];
   if (!adminRows.length) return json({ error: "platform_admin_required" }, 403);
 
+  const executionId = new URL(request.url).searchParams.get("executionId");
+  if (executionId) {
+    if (!/^\\d+$/.test(executionId)) return json({ error: "invalid_execution_id" }, 400);
+    try {
+      const taskResponse = await fetch(`${env.SUPABASE_URL.replace(/\\/$/, "")}/rest/v1/prospecting_tasks?id=eq.${encodeURIComponent(executionId)}&select=id,status,result,last_error,completed_at,created_at,attempt_count&limit=1`, {
+        headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}` },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!taskResponse.ok) return json({ status: "blocked", error: `execution_lookup_http_${taskResponse.status}` }, 503);
+      const tasks = await taskResponse.json() as Array<Record<string, unknown>>;
+      if (!tasks.length) return json({ status: "not_found", error: "execution_not_found" }, 404);
+      const task = tasks[0];
+      return json({
+        status: "ok",
+        execution: {
+          id: String(task.id),
+          taskStatus: task.status,
+          result: task.result ?? null,
+          error: task.last_error ?? null,
+          createdAt: task.created_at ?? null,
+          completedAt: task.completed_at ?? null,
+          attemptCount: task.attempt_count ?? null,
+        },
+      });
+    } catch (error) {
+      return json({ status: "blocked", error: error instanceof Error ? error.message : "execution_lookup_failed" }, 503);
+    }
+  }
+
   try {
     const entries = await Promise.all([
       ["campaigns", "prospecting_campaigns", {}],

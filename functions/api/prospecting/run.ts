@@ -75,7 +75,7 @@ export async function onRequestPost({ request, env }: Context) {
   const region = typeof body.region === 'string' && body.region.trim() ? body.region.trim() : null;
   if (!segment || !region) return json({ error: 'Informe segmento (nichos) e região (cidade/estado) para a busca.' }, 400);
 
-  const createCampaign = body.createCampaign !== false; // default: true, manter backward compatibility
+  const createCampaign = body.createCampaign === true; // Busca manual independente por padrão
   const limitRaw = Number(body.limit ?? 10);
   const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 100)) : 10;
   const countryCode = typeof body.countryCode === 'string' && body.countryCode.trim() ? body.countryCode.trim().toUpperCase() : 'BR';
@@ -91,67 +91,82 @@ export async function onRequestPost({ request, env }: Context) {
   const now = new Date().toISOString();
   const campaignName = `${segment} — ${region} — ${new Date().toLocaleDateString('pt-BR')} (busca pontual)`;
 
-  // Se createCampaign for falso, pular registro de campanha e acionar o Worker diretamente.
+  // A busca manual cria uma tarefa própria; não cria nem depende de campanha comercial.
   if (!createCampaign) {
-    // Aciona o Worker imediatamente para processar a descoberta + captura + qualificação automática.
-    let workerResult: { status: string; error?: string; [key: string]: unknown } | null = null;
-    let workerError: string | null = null;
-    try {
-      const workerResponse = await fetch(env.PROSPECTING_WORKER_URL, {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${env.PROSPECTING_WORKER_SECRET}`,
-          'content-type': 'application/json',
+    const executionId = crypto.randomUUID();
+    const idempotencyKey = `manual-discovery:${executionId}`;
+    const taskResponse = await fetch(`${base}/rest/v1/prospecting_tasks?on_conflict=idempotency_key`, {
+      method: 'POST',
+      headers: new Headers([...headers.entries(), ['prefer', 'resolution=ignore-duplicates,return=representation']]),
+      body: JSON.stringify({
+        campaign_id: null,
+        task_type: 'discover',
+        status: 'pending',
+        idempotency_key: idempotencyKey,
+        payload: {
+          executionId,
+          segment,
+          region,
+          countryCode,
+          dailyDiscoveryLimit: limit,
+          minimumScore: 50,
+          manual: true,
         },
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!taskResponse.ok) {
+      return json({ status: 'failed', error: 'Não foi possível enfileirar a busca manual.', detail: await taskResponse.text().catch(() => '') }, 503);
+    }
+    const taskRows = await taskResponse.json() as Array<{ id: number; status: string }>;
+    if (!taskRows.length) {
+      return json({ status: 'failed', error: 'A busca não foi enfileirada; não houve confirmação de persistência da tarefa.' }, 503);
+    }
+    const taskId = String(taskRows[0].id);
+
+    // Solicita processamento imediato. A fila persistida permite retomada pelo agendador caso a chamada falhe.
+    let workerWarning: string | null = null;
+    try {
+      const workerResponse = await fetch(env.PROSPECTING_WORKER_URL!, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${env.PROSPECTING_WORKER_SECRET!}`, 'content-type': 'application/json' },
         signal: AbortSignal.timeout(60000),
       });
       const workerBody = await workerResponse.json().catch(() => ({})) as Record<string, unknown>;
-      // Determina status baseado no body do worker, não apenas no HTTP ok.
-      // O worker pode retornar 200 com status 'blocked' no body (ex: binding PROSPECTING_BROWSER ausente).
-      // Determine worker status based on body and internal counts (blocked, succeeded, claimed).
-      // Logic:
-      // - If workerBody.status is "blocked"/"retryable"/"failed" → 503 as before
-      // - If workerBody.status is "ok" AND blocked === 0 AND succeeded === claimed → 200 normal
-      // - If workerBody.status is "ok" AND (blocked > 0 OR succeeded < claimed) → 503 blocked
-      // - Otherwise fallback to HTTP ok status
-      let workerStatus: string;
-      if (workerBody.status === 'blocked' || workerBody.status === 'retryable' || workerBody.status === 'failed') {
-        workerStatus = workerBody.status;
-      } else if (workerBody.status === 'ok') {
-        const blockedVal = (workerBody as Record<string, unknown>).blocked;
-        const succeededVal = (workerBody as Record<string, unknown>).succeeded;
-        const claimedVal = (workerBody as Record<string, unknown>).claimed;
-        const hasBlocks = typeof blockedVal === 'number' && blockedVal > 0;
-        const notFullySucceeded = typeof succeededVal === 'number' && typeof claimedVal === 'number' && succeededVal < claimedVal;
-        if (hasBlocks || notFullySucceeded) {
-          workerStatus = 'blocked';
-        } else {
-          workerStatus = 'ok';
+      if (!workerResponse.ok || workerBody.status === 'blocked' || workerBody.status === 'failed') {
+        workerWarning = String(workerBody.error ?? workerBody.detail ?? `Worker respondeu HTTP ${workerResponse.status}`);
+        // Um bloqueio explícito do Worker é persistido na própria tarefa, em vez de simular sucesso.
+        if (workerBody.status === 'blocked' || workerBody.status === 'failed' || workerResponse.status === 503) {
+          await fetch(`${base}/rest/v1/prospecting_tasks?id=eq.${encodeURIComponent(taskId)}&status=eq.pending`, {
+            method: 'PATCH',
+            headers: new Headers([...headers.entries(), ['prefer', 'return=minimal']]),
+            body: JSON.stringify({
+              status: 'blocked',
+              last_error_code: 'worker_blocked',
+              last_error: workerWarning.slice(0, 500),
+              completed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              result: { outcome: 'blocked', reason: 'worker_blocked' },
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
         }
-      } else {
-        workerStatus = workerResponse.ok ? 'ok' : 'blocked';
-      }
-      workerResult = { ...workerBody, status: workerStatus };
-      // Define workerError quando o worker reportou bloqueio/falha ou quando há bloques internos.
-      if (workerStatus === 'blocked' || workerStatus === 'retryable' || workerStatus === 'failed' || !workerResponse.ok) {
-        workerError = String(workerBody.error ?? workerBody.detail ?? `Worker ${workerStatus}`);
       }
     } catch (error) {
-      workerError = error instanceof Error ? error.message : 'Falha ao acionar o Worker.';
-      workerResult = { status: 'blocked', error: workerError };
+      // Falha de transporte não prova que a tarefa falhou; permanece persistida para o Worker/agendador.
+      workerWarning = error instanceof Error ? error.message : 'Não foi possível confirmar o acionamento imediato do Worker.';
     }
 
     return json({
-      status: workerError ? 'blocked' : 'ok',
+      status: workerWarning ? 'pending' : 'running',
+      executionId: taskId,
+      message: workerWarning
+        ? 'Busca enfileirada. O processamento imediato não foi confirmado; a tarefa permanece rastreável.'
+        : 'Busca manual enfileirada e processamento solicitado.',
+      detail: workerWarning,
       campaignId: null,
-      detail: workerError,
-      message: workerError
-        ? 'A campanha não foi registrada e o Worker não pôde processar a campanha imediatamente. Verifique PROSPECTING_WORKER_URL, PROSPECTING_WORKER_SECRET e o binding BROWSER no Worker.'
-        : 'Busca pontual iniciada imediatamente. O Worker está processando a descoberta, captura e qualificação automática.',
-      campaign: null,
-      worker: workerResult,
-      note: 'Esta é uma busca manual sem campanha. Resultados serão persistidos como candidatos. Não cria campanha recorrente.',
-    }, workerError ? 503 : 200);
+      limit,
+    }, 202);
   }
 
   // Com createCampaign = true (padrão): registrar campanha e acionar o Worker.

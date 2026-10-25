@@ -338,14 +338,15 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const dailyLimit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 10000)) : 100;
   const now = new Date();
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-  const countResponse = await db(env, `prospecting_candidates?campaign_id=eq.${encodeURIComponent(String(campaign.campaignId ?? ""))}&created_at=gte.${encodeURIComponent(dayStart)}&select=id&limit=1`, {
+  const countResponse = campaign.campaignId
+    ? await db(env, `prospecting_candidates?campaign_id=eq.${encodeURIComponent(String(campaign.campaignId))}&created_at=gte.${encodeURIComponent(dayStart)}&select=id&limit=1`, {
     headers: { prefer: "count=exact" },
   });
   if (!countResponse.ok) throw new Error(`candidate_daily_count_http_${countResponse.status}`);
-  const range = countResponse.headers.get("content-range") ?? "";
+  const range = countResponse?.headers.get("content-range") ?? "";
   const countMatch = range.match(/\/(\d+|\*)$/);
   const discoveredToday = countMatch && countMatch[1] !== "*" ? Number(countMatch[1]) : 0;
-  const limit = Math.max(0, dailyLimit - discoveredToday);
+  const limit = campaign.campaignId ? Math.max(0, dailyLimit - discoveredToday) : dailyLimit;
   if (limit === 0) {
     await updateTask(env, task, workerId, {
       status: "succeeded", last_error_code: null, last_error: null,
@@ -460,6 +461,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   let inserted = 0;
   let duplicates = 0;
   let rejected = 0;
+  let qualified = 0;
   for (const raw of scrapedResults.slice(0, limit)) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) { rejected++; continue; }
     const candidate = raw as Record<string, unknown>;
@@ -482,12 +484,13 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       description: first(candidate, ["description", "businessDescription"]),
       source_url: sourceUrl,
     });
+    if (result.score >= 50) qualified++;
     const providerRecordId = String(first(candidate, ["placeId", "providerId", "provider_record_id"]) ?? "").slice(0, 250) || null;
     const stored = await db(env, "prospecting_candidates?on_conflict=dedupe_key", {
       method: "POST",
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
-        campaign_id: campaign.campaignId,
+        campaign_id: campaign.campaignId ?? null,
         provider: "google-maps-cloudflare-playwright",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
@@ -509,6 +512,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         missing_fields: result.missingFields,
         status: result.score >= 50 ? "qualified" : "discovered",
         raw_evidence: {
+          rating: typeof first(candidate, ["rating", "stars"]) === "number" ? first(candidate, ["rating", "stars"]) : null,
+          reviewsCount: Number.isFinite(Number(first(candidate, ["reviews", "reviewCount", "reviewsCount"]))) ? Number(first(candidate, ["reviews", "reviewCount", "reviewsCount"])) : null,
           providerRecordId,
           providerRequestId: null,
           observedAt: new Date().toISOString(),
@@ -529,7 +534,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         method: "POST",
         headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
         body: JSON.stringify({
-          campaign_id: campaign.campaignId,
+          campaign_id: campaign.campaignId ?? null,
           task_type: "capture",
           idempotency_key: `candidate:${dedupeKey}:capture`,
           payload: {
@@ -546,7 +551,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, provider: "playwright-browser-run", searchQuery },
+    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, qualified, provider: "playwright-browser-run", searchQuery },
   });
   return "succeeded";
 }
