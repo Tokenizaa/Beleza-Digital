@@ -66,12 +66,15 @@ interface UnifiedAdminDashboardProps {
   onBackToApp?: () => void;
   /** Quando verdadeiro, o painel já foi autorizado pelo wrapper de rota (Supabase) e salta o gate de login interno. */
   preAuthenticated?: boolean;
+  /** Identidade da plataforma validada pelo wrapper Supabase. */
+  platformAdmin?: boolean;
 }
 
 export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   initialSection = 'salao-dashboard',
   onBackToApp,
   preAuthenticated = false,
+  platformAdmin = false,
 }) => {
   const { establishment, allEstablishments, session, platformConfig, store } = useStore();
 
@@ -101,9 +104,8 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   } = useStore();
 
   // Derived auth state: user is authorized if they have a session with appropriate role
-  const isAuthorized =
-    userRole === 'super_admin' ||
-    userRole === 'establishment_admin';
+  const isPlatformAdmin = platformAdmin || userRole === 'super_admin';
+  const isAuthorized = isPlatformAdmin || userRole === 'establishment_admin';
 
   const [isAuthenticated, setIsAuthenticatedState] = useState<boolean>(
     preAuthenticated || storeIsAuthenticated || Boolean(isAuthorized)
@@ -113,10 +115,10 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   // O super administrador pertence à plataforma, não a um salão.
   // Impede também que uma URL/estado antigo o deixe no módulo de gestão local.
   useEffect(() => {
-    if (userRole === 'super_admin' && activeSection.startsWith('salao-')) {
+    if (isPlatformAdmin && activeSection.startsWith('salao-')) {
       setActiveSection('rede-saloes');
     }
-  }, [userRole, activeSection]);
+  }, [isPlatformAdmin, activeSection]);
 
   // Template Showcase preview state
   const [selectedShowcaseTemplate, setSelectedShowcaseTemplate] = useState<SiteVariationId>('ouro-classico');
@@ -486,7 +488,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           </div>
 
 {/* ESTABLISHMENT SELECTOR DROPDOWN */}
-          {userRole !== 'super_admin' && (
+          {!isPlatformAdmin && (
           <div className="relative">
             <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
               Salão Ativo
@@ -552,7 +554,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           {/* ---------------------------------------------------- */}
           <nav className="space-y-5">
 {/* MÓDULO 1: GESTÃO DO SALÃO */}
-            {userRole !== 'super_admin' && (
+            {!isPlatformAdmin && (
             <div className="space-y-1">
               <button
                 type="button"
