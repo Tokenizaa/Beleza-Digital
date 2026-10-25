@@ -423,11 +423,11 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         if (!name || !sourceUrl) return;
         const container = card.closest('[role="article"]') || card.closest('.Nv2PK') || card.parentElement?.parentElement || card.parentElement;
         const parentText = (container as HTMLElement | null)?.innerText || (card as HTMLElement).innerText || "";
-        const lines = parentText.split("\\n").map((line) => line.trim()).filter(Boolean);
-        const ratingMatch = parentText.match(/(\\d[.,]\\d)\\s*\\(([\\d.,]+)\\)/);
-        const phoneMatch = parentText.match(/(?:\\+?\\d[\\d ()-]{7,}\\d)/);
-        const categoryLine = lines.find((line) => /barbearia|sal[aã]o de beleza|cabeleireir|est[eé]tica|cl[ií]nica de beleza|\\bspa\\b|manicure|depila[cç][aã]o/i.test(line) && line !== name) || null;
-        const addressLine = lines.find((line) => /\\b(rua|r\\.|avenida|av\\.|travessa|tv\\.|estrada|rodovia|praça|praca|alameda|largo)\\b/i.test(line)) || null;
+        const lines = parentText.split("\n").map((line) => line.trim()).filter(Boolean);
+        const ratingMatch = parentText.match(/(\d[.,]\d)\s*\(([\d.,]+)\)/);
+        const phoneMatch = parentText.match(/(?:\+?\d[\d ()-]{7,}\d)/);
+        const categoryLine = lines.find((line) => /barbearia|sal[aã]o de beleza|cabeleireir|est[eé]tica|cl[ií]nica de beleza|\bspa\b|manicure|depila[cç][aã]o/i.test(line) && line !== name) || null;
+        const addressLine = lines.find((line) => /\b(rua|r\.|avenida|av\.|travessa|tv\.|estrada|rodovia|praça|praca|alameda|largo)\b/i.test(line)) || null;
         const websiteLink = container.querySelector('a[data-item-id="authority"]') as HTMLAnchorElement | null;
         output.push({
           name,
