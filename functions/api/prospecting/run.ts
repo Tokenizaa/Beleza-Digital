@@ -63,7 +63,7 @@ export async function onRequestPost({ request, env }: Context) {
     }, 503);
   }
 
-  let body: { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown };
+  let body: { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown; executionId?: unknown };
   try { body = (await request.json()) as { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown }; }
   catch { return json({ error: 'Envie um JSON válido com segment e region.' }, 400); }
 
@@ -93,7 +93,7 @@ export async function onRequestPost({ request, env }: Context) {
 
   // A busca manual cria uma tarefa própria; não cria nem depende de campanha comercial.
   if (!createCampaign) {
-    const executionId = crypto.randomUUID();
+    const executionId = typeof body.executionId === 'string' && /^[0-9a-f-]{36}$/i.test(body.executionId) ? body.executionId : crypto.randomUUID();
     const idempotencyKey = `manual-discovery:${executionId}`;
     const taskResponse = await fetch(`${base}/rest/v1/prospecting_tasks?on_conflict=idempotency_key`, {
       method: 'POST',
@@ -118,7 +118,16 @@ export async function onRequestPost({ request, env }: Context) {
     if (!taskResponse.ok) {
       return json({ status: 'failed', error: 'Não foi possível enfileirar a busca manual.', detail: await taskResponse.text().catch(() => '') }, 503);
     }
-    const taskRows = await taskResponse.json() as Array<{ id: number; status: string }>;
+    let taskRows = await taskResponse.json() as Array<{ id: number; status: string }>;
+    if (!taskRows.length) {
+      // Repetição da mesma solicitação: recuperar a tarefa criada anteriormente pela chave idempotente.
+      const existingResponse = await fetch(`${base}/rest/v1/prospecting_tasks?idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&select=id,status&limit=1`, {
+        headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}` },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!existingResponse.ok) return json({ status: 'failed', error: 'Não foi possível confirmar a tarefa já enfileirada.' }, 503);
+      taskRows = await existingResponse.json() as Array<{ id: number; status: string }>;
+    }
     if (!taskRows.length) {
       return json({ status: 'failed', error: 'A busca não foi enfileirada; não houve confirmação de persistência da tarefa.' }, 503);
     }
