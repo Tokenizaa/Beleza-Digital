@@ -3,7 +3,7 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET: string;
   PROSPECTING_BATCH_SIZE?: string;
-  BROWSER: any;
+  PROSPECTING_BROWSER: any;
   // WhatsApp — Evolution API (futuro) ou manual por enquanto
   // WHATSAPP_EVOLUTION_URL?: string;
   // WHATSAPP_EVOLUTION_API_KEY?: string;
@@ -365,9 +365,9 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   let scrapedResults: Array<Record<string, unknown>> = [];
   let browser: any;
   try {
-    if (!env.BROWSER) throw new Error("prospecting_browser_binding_missing");
+    if (!env.PROSPECTING_BROWSER) throw new Error("prospecting_browser_binding_missing");
     const { chromium } = await import("@cloudflare/playwright");
-    browser = await chromium.connectOverCDP(env.BROWSER);
+    browser = await chromium.connectOverCDP(env.PROSPECTING_BROWSER);
     const page = await browser.newPage();
     const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
     await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });

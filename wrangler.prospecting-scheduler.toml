@@ -11,7 +11,7 @@ crons = ["*/5 * * * *"]
 PROSPECTING_BATCH_SIZE = "10"
 
 [browser]
-binding = "BROWSER"
+binding = "PROSPECTING_BROWSER"
 
 # Configure these as encrypted Worker secrets (wrangler secret put):
 # wrangler secret put SUPABASE_URL --config wrangler.prospecting-scheduler.toml
