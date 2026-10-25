@@ -321,7 +321,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     setCrmError(null);
 
     // Gerar ID único para esta execução e registrar início
-    const executionId = `search-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const executionId = crypto.randomUUID();
     const startedAt = new Date().toISOString();
     setSearchExecution({
       executionId,
@@ -369,6 +369,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
           region,
           limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
           countryCode: 'BR',
+          executionId,
           createCampaign: false,
         }),
         signal: AbortSignal.timeout(60000),
