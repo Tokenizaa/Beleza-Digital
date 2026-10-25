@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { UnifiedAdminDashboard } from "./UnifiedAdminDashboard";
 
 export function PlatformAdminDashboard() {
   const [authorized, setAuthorized] = useState(false);
