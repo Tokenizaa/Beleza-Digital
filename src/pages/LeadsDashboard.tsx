@@ -349,7 +349,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     const executionId = crypto.randomUUID();
     const startedAt = new Date().toISOString();
     setSearchExecution({
-      executionId,
+      
       status: 'running',
       startedAt,
       result: null,
@@ -383,10 +383,9 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
     const region = `${searchCity.trim()} - ${searchState.trim()}`;
     try {
-      const response = await fetch('/api/prospecting/run', {
+      const response = await fetch('/api/prospecting/local-scrape', {
         method: 'POST',
         headers: {
-          authorization: `Bearer ${token}`,
           'content-type': 'application/json',
         },
         body: JSON.stringify({
@@ -394,8 +393,8 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
           region,
           limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
           countryCode: 'BR',
-          executionId,
-          createCampaign: false,
+          
+          
         }),
         signal: AbortSignal.timeout(60000),
       });
@@ -431,7 +430,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
       setSearchExecution((prev) => ({
         ...prev,
-        executionId: responseBody.executionId || prev?.executionId || executionId,
+        executionId: responseBody.executionId || prev?.executionId || 
         status: initialStatus,
         message: initialMessage,
         error: initialDetail || undefined,

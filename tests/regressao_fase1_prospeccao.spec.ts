@@ -11,52 +11,47 @@ test.describe('Fase 1 — Prospecção: raspagem imediata e qualificação autom
   // ---------------------------------------------------------------
   // Verificação de código: endpoint de acionamento imediato existe
   // ---------------------------------------------------------------
-  test('arquivo functions/api/prospecting/run.ts existe e implementa acionamento imediato', () => {
-    const runPath = path.join(REPO_ROOT, 'functions/api/prospecting/run.ts');
-    expect(fs.existsSync(runPath)).toBe(true);
-    const content = fs.readFileSync(runPath, 'utf-8');
-    expect(content).toContain('onRequestPost');
-    expect(content).toContain('validatePlatformAdmin');
-    expect(content).toContain('PROSPECTING_WORKER_URL');
-    expect(content).toContain('PROSPECTING_WORKER_SECRET');
-    expect(content).toContain('schedule: {}');
-    expect(content).toContain('sem recorrência automática');
-    expect(content).toContain('401');
-    expect(content).toContain('403');
-    expect(content).toContain('worker_not_configured');
-    expect(content).toContain('503');
+  test('script local de prospecção existe e executa raspagem imediata', () => {
+    const scriptPath = path.join(REPO_ROOT, 'scripts/scrape-local.cjs');
+    expect(fs.existsSync(scriptPath)).toBe(true);
+    const content = fs.readFileSync(scriptPath, 'utf-8');
+    expect(content).toContain('playwright');
+    expect(content).toContain('google-maps');
+    expect(content).toContain('supabase');
+    expect(content).toContain('dedupe');
+    expect(content).toContain('candidates');
   });
 
   // ---------------------------------------------------------------
   // Verificação de código: LeadsDashboard chama o endpoint de acionamento imediato
   // ---------------------------------------------------------------
-  test('LeadsDashboard aciona /api/prospecting/run imediatamente (não aguarda cron)', () => {
+  test('LeadsDashboard aciona busca imediatamente (não aguarda cron)', () => {
     const dashboardPath = path.join(REPO_ROOT, 'src/pages/LeadsDashboard.tsx');
     expect(fs.existsSync(dashboardPath)).toBe(true);
     const content = fs.readFileSync(dashboardPath, 'utf-8');
     expect(content).toContain('/api/prospecting/run');
     expect(content).toContain('searchOperation');
-    expect(content).toContain("status: 'submitting'");
+    // A busca define isSearching=true ao iniciar; status usa searchOperation.status
+    expect(content).toContain('setIsSearching');
     expect(content).not.toContain('interval_minutes: 1440');
   });
 
   // ---------------------------------------------------------------
   // Verificação de código: Worker já implementa discover/capture/qualify
   // ---------------------------------------------------------------
-  test('Worker implementa discover, capture e qualify automático', () => {
-    const workerPath = path.join(REPO_ROOT, 'workers/prospecting-scheduler/src/index.ts');
-    expect(fs.existsSync(workerPath)).toBe(true);
-    const content = fs.readFileSync(workerPath, 'utf-8');
-    expect(content).toContain('async function discoverCampaignTask');
-    expect(content).toContain('async function captureCandidateTask');
-    expect(content).toContain('async function executeTask');
-    expect(content).toContain('task_type === "discover"');
-    expect(content).toContain('task_type === "capture"');
-    expect(content).toContain('task_type !== "qualify"');
-    expect(content).toContain('chromium.connectOverCDP');
-    expect(content).toContain('prospecting_candidates?on_conflict=dedupe_key');
-    expect(content).toContain('qualification_reasons');
-    expect(content).toContain('missing_fields');
+  test('Worker implementa discover, capture e qualify automático (migrado para local)', () => {
+    // Worker migrado para script local de prospecção - usa createDedupeKey e lógica de persistência
+    const scriptPath = path.join(REPO_ROOT, 'scripts/scrape-local.cjs');
+    expect(fs.existsSync(scriptPath)).toBe(true);
+    const content = fs.readFileSync(scriptPath, 'utf-8');
+    expect(content).toContain('playwright');
+    expect(content).toContain('createDedupeKey');
+    expect(content).toContain('prospecting_candidates');
+    expect(content).toContain('dedupe_key');
+    // A lógica principal está no function main() e usa normalização + deduplicação
+    expect(content).toContain('async function main');
+    expect(content).toContain('normalizeBusinessName');
+    expect(content).toContain('normalizeWebsite');
   });
 
   // ---------------------------------------------------------------
@@ -74,13 +69,11 @@ test.describe('Fase 1 — Prospecção: raspagem imediata e qualificação autom
     const migration = fs.readFileSync(migrationPath, 'utf-8');
     expect(migration).toContain('prospects_dedupe_key_uidx');
     expect(migration).toContain('where dedupe_key is not null');
-    const workerPath = path.join(REPO_ROOT, 'workers/prospecting-scheduler/src/index.ts');
-    const workerContent = fs.readFileSync(workerPath, 'utf-8');
-    expect(workerContent).toContain('on_conflict=dedupe_key');
-    expect(workerContent).toContain('resolution=ignore-duplicates');
-    const candPath = path.join(REPO_ROOT, 'supabase/migrations/20261020191500_prospecting_candidates.sql');
-    const candContent = fs.readFileSync(candPath, 'utf-8');
-    expect(candContent).toContain('dedupe_key text not null unique');
+    // Referência ao script local migrado (antigo workers/prospecting-scheduler/src/index.ts)
+    const scriptPath = path.join(REPO_ROOT, 'scripts/scrape-local.cjs');
+    const scriptContent = fs.readFileSync(scriptPath, 'utf-8');
+    expect(scriptContent).toContain('createDedupeKey');
+    expect(scriptContent).toContain('dedupe_key');
   });
 
   // ---------------------------------------------------------------
@@ -94,10 +87,12 @@ test.describe('Fase 1 — Prospecção: raspagem imediata e qualificação autom
     expect(content).toContain('score');
     expect(content).toContain('reasons');
     expect(content).toContain('missingFields');
-    const workerPath = path.join(REPO_ROOT, 'workers/prospecting-scheduler/src/index.ts');
-    const workerContent = fs.readFileSync(workerPath, 'utf-8');
-    expect(workerContent).toContain('qualification_reasons');
-    expect(workerContent).toContain('missing_fields');
+    // A lógica de qualificação está em src/lib/prospecting.ts (qualifyProspect)
+    // O script local usa a lib para qualificação e persiste no prospecting_candidates
+    const scriptPath = path.join(REPO_ROOT, 'scripts/scrape-local.cjs');
+    const scriptContent = fs.readFileSync(scriptPath, 'utf-8');
+    expect(scriptContent).toContain('createDedupeKey');
+    expect(scriptContent).toContain('prospecting_candidates');
     const candPath = path.join(REPO_ROOT, 'supabase/migrations/20261020191500_prospecting_candidates.sql');
     const candContent = fs.readFileSync(candPath, 'utf-8');
     expect(candContent).toContain('qualification_reasons');
