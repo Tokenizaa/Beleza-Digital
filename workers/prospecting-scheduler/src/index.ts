@@ -474,7 +474,13 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const websiteNormalized = normalizeWebsite(website);
     const phoneNormalized = normalizePhone(phone, country);
     const sourceUrl = normalizeWebsite(first(candidate, ["sourceUrl", "source_url", "sourceLink"]));
-    const dedupeKey = await createDedupeKey(candidate);
+    const identityCandidate = {
+      ...candidate,
+      city: first(candidate, ["city", "locality"]) ?? region.split(/\s+-\s+/)[0],
+      region: first(candidate, ["region", "state", "province"]) ?? region.split(/\s+-\s+/)[1] ?? region,
+      countryCode: first(candidate, ["countryCode", "country_code"]) ?? countryCode,
+    };
+    const dedupeKey = await createDedupeKey(identityCandidate);
     if (!businessName || !dedupeKey) { rejected++; continue; }
     const result = qualify({
       business_name: businessName, category,
@@ -503,8 +509,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         normalized_phone: phoneNormalized,
         email: typeof first(candidate, ["email", "emailAddress", "email_address"]) === "string" ? String(first(candidate, ["email", "emailAddress", "email_address"])).slice(0, 320) : null,
         address: typeof first(candidate, ["address", "formattedAddress", "formatted_address"]) === "string" ? String(first(candidate, ["address", "formattedAddress", "formatted_address"])).slice(0, 1000) : null,
-        city: String(first(candidate, ["city", "locality"]) ?? "").slice(0, 160) || null,
-        region: String(first(candidate, ["region", "state", "province"]) ?? region ?? "").slice(0, 160) || null,
+        city: String(first(candidate, ["city", "locality"]) ?? region.split(/\s+-\s+/)[0] ?? "").slice(0, 160) || null,
+        region: String(first(candidate, ["region", "state", "province"]) ?? region.split(/\s+-\s+/)[1] ?? region ?? "").slice(0, 160) || null,
         country_code: country,
         description: typeof first(candidate, ["description", "businessDescription"]) === "string" ? String(first(candidate, ["description", "businessDescription"])).slice(0, 3000) : null,
         source_url: sourceUrl,
@@ -514,7 +520,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         status: result.score >= 50 ? "qualified" : "discovered",
         raw_evidence: {
           rating: typeof first(candidate, ["rating", "stars"]) === "number" ? first(candidate, ["rating", "stars"]) : null,
-          reviewsCount: Number.isFinite(Number(first(candidate, ["reviews", "reviewCount", "reviewsCount"]))) ? Number(first(candidate, ["reviews", "reviewCount", "reviewsCount"])) : null,
+          reviewsCount: first(candidate, ["reviews", "reviewCount", "reviewsCount"]) == null ? null : (Number(String(first(candidate, ["reviews", "reviewCount", "reviewsCount"])).replace(/[^0-9]/g, "")) || null),
           providerRecordId,
           providerRequestId: null,
           observedAt: new Date().toISOString(),
