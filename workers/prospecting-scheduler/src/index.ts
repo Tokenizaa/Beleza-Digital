@@ -605,6 +605,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       }
     }
   } catch (error) {
+      await browser?.close().catch(() => {});
       lastError = error instanceof Error ? error : new Error(String(error));
       const errorMessage = lastError.message ?? "";
 
@@ -617,8 +618,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
                           errorMessage.includes('throttl');
 
       if (!isRateLimit || retryAttempt === MAX_RETRIES) {
-        // Não é retryável ou excedeu tentativas - lançar erro para marcar como bloqueado
-        throw lastError;
+        // Interrompe o retry; o estado será persistido como bloqueado abaixo.
+        break;
       }
 
       // Extrair Retry-After do erro se disponível
@@ -641,6 +642,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
 
       await new Promise(resolve => setTimeout(resolve, sleepDelay));
     }
+    await browser?.close().catch(() => {});
   }
 
   // Se após todas as tentativas ainda houver erro, marcar como bloqueado
