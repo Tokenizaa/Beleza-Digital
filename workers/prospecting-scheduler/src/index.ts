@@ -680,7 +680,10 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const country = String(first(candidate, ["countryCode", "country_code"]) ?? countryCode).slice(0, 3);
     const websiteNormalized = normalizeWebsite(website);
     const phoneNormalized = normalizePhone(phone, country);
-    const sourceUrl = normalizeWebsite(first(candidate, ["sourceUrl", "source_url", "sourceLink"]));
+    const sourceUrlValue = first(candidate, ["sourceUrl", "source_url", "sourceLink"]);
+    const sourceUrl = typeof sourceUrlValue === "string" && /^https?:\/\//i.test(sourceUrlValue.trim())
+      ? sourceUrlValue.trim().slice(0, 2000)
+      : null;
     const identityCandidate = {
       ...candidate,
       city: first(candidate, ["city", "locality"]) ?? region.split(/\s+-\s+/)[0],
