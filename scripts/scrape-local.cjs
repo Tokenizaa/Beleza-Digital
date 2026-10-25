@@ -54,7 +54,19 @@ function normalizeWebsite(value) {
     url.hash = '';
     url.search = '';
     url.pathname = url.pathname.replace(/\/+$/, '');
-    return url.toString().replace(/\/$/, '');
+    return url.hostname + (url.pathname === '/' ? '' : url.pathname);
+  } catch {
+    return null;
+  }
+}
+
+function safeWebsiteUrl(value) {
+  if (!value || !String(value).trim()) return null;
+  try {
+    const raw = String(value).trim();
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
+    return url.toString();
   } catch {
     return null;
   }
@@ -157,7 +169,7 @@ function buildCandidate(place, query, collectedAt) {
     category: normalizeText(place.category) || null,
     address: normalizeText(place.address) || null,
     phone: normalizeText(place.phone) || null,
-    websiteUrl: normalizeWebsite(place.websiteUrl),
+    websiteUrl: safeWebsiteUrl(place.websiteUrl),
     city: normalizeText(place.city) || null,
     region: normalizeText(place.region) || null,
     countryCode: normalizeText(place.countryCode || 'BR').toUpperCase(),
@@ -210,7 +222,7 @@ function buildCandidate(place, query, collectedAt) {
     business_name: normalized.businessName,
     category: normalized.category,
     website_url: normalized.websiteUrl,
-    normalized_website: normalized.websiteUrl,
+    normalized_website: normalizeWebsite(normalized.websiteUrl),
     phone: normalized.phone,
     normalized_phone: normalizePhone(normalized.phone, normalized.countryCode),
     address: normalized.address,
@@ -484,6 +496,7 @@ module.exports = {
   normalizeText,
   normalizeBusinessName,
   normalizeWebsite,
+  safeWebsiteUrl,
   normalizePhone,
   parseRatingAndReviewCount,
   stableDedupeKey,
