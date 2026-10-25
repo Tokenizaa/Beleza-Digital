@@ -405,6 +405,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
       setSearchExecution((prev) => ({
         ...prev,
+        executionId: responseBody.executionId || prev?.executionId || executionId,
         status: initialStatus,
         message: initialMessage,
         error: initialDetail ? initialDetail : null,
@@ -927,10 +928,12 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                       <span className="font-bold text-neutral-200">
                         {searchOperation.status === 'completed'
                           ? 'Concluída'
+                          : searchOperation.status === 'blocked'
+                          ? 'Bloqueada'
                           : searchOperation.status === 'failed'
-                          ? searchOperation.error?.includes('Bloqueado')
-                            ? 'Bloqueado - razões abaixo'
-                            : 'Falha'
+                          ? 'Falha'
+                          : searchOperation.status === 'completed_partial'
+                          ? 'Concluída parcialmente'
                           : 'Processando…'}
                       </span>
                     </div>
