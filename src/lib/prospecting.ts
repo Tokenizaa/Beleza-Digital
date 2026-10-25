@@ -157,7 +157,7 @@ export function qualifyProspect(input: ProspectQualificationInput): ProspectQual
     inspectionState,
     nextAction,
     collectedAt,
-  } as ProspectQualificationInput & { score: number; reasons: string[]; missingFields: string[]; evidence: Record<string, unknown>; inspectionState: string; nextAction: string; collectedAt: string };
+  };
 }
 
 /** Fail closed: a public phone number alone is not consent to receive WhatsApp marketing. */
