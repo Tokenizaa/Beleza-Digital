@@ -101,3 +101,13 @@ test('limita a quantidade configurada de resultados', () => {
   assert.equal(scraper.boundedInteger('0', 20, 1, 100), 1);
   assert.equal(scraper.boundedInteger('invalid', 20, 1, 100), 20);
 });
+
+test('aceita os parâmetros CLI usados pela rota local existente', () => {
+  assert.deepEqual(scraper.parseCliArgs(['--segment', 'Barbearia', '--city', 'Porto Alegre', '--region', 'RS', '--limit', '12', '--countryCode', 'BR']), {
+    segment: 'Barbearia',
+    city: 'Porto Alegre',
+    region: 'RS',
+    limit: '12',
+    countryCode: 'BR',
+  });
+});
