@@ -26,6 +26,8 @@ export function ProspectingConsole() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showScrapeForm, setShowScrapeForm] = useState(false);
+  const [scrapeForm, setScrapeForm] = useState({ segment: "salão de beleza e barbearia", region: "", countryCode: "BR", limit: "10" });
   const [siteProjectId, setSiteProjectId] = useState("");
   const [form, setForm] = useState({ name: "", segment: "salão de beleza e barbearia", region: "", countryCode: "BR", dailyLimit: "100" });
 
@@ -87,6 +89,29 @@ export function ProspectingConsole() {
     await refresh();
   }
 
+  async function runScrape(event: FormEvent) {
+    event.preventDefault();
+    if (!supabase) return;
+    if (!scrapeForm.segment.trim() || !scrapeForm.region.trim()) { setError("Informe o segmento e a região da raspagem."); return; }
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) { setError("Sua sessão expirou. Entre novamente."); return; }
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch("/api/prospecting/run", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + token },
+        body: JSON.stringify({ segment: scrapeForm.segment.trim(), region: scrapeForm.region.trim(), countryCode: scrapeForm.countryCode, limit: Math.max(1, Math.min(100, Number(scrapeForm.limit) || 10)), createCampaign: false, executionId: crypto.randomUUID() }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? result.detail ?? "Não foi possível iniciar a raspagem.");
+      setNotice(result.message ?? "Busca enviada. Atualize a lista para conferir os registros persistidos.");
+      setShowScrapeForm(false);
+      await refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Falha ao iniciar a raspagem."); }
+    finally { setBusy(false); }
+  }
+
   async function toggleCampaign(campaign: Campaign) {
     if (!supabase) return;
     setBusy(true); setError(""); setNotice("");
@@ -125,10 +150,17 @@ export function ProspectingConsole() {
   return <section className="mt-8 space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><p className="text-xs uppercase tracking-widest text-amber-300">Automação comercial</p><h2 className="mt-1 text-xl font-semibold">Prospecção e demonstrações</h2><p className="mt-1 text-sm text-neutral-400">Campanhas, candidatos descobertos e eventos persistidos no banco.</p></div>
-      <div className="flex gap-2"><button onClick={() => void refresh()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} /> Atualizar</button><button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-neutral-950"><Plus size={15} /> Nova campanha</button></div>
+      <div className="flex flex-wrap gap-2"><button onClick={() => void refresh()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-sm disabled:opacity-50"><RefreshCw size={15} /> Atualizar</button><button onClick={() => setShowScrapeForm((v) => !v)} className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-3 py-2 text-sm font-semibold text-neutral-950"><Play size={15} /> Raspar agora</button><button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-sm"><Plus size={15} /> Nova campanha</button></div>
     </div>
     {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-red-900 bg-red-950/30 p-3 text-sm text-red-200"><CircleAlert size={17} className="mt-0.5 shrink-0" />{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-900 bg-emerald-950/30 p-3 text-sm text-emerald-200">{notice}</div>}
+    {showScrapeForm && <form onSubmit={runScrape} className="grid gap-3 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 sm:grid-cols-2">
+      <label className="text-xs text-neutral-400">Segmento<input required value={scrapeForm.segment} onChange={(e) => setScrapeForm({ ...scrapeForm, segment: e.target.value })} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100" /></label>
+      <label className="text-xs text-neutral-400">Cidade / região<input required value={scrapeForm.region} onChange={(e) => setScrapeForm({ ...scrapeForm, region: e.target.value })} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100" placeholder="Porto Alegre, RS" /></label>
+      <label className="text-xs text-neutral-400">País<select value={scrapeForm.countryCode} onChange={(e) => setScrapeForm({ ...scrapeForm, countryCode: e.target.value })} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm"><option value="BR">Brasil</option><option value="PT">Portugal</option><option value="US">Estados Unidos</option></select></label>
+      <label className="text-xs text-neutral-400">Limite de estabelecimentos<input type="number" min="1" max="100" value={scrapeForm.limit} onChange={(e) => setScrapeForm({ ...scrapeForm, limit: e.target.value })} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100" /></label>
+      <div className="flex items-center justify-end gap-2 sm:col-span-2"><button type="button" onClick={() => setShowScrapeForm(false)} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm">Cancelar</button><button disabled={busy} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-50">{busy ? "Iniciando..." : "Iniciar raspagem"}</button></div>
+    </form>}
     {showForm && <form onSubmit={createCampaign} className="grid gap-3 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 sm:grid-cols-2">
       <label className="text-xs text-neutral-400">Nome da campanha<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100" placeholder="Ex.: Barbearias Porto Alegre" /></label>
       <label className="text-xs text-neutral-400">Segmento<input required value={form.segment} onChange={(e) => setForm({ ...form, segment: e.target.value })} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm text-neutral-100" /></label>
