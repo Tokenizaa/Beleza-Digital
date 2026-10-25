@@ -3,6 +3,7 @@ name: Prospecting Phase 1 validation
 on:
   push:
     branches:
+      - main
       - feat/salon-onboarding-venopag
   workflow_dispatch:
 
