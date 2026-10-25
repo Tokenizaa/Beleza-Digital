@@ -223,7 +223,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     status: SearchStatus;
     startedAt: string;            // Quando a busca foi iniciada
     finishedAt?: string;          // Quando terminou (se terminou)
-    result?: SearchOperationResult;
+    result?: SearchOperationResult | null;
     error?: string;
     blockedReason?: string;
   }
@@ -243,7 +243,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   });
 
   // Controle de polling e execução
-  const [searchExecution, setSearchExecution] = useState<SearchExecution | null>(null);
+  const [searchExecution, setSearchExecution] = useState<SearchExecution>({ executionId: '', status: 'idle', startedAt: '', result: null });
   const executionRef = useRef<number | null>(null);
 
   const getSessionToken = async (): Promise<string | null> => {
@@ -417,7 +417,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       );
 
       // Se o worker reportou bloqueio imediato, marcar como bloqueado
-      if ((responseBody as { blocked?: number }).blocked > 0 || responseBody.status === 'blocked') {
+      if (((responseBody as { blocked?: number }).blocked ?? 0) > 0 || responseBody.status === 'blocked') {
         setSearchExecution((prev) => ({
           ...prev,
           status: 'blocked' as const,
