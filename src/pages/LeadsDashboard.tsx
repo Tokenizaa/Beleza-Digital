@@ -409,7 +409,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         executionId: responseBody.executionId || prev?.executionId || executionId,
         status: initialStatus,
         message: initialMessage,
-        error: initialDetail ? initialDetail : null,
+        error: initialDetail || undefined,
       }));
 
       setSearchSuccessMessage(
