@@ -421,7 +421,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         const name = card.getAttribute("aria-label") || card.textContent?.trim() || "";
         const sourceUrl = (card as HTMLAnchorElement).href;
         if (!name || !sourceUrl) return;
-        const container = card.closest('[role="article"]') || card.closest('.Nv2PK') || card.parentElement?.parentElement || card.parentElement;
+        const container = card.closest('[role="article"]') || card.closest('.Nv2PK') || card.parentElement?.parentElement || card.parentElement || card;
         const parentText = (container as HTMLElement | null)?.innerText || (card as HTMLElement).innerText || "";
         const lines = parentText.split("\n").map((line) => line.trim()).filter(Boolean);
         const ratingMatch = parentText.match(/(\d[.,]\d)\s*\(([\d.,]+)\)/);
@@ -536,7 +536,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         status: result.score >= 50 ? "qualified" : "discovered",
         raw_evidence: {
           rating: typeof first(candidate, ["rating", "stars"]) === "number" ? first(candidate, ["rating", "stars"]) : null,
-          reviewsCount: parseCount(first(candidate, ["reviews", "reviewCount", "reviewsCount"]),),
+          reviewsCount: parseCount(first(candidate, ["reviews", "reviewCount", "reviewsCount"])),
           providerRecordId,
           providerRequestId: null,
           observedAt: new Date().toISOString(),
