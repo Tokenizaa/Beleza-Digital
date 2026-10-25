@@ -45,6 +45,7 @@ export function PlatformAdminDashboard() {
   return <UnifiedAdminDashboard
     initialSection="rede-saloes"
     preAuthenticated
+    platformAdmin
     onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign('/'); }}
   />;
 }
