@@ -90,6 +90,7 @@ export function PlanSelectionPage({
     try {
       // Get auth token from current session
       const { supabase } = await import("../lib/supabase");
+      if (!supabase) throw new Error("Supabase não está configurado neste ambiente.");
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error("Sessão expirada. Faça login novamente.");
 
