@@ -485,8 +485,8 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             </button>
           </div>
 
-{userRole !== 'super_admin' && (
-          {/* ESTABLISHMENT SELECTOR DROPDOWN */}
+{/* ESTABLISHMENT SELECTOR DROPDOWN */}
+          {userRole !== 'super_admin' && (
           <div className="relative">
             <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
               Salão Ativo
@@ -551,8 +551,8 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           {/* MÓDULOS E SUBMENUS                                   */}
           {/* ---------------------------------------------------- */}
           <nav className="space-y-5">
-{userRole !== 'super_admin' && (
-            {/* MÓDULO 1: GESTÃO DO SALÃO */}
+{/* MÓDULO 1: GESTÃO DO SALÃO */}
+            {userRole !== 'super_admin' && (
             <div className="space-y-1">
               <button
                 type="button"
