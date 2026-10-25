@@ -23,8 +23,18 @@ async function run() {
     phone: "(51) 99999-1234",
     source_url: "https://exemplo.com/sobre",
   });
-  assert(result.score === 75, "pontua somente evidências presentes");
-  assert(result.missingFields.includes("email") && result.reasons.length === 8, "explica campos ausentes");
+  assert(result.score === 45, "score de oportunidade considera nome, categoria, telefone e site identificado");
+  assert(result.missingFields.includes("email") && result.completenessScore < 50, "completude é separada da oportunidade");
+  assert(result.reasons.some((reason) => reason.includes("site público identificado")), "explica os sinais comerciais usados");
+
+  const enriched = qualify({
+    business_name: "São Paulo Barbearia", category: "Barbearia", address: "Rua Rodesia, 230",
+    phone: "(11) 93759-4342", source_url: "https://www.google.com/maps/place/example",
+    rating: 4.7, reviewsCount: "213", images: ["https://lh3.googleusercontent.com/photo"],
+    openingHours: ["Segunda 09:00-18:00"], latitude: -23.55, longitude: -46.69,
+  });
+  assert(enriched.score > result.score, "reputação, avaliações, fotos e localização aumentam o score de oportunidade");
+  assert(enriched.completenessScore > result.completenessScore, "dados adicionais aumentam a completude");
 
   // Paridade da chave de deduplicação entre o worker (candidatos) e a lib (prospects).
   const workerKey = await createDedupeKey({ name: "Salão Teste", city: "Porto Alegre", region: "RS" });
