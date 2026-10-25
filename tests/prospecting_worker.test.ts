@@ -1,4 +1,4 @@
-import { normalizeName, normalizePhone, normalizeWebsite, qualify, createDedupeKey } from "../workers/prospecting-scheduler/src/index";
+import { normalizeName, normalizePhone, normalizeWebsite, qualify, createDedupeKey, scheduleDueCampaigns } from "../workers/prospecting-scheduler/src/index";
 import { createProspectDedupeKey } from "../src/lib/prospecting";
 
 let passed = 0;
@@ -35,6 +35,11 @@ async function run() {
     "dedupe name-location é estável",
   );
   assert(await createDedupeKey({ name: "Sem localização" }) === null, "worker não inventa chave com dados insuficientes");
+  const campaignSchedule = await scheduleDueCampaigns({} as never);
+  assert(
+    campaignSchedule.campaignsQueued === 0 && campaignSchedule.mode === "commercial_campaigns_do_not_trigger_discovery",
+    "campanhas comerciais não disparam raspagem nem consomem Browser Run",
+  );
 
   console.log(`RESULTADO WORKER: ${passed} passou / ${failed} falhou`);
   if (failed) process.exit(1);
