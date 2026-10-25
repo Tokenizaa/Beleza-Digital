@@ -412,28 +412,9 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     step = "browser_launched";
     const page = await browser.newPage();
 
-    // Diagnóstico passo a passo para isolar onde o navegador falha
-
-    // Passo 1: página simples para validar o navegador
-    step = "nav_example";
-
-    // Diagnóstico passo a passo para isolar onde o navegador falha
-
-    // Passo 1: página simples para validar o navegador
-    step = "nav_example";
-    const testUrl = "https://example.com";
-    await page.goto(testUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
-    const testTitle = await page.title();
-
-    // Passo 2: página inicial do Google
-    step = "nav_google_home";
-    const googleHomeUrl = "https://www.google.com";
-    await page.goto(googleHomeUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-
-    // Passo 3: Google Maps - pode ser bloqueado pelo Cloudflare Browser Run
     step = "nav_google_maps";
     const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
-    await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 30000 });
+    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForSelector('[role="feed"]', { timeout: 15000 });
     const listings = await page.evaluate(() => {
       const output: Array<Record<string, unknown>> = [];
@@ -599,32 +580,12 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     if (storedRows.length) inserted++;
     else duplicates++;
 
-    const candidateLookup = await db(env, `prospecting_candidates?dedupe_key=eq.${encodeURIComponent(dedupeKey)}&select=id&limit=1`);
-    if (!candidateLookup.ok) throw new Error(`candidate_lookup_http_${candidateLookup.status}`);
-    const candidateRows = await candidateLookup.json() as Array<{ id: string }>;
-    if (candidateRows.length) {
-      const capture = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
-        method: "POST",
-        headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
-        body: JSON.stringify({
-          campaign_id: campaign.campaignId ?? null,
-          task_type: "capture",
-          idempotency_key: `candidate:${dedupeKey}:capture`,
-          payload: {
-            candidateId: candidateRows[0].id,
-            dedupeKey,
-            minimumScore: typeof campaign.qualificationRules === "object" && campaign.qualificationRules !== null
-              ? (campaign.qualificationRules as Record<string, unknown>).minimum_score ?? 50 : 50,
-          },
-        }),
-      });
-      if (!capture.ok) throw new Error(`candidate_capture_enqueue_http_${capture.status}`);
-    }
+
   }
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, qualified, provider: "playwright-browser-run", searchQuery },
+    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, qualified, provider: "google-maps-playwright", searchQuery },
   });
   return "succeeded";
 }
