@@ -431,8 +431,6 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   let lastError: Error | null = null;
 
   for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
-    try {
-
   // Build search query for Google Maps / local business directories
   const segment = String(campaign.segment ?? "barbearia e salão");
   const region = String(campaign.region ?? "São Paulo - SP");
