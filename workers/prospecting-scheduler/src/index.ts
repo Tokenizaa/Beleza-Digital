@@ -604,6 +604,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         });
       }
     }
+    await browser?.close().catch(() => {});
   } catch (error) {
       await browser?.close().catch(() => {});
       lastError = error instanceof Error ? error : new Error(String(error));
