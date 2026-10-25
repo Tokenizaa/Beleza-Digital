@@ -109,7 +109,7 @@ function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
-  if (!env.PROSPECTING_BROWSER?.trim()) return "PROSPECTING_BROWSER ausente";
+  if (!env.PROSPECTING_BROWSER) return "PROSPECTING_BROWSER ausente";
   return null;
 }
 
@@ -340,9 +340,10 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
   const countResponse = campaign.campaignId
     ? await db(env, `prospecting_candidates?campaign_id=eq.${encodeURIComponent(String(campaign.campaignId))}&created_at=gte.${encodeURIComponent(dayStart)}&select=id&limit=1`, {
-    headers: { prefer: "count=exact" },
-  });
-  if (!countResponse.ok) throw new Error(`candidate_daily_count_http_${countResponse.status}`);
+        headers: { prefer: "count=exact" },
+      })
+    : null;
+  if (countResponse && !countResponse.ok) throw new Error(`candidate_daily_count_http_${countResponse.status}`);
   const range = countResponse?.headers.get("content-range") ?? "";
   const countMatch = range.match(/\/(\d+|\*)$/);
   const discoveredToday = countMatch && countMatch[1] !== "*" ? Number(countMatch[1]) : 0;
