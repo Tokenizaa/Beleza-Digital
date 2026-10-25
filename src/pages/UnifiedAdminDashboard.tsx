@@ -110,6 +110,14 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   );
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // O super administrador pertence à plataforma, não a um salão.
+  // Impede também que uma URL/estado antigo o deixe no módulo de gestão local.
+  useEffect(() => {
+    if (userRole === 'super_admin' && activeSection.startsWith('salao-')) {
+      setActiveSection('rede-saloes');
+    }
+  }, [userRole, activeSection]);
+
   // Template Showcase preview state
   const [selectedShowcaseTemplate, setSelectedShowcaseTemplate] = useState<SiteVariationId>('ouro-classico');
 
@@ -477,6 +485,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             </button>
           </div>
 
+{userRole !== 'super_admin' && (
           {/* ESTABLISHMENT SELECTOR DROPDOWN */}
           <div className="relative">
             <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
@@ -536,10 +545,13 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             )}
           </div>
 
+          )}
+
           {/* ---------------------------------------------------- */}
           {/* MÓDULOS E SUBMENUS                                   */}
           {/* ---------------------------------------------------- */}
           <nav className="space-y-5">
+{userRole !== 'super_admin' && (
             {/* MÓDULO 1: GESTÃO DO SALÃO */}
             <div className="space-y-1">
               <button
@@ -592,6 +604,8 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                 </div>
               )}
             </div>
+
+            )}
 
             {/* MÓDULO 2: PROSPECÇÃO & RASPAGEM (CRM ALVANTO) */}
             <div className="space-y-1">
