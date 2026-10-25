@@ -399,7 +399,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       }
 
       // Estado inicial recebido do Worker
-      const initialStatus = responseBody.status === 'ok' || !responseBody.status ? 'running' : (responseBody.status === 'blocked' || responseBody.status === 'retryable' || responseBody.status === 'failed' ? responseBody.status : 'blocked');
+      const initialStatus: SearchStatus = ['ok', 'running', 'pending'].includes(String(responseBody.status ?? 'ok')) ? 'running' : (responseBody.status === 'blocked' || responseBody.status === 'retryable' || responseBody.status === 'failed' ? responseBody.status : 'blocked');
       const initialMessage = responseBody.message || 'Busca iniciada. Aguardando processamento do Worker…';
       const initialDetail = responseBody.detail || responseBody.error;
 
@@ -1212,12 +1212,12 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
                               {/* Badges */}
                               <div className="flex flex-wrap items-center gap-1.5">
-                                {company.digitalDiagnosis === 'site_amador' && (
+                                {(company.digitalDiagnosis === 'site_amador' || company.digitalDiagnosis === 'site_identificado') && (
                                   <span className="text-[9px] font-semibold bg-[#252c3a] text-neutral-300 px-2 py-0.5 rounded">
-                                    Site amador
+                                    {company.digitalDiagnosis === 'site_identificado' ? 'Site identificado — não avaliado' : 'Site amador'}
                                   </span>
                                 )}
-                                {company.digitalDiagnosis === 'sem_site' && (
+                                {(company.digitalDiagnosis === 'sem_site' || company.digitalDiagnosis === 'nao_identificado') && (
                                   <span className="text-[9px] font-semibold bg-amber-950/60 text-amber-300 px-2 py-0.5 rounded">
                                     Sem site
                                   </span>
@@ -1229,7 +1229,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                                 )}
                                 <span className="text-[9px] text-neutral-400 flex items-center gap-0.5">
                                   <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
-                                  {company.rating.toFixed(1)} · {company.reviewsCount}
+                                  {company.rating === null ? 'Sem avaliação' : company.rating.toFixed(1)} · {company.reviewsCount === null ? 'contagem indisponível' : company.reviewsCount}
                                 </span>
                               </div>
 
@@ -1409,7 +1409,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                   <span className="text-[10px] text-neutral-400 font-bold block mb-1">AVALIAÇÕES GOOGLE</span>
                   <p className="text-neutral-200 flex items-center gap-1.5">
                     <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
-                    {selectedCompany.rating.toFixed(1)} ({selectedCompany.reviewsCount} avaliações)
+                    {selectedCompany.rating === null ? 'Sem avaliação capturada' : selectedCompany.rating.toFixed(1)} ({selectedCompany.reviewsCount === null ? 'contagem indisponível' : `${selectedCompany.reviewsCount} avaliações`})
                   </p>
                 </div>
                 <div>
