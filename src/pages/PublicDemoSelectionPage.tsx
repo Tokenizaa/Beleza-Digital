@@ -19,8 +19,8 @@ type DemoData = { status: string; expiresAt: string; selectedVersionId: string |
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
-function contentText(version: DemoVersion, keys: string[]) {
-  const content = version.generated_content ?? {};
+function contentText(version: DemoVersion | null | undefined, keys: string[]) {
+  const content = version?.generated_content ?? {};
   for (const key of keys) {
     const value = text(content[key]);
     if (value) return value;
