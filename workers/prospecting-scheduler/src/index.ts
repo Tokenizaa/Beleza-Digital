@@ -376,6 +376,15 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     return "succeeded";
   }
 
+  // Add retry with exponential backoff and jitter to handle 429 rate limit errors.
+  const MAX_RETRIES = 3;
+  const BASE_DELAY_MS = 2_000; // 2s base delay
+  const MAX_DELAY_MS = 60_000; // 60s max delay
+  let lastError: Error | null = null;
+
+  for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
+    try {
+
   // Build search query for Google Maps / local business directories
   const segment = String(campaign.segment ?? "barbearia e salão");
   const region = String(campaign.region ?? "São Paulo - SP");
@@ -458,25 +467,53 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     });
     scrapedResults = listings.slice(0, Math.min(limit, 100));
   } catch (error) {
-    const cloudflareError = error instanceof Error ? error : new Error(String(error));
-    const message = cloudflareError.message ?? "browser_run_failed";
-    // Extrair detalhes adicionais do Cloudflare Browser Run se disponíveis
-    const errorDetails: Record<string, unknown> = {};
-    const errorRecord = error && typeof error === "object" ? error as Record<string, unknown> : {};
-    if ("code" in errorRecord) errorDetails.code = errorRecord.code;
-    if ("status" in errorRecord) errorDetails.status = errorRecord.status;
-    if ("name" in errorRecord) errorDetails.name = errorRecord.name;
-    const extraInfo = Object.keys(errorDetails).length
-      ? ` | details: ${JSON.stringify(errorDetails)}`
-      : "";
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const errorMessage = lastError.message ?? "";
+
+      // Verificar se é um erro de taxa limite (429) que merece retry
+      const isRateLimit = errorMessage.includes('429') ||
+                          errorMessage.includes('rate limit') ||
+                          errorMessage.includes('over capacity') ||
+                          errorMessage.includes('PROSPECTING_BROWSER') ||
+                          errorMessage.includes('browser_run') ||
+                          errorMessage.includes('throttl');
+
+      if (!isRateLimit || retryAttempt === MAX_RETRIES) {
+        // Não é retryável ou excedeu tentativas - lançar erro para marcar como bloqueado
+        throw lastError;
+      }
+
+      // Extrair Retry-After do erro se disponível
+      let retryAfterSeconds: number | null = null;
+      const retryAfterMatch = errorMessage.match(/retry after (\d+)/i);
+      if (retryAfterMatch) {
+        retryAfterSeconds = Number(retryAfterMatch[1]);
+      }
+
+      // Calcular delay com backoff exponencial e jitter
+      const baseDelay = Math.min(BASE_DELAY_MS * (2 ** retryAttempt), MAX_DELAY_MS);
+      const delay = retryAfterSeconds
+        ? Math.min(retryAfterSeconds * 1000, BASE_DELAY_MS * (2 ** retryAttempt))
+        : baseDelay;
+      const jitter = Math.random() * 1000; // até 1s de jitter
+      const sleepDelay = delay + jitter;
+
+      // Log e aguardar antes da próxima tentativa
+      console.info(`[discoverCampaignTask] Rate limit detected, retry attempt ${retryAttempt + 1}/${MAX_RETRIES}. Waiting ${sleepDelay}ms before retry. Error: ${errorMessage.slice(0, 200)}`);
+
+      await new Promise(resolve => setTimeout(resolve, sleepDelay));
+    }
+  }
+
+  // Se após todas as tentativas ainda houver erro, marcar como bloqueado
+  if (lastError) {
+    const errorMessage = lastError.message ?? "browser_scraping_failed";
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "browser_scraping_failed",
-      last_error: `Falha na coleta via Cloudflare Browser Run no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${message}${extraInfo}`,
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed", failedStep: step, bindingType, bindingIsString, bindingLength },
+      last_error: `Falha na coleta via Cloudflare Browser Run após ${MAX_RETRIES + 1} tentativas no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${errorMessage}`,
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed", failedStep: step, bindingType, bindingIsString, bindingLength, retryAttempts: MAX_RETRIES + 1 },
     });
     return "blocked";
-  } finally {
-    try { await browser?.close(); } catch { /* close is best-effort after failed navigation */ }
   }
 
   if (!scrapedResults.length) {
@@ -1067,18 +1104,41 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   return "succeeded";
 }
 
-async function scheduleDueCampaigns(_env: Env) {
+async function scheduleDueCampaigns(env: Env) {
   // Commercial campaigns classify and prioritize records already collected.
   // They must never initiate scraping: "Raspar agora" owns discovery independently.
-  // The previous implementation enqueued a discover task for every due active
-  // campaign every five minutes, coupling commercial configuration to scraping
-  // and repeatedly consuming Cloudflare Browser Run quota.
-  return {
-    campaignsScanned: 0,
-    campaignsQueued: 0,
-    campaignsSkipped: 0,
-    mode: "commercial_campaigns_do_not_trigger_discovery",
-  };
+  // The scheduler only advances the due_at timestamp - it does NOT enqueue discover tasks.
+  // Manual discovery is acionada via API /api/prospecting/run?createCampaign=false.
+  const now = new Date();
+  const due = await db(env, `prospecting_campaigns?status=eq.active&next_run_at=lte.${encodeURIComponent(now.toISOString())}&select=id,name,segment,region,country_code,source_provider,source_config,qualification_rules,schedule,daily_discovery_limit,next_run_at&order=next_run_at.asc&limit=20`);
+  if (!due.ok) throw new Error(`campaign_scan_http_${due.status}`);
+  const campaigns = await due.json() as Array<Record<string, unknown>>;
+  let advanced = 0;
+  let skipped = 0;
+
+  for (const campaign of campaigns) {
+    const campaignId = String(campaign.id ?? "");
+    const dueAt = String(campaign.next_run_at ?? "");
+    if (!campaignId || !dueAt) { skipped++; continue; }
+
+    // Apenas avançar o cronômetro da campanha - NÃO enfileirar tasks de descoberta.
+    // A descoberta manual é acionada via API /api/prospecting/run?createCampaign=false.
+    const schedule = campaign.schedule && typeof campaign.schedule === "object"
+      ? campaign.schedule as Record<string, unknown> : {};
+    const rawInterval = Number(schedule.interval_minutes ?? 1440);
+    const interval = Number.isFinite(rawInterval) ? Math.max(5, Math.min(Math.floor(rawInterval), 10080)) : 1440;
+    const nextRun = new Date(Math.max(now.getTime(), new Date(dueAt).getTime()) + interval * 60_000).toISOString();
+    const advance = await db(env, `prospecting_campaigns?id=eq.${encodeURIComponent(campaignId)}&status=eq.active&next_run_at=eq.${encodeURIComponent(dueAt)}&select=id`, {
+      method: "PATCH",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify({ last_run_at: now.toISOString(), next_run_at: nextRun, updated_at: now.toISOString() }),
+    });
+    if (!advance.ok) throw new Error(`campaign_advance_http_${advance.status}`);
+    const rows = await advance.json() as unknown[];
+    if (rows.length) advanced++;
+    else skipped++;
+  }
+  return { campaignsScanned: campaigns.length, campaignsAdvanced: advanced, campaignsSkipped: skipped };
 }
 
 async function processBatch(env: Env) {
