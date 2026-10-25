@@ -55,6 +55,8 @@ export interface LeadCompany {
   phone: string;
   whatsapp: string;
   websiteUrl: string;
+  demoUrl?: string;
+  demoExpiresAt?: string;
   instagramUrl?: string;
   rating: number | null;
   reviewsCount: number | null;
@@ -119,7 +121,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     setCrmLoading(true);
     setCrmError(null);
     const [candidateResult, stateResult] = await Promise.all([
-      supabase.from('prospecting_candidates').select('id,business_name,category,city,region,address,phone,normalized_phone,website_url,normalized_website,qualification_score,status,source_url,raw_evidence,created_at').order('created_at', { ascending: false }).limit(500),
+      supabase.from('prospecting_candidates').select('id,prospect_id,business_name,category,city,region,address,phone,normalized_phone,website_url,normalized_website,qualification_score,status,source_url,raw_evidence,created_at').order('created_at', { ascending: false }).limit(500),
       supabase.from('prospecting_crm_state').select('candidate_id,stage,selected_template,notes,follow_up_date'),
     ]);
     if (candidateResult.error) {
@@ -133,8 +135,30 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       return;
     }
     const states = new Map<string, any>((stateResult.data ?? []).map((item: any) => [String(item.candidate_id), item]));
+    const demoLinksByProspect = new Map<string, { url: string; expiresAt: string }>();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (accessToken) {
+      try {
+        const linksResponse = await fetch('/api/prospecting/demo-links', {
+          headers: { authorization: `Bearer ${accessToken}` },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (linksResponse.ok) {
+          const linksBody = await linksResponse.json() as { links?: Array<{ prospectId?: string | null; url?: string; expiresAt?: string }> };
+          for (const link of linksBody.links ?? []) {
+            if (link.prospectId && link.url && link.expiresAt) {
+              demoLinksByProspect.set(link.prospectId, { url: link.url, expiresAt: link.expiresAt });
+            }
+          }
+        }
+      } catch {
+        // Falha ao carregar links não deve transformar uma prévia local em demonstração publicada.
+      }
+    }
     const mapped: LeadCompany[] = (candidateResult.data ?? []).map((row: any) => {
       const state: any = states.get(row.id);
+      const demoLink = row.prospect_id ? demoLinksByProspect.get(String(row.prospect_id)) : undefined;
       const phone = String(row.normalized_phone || row.phone || '').replace(/\D/g, '');
       const websiteUrl = String(row.normalized_website || row.website_url || '');
       const category = String(row.category || 'Empresa local');
@@ -149,6 +173,8 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         phone,
         whatsapp: phone,
         websiteUrl,
+        demoUrl: demoLink?.url,
+        demoExpiresAt: demoLink?.expiresAt,
         rating: typeof row.raw_evidence?.rating === 'number' ? row.raw_evidence.rating : null,
         reviewsCount: typeof row.raw_evidence?.reviewsCount === 'number' ? row.raw_evidence.reviewsCount : null,
         digitalDiagnosis: websiteUrl ? 'site_identificado' : 'nao_identificado',
@@ -164,8 +190,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     setCrmLoading(false);
   };
 
-  useEffect(() => {
-  }, [activeTab]);
+  useEffect(() => { void loadCompanies(); }, []);
 
   const persistCrmState = async (companyId: string, patch: Record<string, unknown>): Promise<boolean> => {
     if (!supabase) {
@@ -524,8 +549,9 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
   // Generate proposal link for a lead
   const getProposalUrl = (company: LeadCompany) => {
+    if (company.demoUrl) return company.demoUrl;
     const templateKey = normalizeTemplateId(company.selectedTemplate);
-    return createShareablePreviewUrl({
+    return `${window.location.origin}${createShareablePreviewUrl({
       version: 1,
       businessName: company.name,
       category: company.category,
@@ -538,12 +564,12 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       templateName: TEMPLATE_NAMES[templateKey] || 'Modelo Oficial',
       projectVersion: 1,
       generatedAt: new Date().toISOString(),
-    });
+    })}`;
   };
 
   // WhatsApp click-to-chat with tailored copy
   const getWhatsAppProposalMessage = (company: LeadCompany) => {
-    const proposalLink = `${window.location.origin}${getProposalUrl(company)}`;
+    const proposalLink = getProposalUrl(company);
     const text = `Olá! Preparei uma proposta visual de site para ${company.name}, para vocês avaliarem o conceito e o visual antes de qualquer publicação:\n\n${proposalLink}\n\nO que achou da proposta?`;
     return `https://wa.me/${company.whatsapp}?text=${encodeURIComponent(text)}`;
   };
@@ -1511,17 +1537,17 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                     rel="noreferrer"
                     className="py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center justify-center gap-2 transition text-center"
                   >
-                    <Globe className="h-4 w-4" /> Abrir Site Gerado
+                    <Globe className="h-4 w-4" /> {selectedCompany.demoUrl ? 'Abrir demonstração publicada' : 'Abrir prévia local'}
                   </a>
                 </div>
 
                 <div className="p-3 bg-[#171b23] rounded-xl border border-[#202530] flex items-center justify-between text-xs">
                   <span className="text-neutral-400 truncate max-w-sm">
-                    {window.location.origin}{getProposalUrl(selectedCompany)}
+                    {getProposalUrl(selectedCompany)}
                   </span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}${getProposalUrl(selectedCompany)}`);
+                      navigator.clipboard.writeText(getProposalUrl(selectedCompany));
                       setProposalCopied(true);
                       setTimeout(() => setProposalCopied(false), 2000);
                     }}
