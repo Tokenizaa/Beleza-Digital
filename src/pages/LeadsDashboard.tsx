@@ -58,7 +58,7 @@ export interface LeadCompany {
   instagramUrl?: string;
   rating: number | null;
   reviewsCount: number | null;
-  digitalDiagnosis: 'site_amador' | 'sem_site' | 'perfil_sem_foto' | 'site_desatualizado';
+  digitalDiagnosis: 'site_identificado' | 'nao_identificado' | 'perfil_sem_foto' | 'site_desatualizado' | 'site_amador' | 'sem_site';
   opportunity: OpportunityLevel;
   stage: LeadStage;
   selectedTemplate: LeadTemplateKey;
@@ -151,7 +151,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         websiteUrl,
         rating: typeof row.raw_evidence?.rating === 'number' ? row.raw_evidence.rating : null,
         reviewsCount: typeof row.raw_evidence?.reviewsCount === 'number' ? row.raw_evidence.reviewsCount : null,
-        digitalDiagnosis: websiteUrl ? 'site_amador' : 'sem_site',
+        digitalDiagnosis: websiteUrl ? 'site_identificado' : 'nao_identificado',
         opportunity: Number(row.qualification_score || 0) >= 70 ? 'alta' : Number(row.qualification_score || 0) >= 40 ? 'media' : 'baixa',
         stage: state?.stage || 'novo',
         selectedTemplate: (state?.selected_template || 'ouro-classico') as LeadTemplateKey,
@@ -259,7 +259,6 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   const [searchLimit, setSearchLimit] = useState(5);
   const [isSearching, setIsSearching] = useState(false);
   const [searchSuccessMessage, setSearchSuccessMessage] = useState<string | null>(null);
-  const [searchCreateCampaign, setSearchCreateCampaign] = useState(false);
 
   // CRM Filter states
   const [crmSearchQuery, setCrmSearchQuery] = useState('');
@@ -370,7 +369,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
           region,
           limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
           countryCode: 'BR',
-          createCampaign: searchCreateCampaign,
+          createCampaign: false,
         }),
         signal: AbortSignal.timeout(60000),
       });
@@ -850,15 +849,15 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                           Oportunidade {company.opportunity}
                         </span>
 
-                        {company.digitalDiagnosis === 'site_amador' && (
+                        {(company.digitalDiagnosis === 'site_amador' || company.digitalDiagnosis === 'site_identificado') && (
                           <span className="text-[10px] font-semibold bg-[#1c212c] text-neutral-300 border border-[#2d3443] px-2.5 py-1 rounded-lg">
-                            Site amador
+                            {company.digitalDiagnosis === 'site_identificado' ? 'Site identificado — não avaliado' : 'Site amador'}
                           </span>
                         )}
 
-                        {company.digitalDiagnosis === 'sem_site' && (
+                        {(company.digitalDiagnosis === 'sem_site' || company.digitalDiagnosis === 'nao_identificado') && (
                           <span className="text-[10px] font-semibold bg-amber-950/60 text-amber-300 border border-amber-800/40 px-2.5 py-1 rounded-lg">
-                            Sem site próprio
+                            {company.digitalDiagnosis === 'nao_identificado' ? 'Site não identificado na coleta' : 'Sem site próprio'}
                           </span>
                         )}
 
@@ -1042,15 +1041,6 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                   </div>
                   <p className="text-[10px] text-neutral-400 mt-1">
                     Limite diário aplicado. Quantidade real pode ser menor se limite diário expirado ou dados indisponíveis no Google Maps.
-                  </p>
-                  <p className="text-[10px] text-neutral-400 mt-1">
-                    <input
-                      type="checkbox"
-                      checked={searchCreateCampaign}
-                      onChange={(e) => setSearchCreateCampaign(e.target.checked)}
-                      className="rounded border border-neutral-700 p-1"
-                    />
-                    Criar campanha ao final da busca
                   </p>
                 </div>
 
