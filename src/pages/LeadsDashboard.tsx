@@ -399,7 +399,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       }
 
       // Estado inicial recebido do Worker
-      const initialStatus: SearchStatus = ['ok', 'running', 'pending'].includes(String(responseBody.status ?? 'ok')) ? 'running' : (responseBody.status === 'blocked' || responseBody.status === 'retryable' || responseBody.status === 'failed' ? responseBody.status : 'blocked');
+      const initialStatus: SearchStatus = ['ok', 'running', 'pending', 'retryable'].includes(String(responseBody.status ?? 'ok')) ? 'running' : (responseBody.status === 'blocked' || responseBody.status === 'failed' ? responseBody.status : 'blocked');
       const initialMessage = responseBody.message || 'Busca iniciada. Aguardando processamento do Worker…';
       const initialDetail = responseBody.detail || responseBody.error;
 
