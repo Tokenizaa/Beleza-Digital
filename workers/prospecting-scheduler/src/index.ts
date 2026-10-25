@@ -111,6 +111,19 @@ function qualify(prospect: Prospect) {
   };
 }
 
+function preferredTemplateSlug(prospect: Prospect): string {
+  const signal = normalizeName([
+    first(prospect, ["category", "business_category", "segment"]),
+    first(prospect, ["business_name", "name", "company_name"]),
+    first(prospect, ["description", "business_description"]),
+  ].filter(Boolean).join(" "));
+  if (/barbearia|barber/.test(signal)) return "preto-esmeralda";
+  if (/executiv|premium|luxo|vip/.test(signal)) return "safira-executivo";
+  if (/salao|cabeleireir|hair|rubi|lounge/.test(signal)) return "rubi-lounge";
+  if (/estetica|clinica|spa|studio|manicure|depilacao/.test(signal)) return "minimal-studio";
+  return "ouro-classico";
+}
+
 function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
@@ -1009,10 +1022,19 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
 
   let demoPipeline: Record<string, unknown> = { status: "skipped", reason: "qualification_score_below_threshold", minimumScore };
   if (passedQualification) {
-    const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id&order=created_at.desc&limit=1");
+    const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id,created_at,site_templates(slug,is_active)&order=created_at.desc");
     if (!templateLookup.ok) throw new Error(`qualified_template_lookup_http_${templateLookup.status}`);
-    const templates = await templateLookup.json() as Array<{ id: string }>;
-    const templateVersionId = templates[0]?.id;
+    const templates = await templateLookup.json() as Array<{
+      id: string;
+      created_at?: string;
+      site_templates?: { slug?: string; is_active?: boolean } | null;
+    }>;
+    const preferredSlug = preferredTemplateSlug(prospects[0]);
+    const activeTemplates = templates.filter((item) => item.site_templates?.is_active !== false);
+    const selectedTemplate = activeTemplates.find((item) => item.site_templates?.slug === preferredSlug)
+      ?? activeTemplates.find((item) => item.site_templates?.slug === "ouro-classico")
+      ?? activeTemplates[0];
+    const templateVersionId = selectedTemplate?.id;
     if (!templateVersionId) throw new Error("qualified_published_template_missing");
     const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
       method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: templateVersionId }),
