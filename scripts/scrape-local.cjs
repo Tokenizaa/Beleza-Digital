@@ -73,7 +73,7 @@ function normalizePhone(value, countryCode) {
 function parseRatingAndReviewCount(value) {
   const text = normalizeText(value);
   const ratingMatch = text.match(/(?:^|\s)([0-5](?:[.,]\d+)?)\s*(?:estrelas?|stars?)?/i);
-  const reviewsMatch = text.match(/([\d.,]+)\s*(?:avaliações|avaliação|reviews|review|comentários)/i);
+  const reviewsMatch = text.match(/([\d.,]+)\s*(?:avaliações|avaliação|reviews|review|comentários)/i) || text.match(/\(([\d.,]+)\)/);
   const rating = ratingMatch ? Number(ratingMatch[1].replace(',', '.')) : null;
   const reviewCount = reviewsMatch ? Number(reviewsMatch[1].replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.')) : null;
   return {
