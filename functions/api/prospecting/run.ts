@@ -97,7 +97,7 @@ export async function onRequestPost({ request, env }: Context) {
     const idempotencyKey = `manual-discovery:${executionId}`;
     const taskResponse = await fetch(`${base}/rest/v1/prospecting_tasks?on_conflict=idempotency_key`, {
       method: 'POST',
-      headers: new Headers([...headers.entries(), ['prefer', 'resolution=ignore-duplicates,return=representation']]),
+      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}`, 'content-type': 'application/json', prefer: 'resolution=ignore-duplicates,return=representation' },
       body: JSON.stringify({
         campaign_id: null,
         task_type: 'discover',
@@ -139,7 +139,7 @@ export async function onRequestPost({ request, env }: Context) {
         if (workerBody.status === 'blocked' || workerBody.status === 'failed' || workerResponse.status === 503) {
           await fetch(`${base}/rest/v1/prospecting_tasks?id=eq.${encodeURIComponent(taskId)}&status=eq.pending`, {
             method: 'PATCH',
-            headers: new Headers([...headers.entries(), ['prefer', 'return=minimal']]),
+            headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}`, 'content-type': 'application/json', prefer: 'return=minimal' },
             body: JSON.stringify({
               status: 'blocked',
               last_error_code: 'worker_blocked',

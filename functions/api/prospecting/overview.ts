@@ -55,9 +55,9 @@ export async function onRequestGet({ request, env }: Context) {
 
   const executionId = new URL(request.url).searchParams.get("executionId");
   if (executionId) {
-    if (!/^\\d+$/.test(executionId)) return json({ error: "invalid_execution_id" }, 400);
+    if (!/^\d+$/.test(executionId)) return json({ error: "invalid_execution_id" }, 400);
     try {
-      const taskResponse = await fetch(`${env.SUPABASE_URL.replace(/\\/$/, "")}/rest/v1/prospecting_tasks?id=eq.${encodeURIComponent(executionId)}&select=id,status,result,last_error,completed_at,created_at,attempt_count&limit=1`, {
+      const taskResponse = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/rest/v1/prospecting_tasks?id=eq.${encodeURIComponent(executionId)}&select=id,status,result,last_error,completed_at,created_at,attempt_count&limit=1`, {
         headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}` },
         signal: AbortSignal.timeout(5000),
       });
