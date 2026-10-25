@@ -63,8 +63,8 @@ export async function onRequestPost({ request, env }: Context) {
     }, 503);
   }
 
-  let body: { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown };
-  try { body = (await request.json()) as { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown }; }
+  let body: { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown };
+  try { body = (await request.json()) as { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown }; }
   catch { return json({ error: 'Envie um JSON válido com segment e region.' }, 400); }
 
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -75,6 +75,7 @@ export async function onRequestPost({ request, env }: Context) {
   const region = typeof body.region === 'string' && body.region.trim() ? body.region.trim() : null;
   if (!segment || !region) return json({ error: 'Informe segmento (nichos) e região (cidade/estado) para a busca.' }, 400);
 
+  const createCampaign = body.createCampaign !== false; // default: true, manter backward compatibility
   const limitRaw = Number(body.limit ?? 10);
   const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 100)) : 10;
   const countryCode = typeof body.countryCode === 'string' && body.countryCode.trim() ? body.countryCode.trim().toUpperCase() : 'BR';
@@ -90,8 +91,70 @@ export async function onRequestPost({ request, env }: Context) {
   const now = new Date().toISOString();
   const campaignName = `${segment} — ${region} — ${new Date().toLocaleDateString('pt-BR')} (busca pontual)`;
 
-  // Campanha PONTUAL: schedule vazio (sem interval_minutes) para não criar recorrência.
-  // next_run_at = now para o Worker processar imediatamente ao ser acionado.
+  // Se createCampaign for falso, pular registro de campanha e acionar o Worker diretamente.
+  if (!createCampaign) {
+    // Aciona o Worker imediatamente para processar a descoberta + captura + qualificação automática.
+    let workerResult: { status: string; error?: string; [key: string]: unknown } | null = null;
+    let workerError: string | null = null;
+    try {
+      const workerResponse = await fetch(env.PROSPECTING_WORKER_URL, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${env.PROSPECTING_WORKER_SECRET}`,
+          'content-type': 'application/json',
+        },
+        signal: AbortSignal.timeout(60000),
+      });
+      const workerBody = await workerResponse.json().catch(() => ({})) as Record<string, unknown>;
+      // Determina status baseado no body do worker, não apenas no HTTP ok.
+      // O worker pode retornar 200 com status 'blocked' no body (ex: binding PROSPECTING_BROWSER ausente).
+      // Determine worker status based on body and internal counts (blocked, succeeded, claimed).
+      // Logic:
+      // - If workerBody.status is "blocked"/"retryable"/"failed" → 503 as before
+      // - If workerBody.status is "ok" AND blocked === 0 AND succeeded === claimed → 200 normal
+      // - If workerBody.status is "ok" AND (blocked > 0 OR succeeded < claimed) → 503 blocked
+      // - Otherwise fallback to HTTP ok status
+      let workerStatus: string;
+      if (workerBody.status === 'blocked' || workerBody.status === 'retryable' || workerBody.status === 'failed') {
+        workerStatus = workerBody.status;
+      } else if (workerBody.status === 'ok') {
+        const blockedVal = (workerBody as Record<string, unknown>).blocked;
+        const succeededVal = (workerBody as Record<string, unknown>).succeeded;
+        const claimedVal = (workerBody as Record<string, unknown>).claimed;
+        const hasBlocks = typeof blockedVal === 'number' && blockedVal > 0;
+        const notFullySucceeded = typeof succeededVal === 'number' && typeof claimedVal === 'number' && succeededVal < claimedVal;
+        if (hasBlocks || notFullySucceeded) {
+          workerStatus = 'blocked';
+        } else {
+          workerStatus = 'ok';
+        }
+      } else {
+        workerStatus = workerResponse.ok ? 'ok' : 'blocked';
+      }
+      workerResult = { ...workerBody, status: workerStatus };
+      // Define workerError quando o worker reportou bloqueio/falha ou quando há bloques internos.
+      if (workerStatus === 'blocked' || workerStatus === 'retryable' || workerStatus === 'failed' || !workerResponse.ok) {
+        workerError = String(workerBody.error ?? workerBody.detail ?? `Worker ${workerStatus}`);
+      }
+    } catch (error) {
+      workerError = error instanceof Error ? error.message : 'Falha ao acionar o Worker.';
+      workerResult = { status: 'blocked', error: workerError };
+    }
+
+    return json({
+      status: workerError ? 'blocked' : 'ok',
+      campaignId: null,
+      detail: workerError,
+      message: workerError
+        ? 'A campanha não foi registrada e o Worker não pôde processar a campanha imediatamente. Verifique PROSPECTING_WORKER_URL, PROSPECTING_WORKER_SECRET e o binding BROWSER no Worker.'
+        : 'Busca pontual iniciada imediatamente. O Worker está processando a descoberta, captura e qualificação automática.',
+      campaign: null,
+      worker: workerResult,
+      note: 'Esta é uma busca manual sem campanha. Resultados serão persistidos como candidatos. Não cria campanha recorrente.',
+    }, workerError ? 503 : 200);
+  }
+
+  // Com createCampaign = true (padrão): registrar campanha e acionar o Worker.
   const campaignResult = await fetch(`${base}/rest/v1/prospecting_campaigns`, {
     method: 'POST',
     headers,

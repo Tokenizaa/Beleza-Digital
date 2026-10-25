@@ -234,6 +234,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   const [searchLimit, setSearchLimit] = useState(5);
   const [isSearching, setIsSearching] = useState(false);
   const [searchSuccessMessage, setSearchSuccessMessage] = useState<string | null>(null);
+  const [searchCreateCampaign, setSearchCreateCampaign] = useState(true);
 
   // CRM Filter states
   const [crmSearchQuery, setCrmSearchQuery] = useState('');
@@ -323,6 +324,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
           region,
           limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
           countryCode: 'BR',
+          createCampaign: searchCreateCampaign,
         }),
         signal: AbortSignal.timeout(60000),
       });
@@ -911,6 +913,15 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                   </div>
                   <p className="text-[10px] text-neutral-400 mt-1">
                     Limite diário aplicado. Quantidade real pode ser menor se limite diário expirado ou dados indisponíveis no Google Maps.
+                  </p>
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={searchCreateCampaign}
+                      onChange={(e) => setSearchCreateCampaign(e.target.checked)}
+                      className="rounded border border-neutral-700 p-1"
+                    />
+                    Criar campanha ao final da busca
                   </p>
                 </div>
 
