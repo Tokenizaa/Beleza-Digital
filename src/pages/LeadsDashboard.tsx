@@ -165,7 +165,6 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   };
 
   useEffect(() => {
-    if (activeTab === 'empresas' || activeTab === 'hoje') void loadCompanies();
   }, [activeTab]);
 
   const persistCrmState = async (companyId: string, patch: Record<string, unknown>): Promise<boolean> => {
@@ -357,7 +356,8 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         message: responseBody.message || 'Busca iniciada. Aguardando processamento do Worker…',
       }));
       setSearchSuccessMessage(
-        responseBody.message || 'Busca pontual iniciada imediatamente. O Worker está processando a coleta e qualificação.'
+        responseBody.message ||
+          'Busca pontual iniciada imediatamente. O Worker está processando a coleta e qualificação. Resultados podem ser menores que solicitados por limite diário, disponibilidade de dados no Google Maps ou deduplicação.'
       );
 
       // Se o worker não pôde ser acionado, exibe o bloqueio com clareza (sem simular sucesso).
@@ -369,8 +369,18 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         }));
       }
 
-      // Recarrega o CRM para mostrar os candidatos após a persistência (pode estar vazio até o Worker concluir).
-      void loadCompanies();
+      // Verificar se há tasks bloqueadas no resultado do worker
+      // O worker pode retornar {status: "ok", claimed: 1, succeeded: 0, blocked: 7, ...}
+      // mesmo com HTTP 200 - isso cria ilusão de funcionamento
+      const workerBlocked = (responseBody as { blocked?: number }).blocked;
+      if (workerBlocked && workerBlocked > 0) {
+        setSearchOperation((prev) => ({
+          ...prev,
+          status: 'failed',
+          error: responseBody.detail || `Worker não pôde processar a campanha imediatamente. ${workerBlocked} tarefa(s) bloqueada(s).`,
+        }));
+      }
+
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Falha inesperada ao iniciar a busca.';
       setSearchSuccessMessage(message);
@@ -785,15 +795,27 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                         }`}
                       />
                       <span className="font-bold text-neutral-200">
-                        {searchOperation.status === 'completed' ? 'Concluída' : searchOperation.status === 'failed' ? 'Falha' : 'Processando…'}
+                        {searchOperation.status === 'completed'
+                          ? 'Concluída'
+                          : searchOperation.status === 'failed'
+                          ? searchOperation.error?.includes('Bloqueado')
+                            ? 'Bloqueado - razões abaixo'
+                            : 'Falha'
+                          : 'Processando…'}
                       </span>
                     </div>
                     {searchOperation.message && <p className="text-neutral-400 text-[11px] mb-2">{searchOperation.message}</p>}
                     {searchOperation.error && (
                       <p className="text-red-400 text-[11px] mb-2">{searchOperation.error}</p>
                     )}
+                    {searchOperation.result && searchOperation.result.blocked > 0 && (
+                      <p className="text-[10px] text-red-300 text-[11px] mb-2">
+                        {searchOperation.error || 'Worker reportou tarefas bloqueadas. '
+                        }{searchOperation.result.blocked} tarefa(s) não puderam ser processadas.
+                      </p>
+                    )}
                     {searchOperation.result && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[11px]">
                         <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
                           <span className="text-neutral-500 block">Encontrados</span>
                           <span className="text-white font-bold">{searchOperation.result.found}</span>
@@ -810,6 +832,12 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                           <span className="text-neutral-500 block">Qualificados</span>
                           <span className="text-amber-400 font-bold">{searchOperation.result.qualified}</span>
                         </div>
+                        {searchOperation.result.blocked > 0 && (
+                          <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                            <span className="text-neutral-500 block">Bloqueados</span>
+                            <span className="text-red-400 font-bold">{searchOperation.result.blocked}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -881,6 +909,9 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                     <span>35</span>
                     <span>50 empresas</span>
                   </div>
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    Limite diário aplicado. Quantidade real pode ser menor se limite diário expirado ou dados indisponíveis no Google Maps.
+                  </p>
                 </div>
 
                 <div className="pt-2">
@@ -931,6 +962,12 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                         </div>
                       </div>
                     ))}
+                    {searchOperation.result && (
+                      <div className="flex items-center justify-between text-xs text-neutral-400">
+                        <span>Encontrados: {searchOperation.result.found}</span>
+                        <span className="font-medium">de {searchLimit} solicitadas</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

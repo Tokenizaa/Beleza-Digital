@@ -132,8 +132,36 @@ export async function onRequestPost({ request, env }: Context) {
       signal: AbortSignal.timeout(60000),
     });
     const workerBody = await workerResponse.json().catch(() => ({})) as Record<string, unknown>;
-    workerResult = { status: workerResponse.ok ? 'ok' : 'blocked', ...workerBody };
-    if (!workerResponse.ok) workerError = String(workerBody.error ?? `Worker HTTP ${workerResponse.status}`);
+    // Determina status baseado no body do worker, não apenas no HTTP ok.
+    // O worker pode retornar 200 com status 'blocked' no body (ex: binding PROSPECTING_BROWSER ausente).
+    // Determine worker status based on body and internal counts (blocked, succeeded, claimed).
+    // Logic:
+    // - If workerBody.status is "blocked"/"retryable"/"failed" → 503 as before
+    // - If workerBody.status is "ok" AND blocked === 0 AND succeeded === claimed → 200 normal
+    // - If workerBody.status is "ok" AND (blocked > 0 OR succeeded < claimed) → 503 blocked
+    // - Otherwise fallback to HTTP ok status
+    let workerStatus: string;
+    if (workerBody.status === 'blocked' || workerBody.status === 'retryable' || workerBody.status === 'failed') {
+      workerStatus = workerBody.status;
+    } else if (workerBody.status === 'ok') {
+      const blockedVal = (workerBody as Record<string, unknown>).blocked;
+      const succeededVal = (workerBody as Record<string, unknown>).succeeded;
+      const claimedVal = (workerBody as Record<string, unknown>).claimed;
+      const hasBlocks = typeof blockedVal === 'number' && blockedVal > 0;
+      const notFullySucceeded = typeof succeededVal === 'number' && typeof claimedVal === 'number' && succeededVal < claimedVal;
+      if (hasBlocks || notFullySucceeded) {
+        workerStatus = 'blocked';
+      } else {
+        workerStatus = 'ok';
+      }
+    } else {
+      workerStatus = workerResponse.ok ? 'ok' : 'blocked';
+    }
+    workerResult = { ...workerBody, status: workerStatus };
+    // Define workerError quando o worker reportou bloqueio/falha ou quando há bloques internos.
+    if (workerStatus === 'blocked' || workerStatus === 'retryable' || workerStatus === 'failed' || !workerResponse.ok) {
+      workerError = String(workerBody.error ?? workerBody.detail ?? `Worker ${workerStatus}`);
+    }
   } catch (error) {
     workerError = error instanceof Error ? error.message : 'Falha ao acionar o Worker.';
     workerResult = { status: 'blocked', error: workerError };

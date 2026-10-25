@@ -109,6 +109,7 @@ function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
+  if (!env.PROSPECTING_BROWSER?.trim()) return "PROSPECTING_BROWSER ausente";
   return null;
 }
 
@@ -427,10 +428,19 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     });
     scrapedResults = listings.slice(0, Math.min(limit, 100));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "browser_run_failed";
+    const cloudflareError = error instanceof Error ? error : new Error(String(error));
+    const message = cloudflareError.message ?? "browser_run_failed";
+    // Extrair detalhes adicionais do Cloudflare Browser Run se disponíveis
+    const errorDetails: Record<string, unknown> = {};
+    if ("code" in error) errorDetails.code = (error as any).code;
+    if ("status" in error) errorDetails.status = (error as any).status;
+    if ("name" in error) errorDetails.name = (error as any).name;
+    const extraInfo = Object.keys(errorDetails).length
+      ? ` | details: ${JSON.stringify(errorDetails)}`
+      : "";
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "browser_scraping_failed",
-      last_error: `Falha na coleta via Cloudflare Browser Run no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${message}`,
+      last_error: `Falha na coleta via Cloudflare Browser Run no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${message}${extraInfo}`,
       completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed", failedStep: step, bindingType, bindingIsString, bindingLength },
     });
     return "blocked";
