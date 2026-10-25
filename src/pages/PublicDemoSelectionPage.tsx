@@ -16,6 +16,18 @@ type DemoVersion = {
   } | null;
 };
 type DemoData = { status: string; expiresAt: string; selectedVersionId: string | null; versions: DemoVersion[] };
+
+const TEMPLATE_ID_BY_SLUG: Record<string, string> = {
+  "ouro-classico": "ouro-classico",
+  "preto-esmeralda": "preto-esmeralda",
+  "minimal-studio": "minimal-studio",
+  "safira-executivo": "safira-executivo",
+  "rubi-lounge": "rubi-lounge",
+  "modelo-inicial": "ouro-classico",
+  minimal: "minimal-studio",
+  bold: "preto-esmeralda",
+  editorial: "rubi-lounge",
+};
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -130,7 +142,7 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
   const expires = data?.expiresAt ? new Date(data.expiresAt).toLocaleDateString("pt-BR") : "";
   const activeVersion = data?.versions.find((version) => version.id === activePreviewId) ?? data?.versions[0] ?? null;
   const activeContent = activeVersion?.generated_content ?? {};
-  const templateSlug = activeVersion?.template?.site_templates?.slug ?? "modelo-inicial";
+  const templateSlug = activeVersion?.template?.site_templates?.slug ?? "ouro-classico";
   const businessName = contentText(activeVersion, ["businessName", "business_name", "title", "name", "brandName"]) || "Negócio local";
   const category = contentText(activeVersion, ["category", "business_category", "segment"]);
   const phone = contentText(activeVersion, ["phone", "normalized_phone", "phone_number"]);
@@ -144,7 +156,7 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
     email: contentText(activeVersion, ["email", "email_address"]),
     address,
     websiteUrl: contentText(activeVersion, ["website", "website_url", "url"]),
-    templateId: ["modelo-inicial", "minimal", "editorial", "bold"].includes(templateSlug) ? templateSlug : "modelo-inicial",
+    templateId: TEMPLATE_ID_BY_SLUG[templateSlug] ?? "ouro-classico",
     templateName: activeVersion.template?.site_templates?.name || "Modelo inicial",
     projectVersion: activeVersion.version,
     generatedAt: text(activeContent.generatedAt) || new Date().toISOString(),
