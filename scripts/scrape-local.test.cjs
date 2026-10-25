@@ -28,6 +28,10 @@ test('extrai nota e volume de avaliações em português e inglês', () => {
     rating: 4.7,
     reviewCount: 213,
   });
+  assert.deepEqual(scraper.parseRatingAndReviewCount('4,9 (1.792)'), {
+    rating: 4.9,
+    reviewCount: 1792,
+  });
 });
 
 test('usa identidade estável do Google antes de telefone e nome', () => {
