@@ -415,7 +415,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         const name = card.getAttribute("aria-label") || card.textContent?.trim() || "";
         const sourceUrl = (card as HTMLAnchorElement).href;
         if (!name || !sourceUrl) return;
-        const parentText = card.parentElement?.innerText || card.innerText || "";
+        const parentText = (card.parentElement as HTMLElement | null)?.innerText || (card as HTMLElement).innerText || "";
         const ratingMatch = parentText.match(/(\d[.,]\d)\s*\(([\d.,]+)\)/);
         const phoneMatch = parentText.match(/(?:\+?\d[\d ()-]{7,}\d)/);
         output.push({
@@ -434,9 +434,10 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const message = cloudflareError.message ?? "browser_run_failed";
     // Extrair detalhes adicionais do Cloudflare Browser Run se disponíveis
     const errorDetails: Record<string, unknown> = {};
-    if ("code" in error) errorDetails.code = (error as any).code;
-    if ("status" in error) errorDetails.status = (error as any).status;
-    if ("name" in error) errorDetails.name = (error as any).name;
+    const errorRecord = error && typeof error === "object" ? error as Record<string, unknown> : {};
+    if ("code" in errorRecord) errorDetails.code = errorRecord.code;
+    if ("status" in errorRecord) errorDetails.status = errorRecord.status;
+    if ("name" in errorRecord) errorDetails.name = errorRecord.name;
     const extraInfo = Object.keys(errorDetails).length
       ? ` | details: ${JSON.stringify(errorDetails)}`
       : "";
