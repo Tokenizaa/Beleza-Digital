@@ -1,5 +1,10 @@
+interface RateLimitKV {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+}
+
 interface Env {
-  RATE_LIMIT_KV: KVNamespace;
+  RATE_LIMIT_KV?: RateLimitKV;
 }
 
 type Context = { request: Request; env: Env; next: () => Promise<Response> };
