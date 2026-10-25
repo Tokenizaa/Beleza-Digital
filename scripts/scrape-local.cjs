@@ -119,6 +119,23 @@ function boundedInteger(value, fallback, min, max) {
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 }
 
+function parseCliArgs(argv) {
+  const parsed = {};
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (!token.startsWith('--')) continue;
+    const key = token.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    const value = argv[index + 1];
+    if (value && !value.startsWith('--')) {
+      parsed[key] = value;
+      index += 1;
+    } else {
+      parsed[key] = true;
+    }
+  }
+  return parsed;
+}
+
 function scoreCompleteness(place) {
   const fields = [
     Boolean(normalizeText(place.businessName)),
@@ -414,11 +431,15 @@ async function main() {
     throw new Error('Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no ambiente local seguro.');
   }
 
-  const query = normalizeText(process.env.SCRAPE_QUERY || DEFAULT_QUERY);
-  const limit = boundedInteger(process.env.SCRAPE_LIMIT, DEFAULT_LIMIT, 1, MAX_LIMIT);
-  const city = normalizeText(process.env.SCRAPE_CITY || '') || null;
-  const region = normalizeText(process.env.SCRAPE_REGION || '') || null;
-  const countryCode = normalizeText(process.env.SCRAPE_COUNTRY_CODE || 'BR').toUpperCase();
+  const args = parseCliArgs(process.argv.slice(2));
+  const segment = normalizeText(process.env.SCRAPE_SEGMENT || args.segment || '');
+  const city = normalizeText(process.env.SCRAPE_CITY || args.city || '') || null;
+  const region = normalizeText(process.env.SCRAPE_REGION || args.region || '') || null;
+  const countryCode = normalizeText(process.env.SCRAPE_COUNTRY_CODE || args.countryCode || 'BR').toUpperCase();
+  const query = normalizeText(process.env.SCRAPE_QUERY || args.query || (
+    segment && city ? segment + ' em ' + city + ' ' + (region || '') + ' ' + countryCode : DEFAULT_QUERY
+  ));
+  const limit = boundedInteger(process.env.SCRAPE_LIMIT || args.limit, DEFAULT_LIMIT, 1, MAX_LIMIT);
   const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
@@ -504,4 +525,5 @@ module.exports = {
   scoreOpportunity,
   buildCandidate,
   boundedInteger,
+  parseCliArgs,
 };
