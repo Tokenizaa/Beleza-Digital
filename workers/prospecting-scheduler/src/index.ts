@@ -67,6 +67,12 @@ function first(prospect: Prospect, keys: string[]): unknown {
   return null;
 }
 
+function parseCount(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const digits = String(value).replace(/[^0-9]/g, "");
+  return digits ? Number(digits) : null;
+}
+
 function firstCaptured(prospect: Prospect, keys: string[]): unknown {
   const direct = first(prospect, keys);
   if (direct !== null) return direct;
@@ -415,15 +421,24 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         const name = card.getAttribute("aria-label") || card.textContent?.trim() || "";
         const sourceUrl = (card as HTMLAnchorElement).href;
         if (!name || !sourceUrl) return;
-        const parentText = (card.parentElement as HTMLElement | null)?.innerText || (card as HTMLElement).innerText || "";
-        const ratingMatch = parentText.match(/(\d[.,]\d)\s*\(([\d.,]+)\)/);
-        const phoneMatch = parentText.match(/(?:\+?\d[\d ()-]{7,}\d)/);
+        const container = card.closest('[role="article"]') || card.closest('.Nv2PK') || card.parentElement?.parentElement || card.parentElement;
+        const parentText = (container as HTMLElement | null)?.innerText || (card as HTMLElement).innerText || "";
+        const lines = parentText.split("\\n").map((line) => line.trim()).filter(Boolean);
+        const ratingMatch = parentText.match(/(\\d[.,]\\d)\\s*\\(([\\d.,]+)\\)/);
+        const phoneMatch = parentText.match(/(?:\\+?\\d[\\d ()-]{7,}\\d)/);
+        const categoryLine = lines.find((line) => /barbearia|sal[aã]o de beleza|cabeleireir|est[eé]tica|cl[ií]nica de beleza|\\bspa\\b|manicure|depila[cç][aã]o/i.test(line) && line !== name) || null;
+        const addressLine = lines.find((line) => /\\b(rua|r\\.|avenida|av\\.|travessa|tv\\.|estrada|rodovia|praça|praca|alameda|largo)\\b/i.test(line)) || null;
+        const websiteLink = container.querySelector('a[data-item-id="authority"]') as HTMLAnchorElement | null;
         output.push({
           name,
+          category: categoryLine,
+          address: addressLine,
           phone: phoneMatch?.[0] ?? null,
+          website: websiteLink?.href ?? null,
           rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
           reviews: ratingMatch ? ratingMatch[2] : null,
           sourceUrl,
+          rawListingText: parentText.slice(0, 2000),
         });
       });
       return output;
@@ -521,11 +536,11 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         status: result.score >= 50 ? "qualified" : "discovered",
         raw_evidence: {
           rating: typeof first(candidate, ["rating", "stars"]) === "number" ? first(candidate, ["rating", "stars"]) : null,
-          reviewsCount: first(candidate, ["reviews", "reviewCount", "reviewsCount"]) == null ? null : (Number(String(first(candidate, ["reviews", "reviewCount", "reviewsCount"])).replace(/[^0-9]/g, "")) || null),
+          reviewsCount: parseCount(first(candidate, ["reviews", "reviewCount", "reviewsCount"]),),
           providerRecordId,
           providerRequestId: null,
           observedAt: new Date().toISOString(),
-          evidence: { scraped: true, searchQuery, sourceUrl: candidate.sourceUrl },
+          evidence: { scraped: true, searchQuery, sourceUrl: candidate.sourceUrl, listingText: candidate.rawListingText ?? null },
         },
       }),
     });
