@@ -1067,59 +1067,18 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   return "succeeded";
 }
 
-async function scheduleDueCampaigns(env: Env) {
-  const now = new Date();
-  const due = await db(env, `prospecting_campaigns?status=eq.active&next_run_at=lte.${encodeURIComponent(now.toISOString())}&select=id,name,segment,region,country_code,source_provider,source_config,qualification_rules,schedule,daily_discovery_limit,next_run_at&order=next_run_at.asc&limit=20`);
-  if (!due.ok) throw new Error(`campaign_scan_http_${due.status}`);
-  const campaigns = await due.json() as Array<Record<string, unknown>>;
-  let queued = 0;
-  let skipped = 0;
-
-  for (const campaign of campaigns) {
-    const campaignId = String(campaign.id ?? "");
-    const dueAt = String(campaign.next_run_at ?? "");
-    if (!campaignId || !dueAt) { skipped++; continue; }
-    const key = `campaign:${campaignId}:run:${dueAt}`;
-    const task = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
-      method: "POST",
-      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
-      body: JSON.stringify({
-        campaign_id: campaignId,
-        task_type: "discover",
-        status: "pending",
-        idempotency_key: key,
-        payload: {
-          campaignId,
-          campaignName: campaign.name,
-          segment: campaign.segment,
-          region: campaign.region,
-          countryCode: campaign.country_code ?? "BR",
-          sourceProvider: campaign.source_provider,
-          sourceConfig: campaign.source_config ?? {},
-          qualificationRules: campaign.qualification_rules ?? {},
-          dailyDiscoveryLimit: campaign.daily_discovery_limit ?? 100,
-          scheduledFor: dueAt,
-        },
-      }),
-    });
-    if (!task.ok) throw new Error(`campaign_enqueue_http_${task.status}`);
-
-    const schedule = campaign.schedule && typeof campaign.schedule === "object"
-      ? campaign.schedule as Record<string, unknown> : {};
-    const rawInterval = Number(schedule.interval_minutes ?? 1440);
-    const interval = Number.isFinite(rawInterval) ? Math.max(5, Math.min(Math.floor(rawInterval), 10080)) : 1440;
-    const nextRun = new Date(Math.max(now.getTime(), new Date(dueAt).getTime()) + interval * 60_000).toISOString();
-    const advance = await db(env, `prospecting_campaigns?id=eq.${encodeURIComponent(campaignId)}&status=eq.active&next_run_at=eq.${encodeURIComponent(dueAt)}&select=id`, {
-      method: "PATCH",
-      headers: { prefer: "return=representation" },
-      body: JSON.stringify({ last_run_at: now.toISOString(), next_run_at: nextRun, updated_at: now.toISOString() }),
-    });
-    if (!advance.ok) throw new Error(`campaign_advance_http_${advance.status}`);
-    const rows = await advance.json() as unknown[];
-    if (rows.length) queued++;
-    else skipped++;
-  }
-  return { campaignsScanned: campaigns.length, campaignsQueued: queued, campaignsSkipped: skipped };
+async function scheduleDueCampaigns(_env: Env) {
+  // Commercial campaigns classify and prioritize records already collected.
+  // They must never initiate scraping: "Raspar agora" owns discovery independently.
+  // The previous implementation enqueued a discover task for every due active
+  // campaign every five minutes, coupling commercial configuration to scraping
+  // and repeatedly consuming Cloudflare Browser Run quota.
+  return {
+    campaignsScanned: 0,
+    campaignsQueued: 0,
+    campaignsSkipped: 0,
+    mode: "commercial_campaigns_do_not_trigger_discovery",
+  };
 }
 
 async function processBatch(env: Env) {
