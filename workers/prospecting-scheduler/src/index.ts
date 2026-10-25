@@ -416,37 +416,148 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
     await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForSelector('[role="feed"]', { timeout: 15000 });
-    const listings = await page.evaluate(() => {
-      const output: Array<Record<string, unknown>> = [];
-      const cards = document.querySelectorAll('a[href*="/maps/place/"]');
-      cards.forEach((card) => {
-        if (output.length >= 100) return;
-        const name = card.getAttribute("aria-label") || card.textContent?.trim() || "";
-        const sourceUrl = (card as HTMLAnchorElement).href;
-        if (!name || !sourceUrl) return;
-        const container = card.closest('[role="article"]') || card.closest('.Nv2PK') || card.parentElement?.parentElement || card.parentElement || card;
-        const parentText = (container as HTMLElement | null)?.innerText || (card as HTMLElement).innerText || "";
-        const lines = parentText.split("\n").map((line) => line.trim()).filter(Boolean);
-        const ratingMatch = parentText.match(/(\d[.,]\d)\s*\(([\d.,]+)\)/);
-        const phoneMatch = parentText.match(/(?:\+?\d[\d ()-]{7,}\d)/);
-        const categoryLine = lines.find((line) => /barbearia|sal[aã]o de beleza|cabeleireir|est[eé]tica|cl[ií]nica de beleza|\bspa\b|manicure|depila[cç][aã]o/i.test(line) && line !== name) || null;
-        const addressLine = lines.find((line) => /\b(rua|r\.|avenida|av\.|travessa|tv\.|estrada|rodovia|praça|praca|alameda|largo)\b/i.test(line)) || null;
-        const websiteLink = container.querySelector('a[data-item-id="authority"]') as HTMLAnchorElement | null;
-        output.push({
-          name,
-          category: categoryLine,
-          address: addressLine,
-          phone: phoneMatch?.[0] ?? null,
-          website: websiteLink?.href ?? null,
-          rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
-          reviews: ratingMatch ? ratingMatch[2] : null,
-          sourceUrl,
-          rawListingText: parentText.slice(0, 2000),
+
+    // Coleta links únicos e rola a lista até alcançar o limite ou ficar sem novos resultados.
+    const listingMap = new Map<string, Record<string, unknown>>();
+    let stagnantRounds = 0;
+    let previousCount = 0;
+    for (let round = 0; round < 35 && listingMap.size < Math.min(limit, 100); round++) {
+      const visibleListings = await page.evaluate(() => {
+        const output: Array<Record<string, unknown>> = [];
+        const seen = new Set<string>();
+        document.querySelectorAll('a[href*="/maps/place/"]').forEach((node) => {
+          const anchor = node as HTMLAnchorElement;
+          const href = anchor.href.split("&")[0];
+          if (!href || seen.has(href)) return;
+          seen.add(href);
+          const container = anchor.closest('[role="article"]') || anchor.closest('.Nv2PK') || anchor.parentElement?.parentElement || anchor.parentElement || anchor;
+          const cardText = ((container as HTMLElement | null)?.innerText || anchor.innerText || "").replace(/\s+/g, " ").trim();
+          const name = (anchor.getAttribute("aria-label") || anchor.querySelector('.qBF1Pd, .fontHeadlineSmall')?.textContent || anchor.textContent || "").replace(/\s+/g, " ").trim();
+          if (!name || !href) return;
+          output.push({ name: name.slice(0, 240), url: href, cardText: cardText.slice(0, 2500) });
         });
+        return output;
       });
-      return output;
-    });
-    scrapedResults = listings.slice(0, Math.min(limit, 100));
+      for (const listing of visibleListings) {
+        const href = String(listing.url || "");
+        if (href && !listingMap.has(href)) listingMap.set(href, listing);
+        if (listingMap.size >= Math.min(limit, 100)) break;
+      }
+      if (listingMap.size === previousCount) stagnantRounds++;
+      else stagnantRounds = 0;
+      previousCount = listingMap.size;
+      if (stagnantRounds >= 3) break;
+      await page.locator('[role="feed"]').evaluate((feed) => { feed.scrollTop = feed.scrollHeight; }).catch(() => {});
+      await page.waitForTimeout(900);
+    }
+
+    const listings = Array.from(listingMap.values()).slice(0, Math.min(limit, 100));
+    scrapedResults = [];
+    for (let index = 0; index < listings.length; index++) {
+      const listing = listings[index];
+      const listingUrl = String(listing.url || "");
+      if (!listingUrl) continue;
+      step = "detail_" + (index + 1);
+      try {
+        await page.goto(listingUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+        await page.waitForTimeout(700);
+        const detail = await page.evaluate(() => {
+          const textOf = (selector: string): string | null => {
+            const element = document.querySelector(selector);
+            const value = (element as HTMLElement | null)?.innerText || element?.getAttribute("aria-label") || "";
+            return value.replace(/\s+/g, " ").trim() || null;
+          };
+          const hrefOf = (selector: string): string | null => {
+            const element = document.querySelector(selector) as HTMLAnchorElement | null;
+            const value = element?.href || null;
+            return value && /^https?:\/\//i.test(value) ? value : null;
+          };
+          const bodyText = document.body?.innerText || "";
+          const ratingLabel = document.querySelector('div.F7nice, [aria-label*="stars"], [aria-label*="estrelas"]')?.getAttribute("aria-label") || "";
+          const ratingText = textOf("div.F7nice") || "";
+          const reviewLabel = document.querySelector('button[aria-label*="reviews"], button[aria-label*="avaliações"], [aria-label*="reviews"], [aria-label*="avaliações"]')?.getAttribute("aria-label") || "";
+          const ratingSource = [ratingLabel, ratingText, reviewLabel, bodyText.slice(0, 8000)].join(" ");
+          const ratingMatch = ratingSource.match(/(?:^|\s)([0-5](?:[.,]\d+)?)\s*(?:estrelas?|stars?)?/i) || bodyText.match(/([0-5][.,]\d)\s*\(/);
+          const reviewMatch = ratingSource.match(/([\d.,]+)\s*(?:avaliações|avaliação|reviews|review|comentários)/i) || bodyText.match(/\(([0-9][0-9.,]*)\)/);
+          const parseCount = (value: string | null): number | null => {
+            if (!value) return null;
+            const digits = value.replace(/[.,](?=\d{3}\b)/g, "").replace(/\D/g, "");
+            const parsed = Number(digits);
+            return Number.isSafeInteger(parsed) ? parsed : null;
+          };
+          const hours = Array.from(document.querySelectorAll('table.eK4R0e tr, table[aria-label*="hours"] tr'))
+            .map((row) => ((row as HTMLElement).innerText || "").replace(/\s+/g, " ").trim())
+            .filter(Boolean).slice(0, 14);
+          const images = Array.from(document.querySelectorAll("img"))
+            .map((image) => (image as HTMLImageElement).currentSrc || (image as HTMLImageElement).src || "")
+            .filter((url) => /^https?:\/\//i.test(url) && /googleusercontent|gstatic/i.test(url));
+          const category = textOf("button.DkEaL") || textOf('button[jsaction*="category"]');
+          const address = textOf('[data-item-id="address"]');
+          const phoneElement = document.querySelector('[data-item-id^="phone:tel"], a[href^="tel:"]') as HTMLAnchorElement | null;
+          const phone = phoneElement?.getAttribute("href")?.startsWith("tel:")
+            ? phoneElement.getAttribute("href")?.slice(4) || null
+            : (phoneElement as HTMLElement | null)?.innerText?.trim() || null;
+          const website = hrefOf('a[data-item-id="authority"]') || hrefOf('a[aria-label*="Website"]') || hrefOf('a[aria-label*="website"]');
+          const coordinates = location.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+          const feature = location.href.match(/!1s([^!/?]+)/);
+          const placeId = location.href.match(/[?&]place_id=([^&]+)/i);
+          const price = bodyText.match(/(?:Preço|Price)\s*[:·]?\s*(\${1,4}|R\${1,4})/i);
+          return {
+            name: textOf("h1.DUwDvf") || document.querySelector("h1")?.textContent?.trim() || null,
+            category,
+            address,
+            phone,
+            website,
+            rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
+            reviewsCount: reviewMatch ? parseCount(reviewMatch[1]) : null,
+            sourceUrl: location.href,
+            placeId: placeId ? decodeURIComponent(placeId[1]) : null,
+            featureId: feature ? decodeURIComponent(feature[1]) : null,
+            latitude: coordinates ? Number(coordinates[1]) : null,
+            longitude: coordinates ? Number(coordinates[2]) : null,
+            images: Array.from(new Set(images)).slice(0, 20),
+            openingHours: hours,
+            priceLevel: price?.[1] || null,
+            editorialSummary: textOf('[class*="PYvSYb"], [class*="WeS02d"]'),
+            rawListingText: bodyText.slice(0, 8000),
+            fieldStatus: {
+              name: "name",
+              category: category ? "found" : "not_found_in_capture",
+              address: address ? "found" : "not_found_in_capture",
+              phone: phone ? "found" : "not_found_in_capture",
+              website: website ? "found" : "not_found_in_capture",
+              rating: ratingMatch ? "found" : "not_found_in_capture",
+              reviewsCount: reviewMatch ? "found" : "not_found_in_capture",
+              images: images.length ? "found" : "not_found_in_capture",
+              openingHours: hours.length ? "found" : "not_found_in_capture",
+            },
+          };
+        });
+        scrapedResults.push({
+          ...listing,
+          ...detail,
+          name: detail.name || listing.name,
+          sourceUrl: detail.sourceUrl || listingUrl,
+          city: region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: region.split(/\s+-\s+/)[1]?.trim() || region,
+          countryCode,
+          provider: "google-maps-cloudflare-playwright",
+          searchQuery,
+        });
+      } catch (detailError) {
+        // Mantém a listagem como evidência parcial; não inventa dados ausentes.
+        scrapedResults.push({
+          ...listing,
+          sourceUrl: listingUrl,
+          city: region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: region.split(/\s+-\s+/)[1]?.trim() || region,
+          countryCode,
+          provider: "google-maps-cloudflare-playwright",
+          searchQuery,
+          fieldStatus: { detailPage: "failed", error: String(detailError instanceof Error ? detailError.message : detailError).slice(0, 250) },
+        });
+      }
+    }
   } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       const errorMessage = lastError.message ?? "";
