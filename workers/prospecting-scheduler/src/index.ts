@@ -364,13 +364,45 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   // No Docker, container, VPS, or external Python service is required.
   let scrapedResults: Array<Record<string, unknown>> = [];
   let browser: any;
+  let step = "init";
+  let bindingType = "unknown";
+  let bindingIsString = false;
+  let bindingLength = 0;
   try {
-    if (!env.PROSPECTING_BROWSER) throw new Error("prospecting_browser_binding_missing");
-    const { chromium } = await import("@cloudflare/playwright");
-    browser = await chromium.connectOverCDP(env.PROSPECTING_BROWSER);
+    const browserBindingValue = env.PROSPECTING_BROWSER;
+    bindingType = typeof browserBindingValue;
+    bindingIsString = typeof browserBindingValue === "string";
+    bindingLength = bindingIsString ? browserBindingValue.length : 0;
+    step = "browser_connect";
+    if (!browserBindingValue) throw new Error("prospecting_browser_binding_missing");
+
+    const { launch } = await import("@cloudflare/playwright");
+    browser = await launch(browserBindingValue);
+    step = "browser_launched";
     const page = await browser.newPage();
+
+    // Diagnóstico passo a passo para isolar onde o navegador falha
+
+    // Passo 1: página simples para validar o navegador
+    step = "nav_example";
+
+    // Diagnóstico passo a passo para isolar onde o navegador falha
+
+    // Passo 1: página simples para validar o navegador
+    step = "nav_example";
+    const testUrl = "https://example.com";
+    await page.goto(testUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
+    const testTitle = await page.title();
+
+    // Passo 2: página inicial do Google
+    step = "nav_google_home";
+    const googleHomeUrl = "https://www.google.com";
+    await page.goto(googleHomeUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+
+    // Passo 3: Google Maps - pode ser bloqueado pelo Cloudflare Browser Run
+    step = "nav_google_maps";
     const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
-    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 30000 });
     await page.waitForSelector('[role="feed"]', { timeout: 15000 });
     const listings = await page.evaluate(() => {
       const output: Array<Record<string, unknown>> = [];
@@ -398,8 +430,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const message = error instanceof Error ? error.message : "browser_run_failed";
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "browser_scraping_failed",
-      last_error: `Falha na coleta via Cloudflare Browser Run: ${message}`,
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed" },
+      last_error: `Falha na coleta via Cloudflare Browser Run no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${message}`,
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed", failedStep: step, bindingType, bindingIsString, bindingLength },
     });
     return "blocked";
   } finally {
