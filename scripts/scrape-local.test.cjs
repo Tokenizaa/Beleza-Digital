@@ -9,7 +9,8 @@ test('normaliza nome sem destruir o valor original da ficha', () => {
 });
 
 test('normaliza apenas URLs HTTP(S) públicas', () => {
-  assert.equal(scraper.normalizeWebsite('HTTPS://WWW.Example.com/'), 'https://example.com');
+  assert.equal(scraper.normalizeWebsite('HTTPS://WWW.Example.com/'), 'example.com');
+  assert.equal(scraper.safeWebsiteUrl('HTTPS://WWW.Example.com/'), 'https://www.example.com/');
   assert.equal(scraper.normalizeWebsite('javascript:alert(1)'), null);
   assert.equal(scraper.normalizeWebsite('https://user:pass@example.com'), null);
 });
