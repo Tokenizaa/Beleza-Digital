@@ -88,10 +88,23 @@ export async function createProspectDedupeKey(input: ProspectIdentity): Promise<
 }
 
 /** Deterministic and explainable score. A high score never grants outreach permission by itself. */
-export function qualifyProspect(input: ProspectQualificationInput): ProspectQualification {
+export function qualifyProspect(input: ProspectQualificationInput): ProspectQualificationInput & { score: number; reasons: string[]; missingFields: string[]; evidence: Record<string, unknown>; inspectionState: 'no_website' | 'website_identified' | 'website_accessible' | 'website_with_issues' | 'inconclusive'; nextAction: string; collectedAt: string } {
   const reasons: string[] = [];
   const missingFields: string[] = [];
   let score = 0;
+
+  // Collect evidence
+  const evidence: Record<string, unknown> = {
+    businessName: input.businessName,
+    category: input.category,
+    websiteUrl: input.websiteUrl,
+    phone: input.phone,
+    email: input.email,
+    address: input.address,
+    description: input.description,
+    sourceUrl: input.sourceUrl,
+    countryCode: input.countryCode,
+  };
 
   const add = (field: string, points: number, present: boolean, reason: string) => {
     if (present) {
@@ -112,7 +125,39 @@ export function qualifyProspect(input: ProspectQualificationInput): ProspectQual
   add('description', 5, Boolean(input.description?.trim()), 'descrição pública disponível');
   add('sourceUrl', 5, Boolean(normalizeWebsite(input.sourceUrl)), 'origem pública registrada');
 
-  return { score, reasons, missingFields };
+  // Determine inspection state based on website availability
+  let inspectionState: 'no_website' | 'website_identified' | 'website_accessible' | 'website_with_issues' | 'inconclusive';
+  if (!input.websiteUrl) {
+    inspectionState = 'no_website';
+  } else if (!/^https?:\/\//i.test(input.websiteUrl)) {
+    inspectionState = 'inconclusive';
+  } else {
+    inspectionState = 'website_identified';
+  }
+
+  // Determine next action based on score and fields present
+  let nextAction: string;
+  if (score >= 80) {
+    nextAction = 'solicitar demonstração';
+  } else if (score >= 50) {
+    nextAction = 'completar dados e solicitar demonstração';
+  } else if (score > 0) {
+    nextAction = 'qualificar dados e reavaliar';
+  } else {
+    nextAction = 'coletar dados mínimos antes de qualificar';
+  }
+
+  const collectedAt = new Date().toISOString();
+
+  return {
+    score,
+    reasons,
+    missingFields,
+    evidence,
+    inspectionState,
+    nextAction,
+    collectedAt,
+  } as ProspectQualificationInput & { score: number; reasons: string[]; missingFields: string[]; evidence: Record<string, unknown>; inspectionState: string; nextAction: string; collectedAt: string };
 }
 
 /** Fail closed: a public phone number alone is not consent to receive WhatsApp marketing. */

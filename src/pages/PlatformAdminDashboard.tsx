@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { UnifiedAdminDashboard } from './UnifiedAdminDashboard';
+import React, { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 export function PlatformAdminDashboard() {
   const [authorized, setAuthorized] = useState(false);
@@ -8,7 +7,7 @@ export function PlatformAdminDashboard() {
 
   useEffect(() => {
     if (!supabase) {
-      window.location.replace('/plataforma/acesso?mode=login');
+      window.location.replace("/plataforma/acesso?mode=login");
       return;
     }
     let active = true;
@@ -16,22 +15,24 @@ export function PlatformAdminDashboard() {
     const verify = async () => {
       const { data: { session } } = await client.auth.getSession();
       if (!session) {
-        if (active) window.location.replace('/plataforma/acesso?mode=login');
+        if (active) window.location.replace("/plataforma/acesso?mode=login");
         return;
       }
-      const { data, error } = await client.from('platform_admins')
-        .select('user_id').eq('user_id', session.user.id).maybeSingle();
+      const { data, error } = await client.from("platform_admins")
+        .select("user_id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
       if (!active) return;
       if (error || !data) {
         await client.auth.signOut();
-        window.location.replace('/plataforma/acesso?mode=login');
+        window.location.replace("/plataforma/acesso?mode=login");
         return;
       }
       setAuthorized(true);
       setChecking(false);
     };
     void verify();
-    const { data: listener } = client.auth.onAuthStateChange(() => { void verify(); });
+    const { data: listener } = client.auth.onAuthStateChange(() => void verify());
     return () => {
       active = false;
       listener.subscription.unsubscribe();
@@ -41,10 +42,11 @@ export function PlatformAdminDashboard() {
   if (checking || !authorized) {
     return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">Verificando acesso administrativo…</main>;
   }
-  // Renderiza o painel unificado com sidebar única (Super Admin / rede). O wrapper já validou a sessão Supabase.
+  // Renderiza o painel unificado.
+  // Usa a seção de prospecção como inicial, pois é o módulo principal do admin.
   return <UnifiedAdminDashboard
-    initialSection="rede-saloes"
+    initialSection="prospeccao-hoje"
     preAuthenticated
-    onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign('/'); }}
+    onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign("/"); }}
   />;
 }
