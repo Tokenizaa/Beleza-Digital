@@ -91,21 +91,65 @@ function qualify(prospect: Prospect) {
   const address = firstCaptured(prospect, ["address", "formatted_address"]);
   const description = firstCaptured(prospect, ["description", "business_description"]);
   const source = firstCaptured(prospect, ["source_url", "sourceUrl", "source_link"]);
-  const fields: Array<[string, number, boolean, string]> = [
-    ["businessName", 20, Boolean(normalizeName(String(name ?? ""))), "nome comercial identificado"],
-    ["category", 10, Boolean(String(category ?? "").trim()), "categoria identificada"],
-    ["websiteUrl", 20, Boolean(normalizeWebsite(website)), "site público identificável"],
-    ["phone", 20, Boolean(normalizePhone(phone, country)), "telefone em formato válido"],
-    ["email", 10, Boolean(typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())), "e-mail em formato válido"],
-    ["address", 10, Boolean(String(address ?? "").trim()), "endereço disponível"],
-    ["description", 5, Boolean(String(description ?? "").trim()), "descrição pública disponível"],
-    ["sourceUrl", 5, Boolean(normalizeWebsite(source)), "origem pública registrada"],
+  const ratingValue = first(prospect, ["rating", "stars"]);
+  const rating = typeof ratingValue === "number" && ratingValue >= 0 && ratingValue <= 5 ? ratingValue : null;
+  const reviewCount = parseCount(first(prospect, ["reviewsCount", "reviewCount", "reviews_count", "reviews"]));
+  const images = first(prospect, ["images", "photos"]);
+  const openingHours = first(prospect, ["openingHours", "opening_hours", "hours"]);
+  const latitude = first(prospect, ["latitude", "lat"]);
+  const longitude = first(prospect, ["longitude", "lng", "lon"]);
+  const normalizedName = normalizeName(String(name ?? ""));
+  const hasWebsite = Boolean(normalizeWebsite(website));
+  const hasPhone = Boolean(normalizePhone(phone, country));
+  const hasAddress = Boolean(String(address ?? "").trim());
+  const hasImages = Array.isArray(images) && images.length > 0;
+  const hasHours = Array.isArray(openingHours) && openingHours.length > 0;
+  const hasCoordinates = typeof latitude === "number" && typeof longitude === "number";
+
+  // Completude mede quanto do cadastro foi preenchido; não mede valor comercial.
+  const completenessFields: Array<[string, boolean]> = [
+    ["businessName", Boolean(normalizedName)],
+    ["category", Boolean(String(category ?? "").trim())],
+    ["address", hasAddress],
+    ["phone", hasPhone],
+    ["websiteUrl", hasWebsite],
+    ["email", Boolean(typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))],
+    ["rating", rating !== null],
+    ["reviewCount", reviewCount !== null],
+    ["images", hasImages],
+    ["openingHours", hasHours],
+    ["coordinates", hasCoordinates],
+    ["sourceUrl", Boolean(normalizeWebsite(source))],
   ];
-  const score = fields.reduce((sum, field) => sum + (field[2] ? field[1] : 0), 0);
-  const reasons = fields.map(([field, points, present, reason]) => present ? `+${points}: ${reason}` : `0: ${field} ausente; ${reason}`);
-  const missingFields = fields.filter((field) => !field[2]).map((field) => field[0]);
+  const completenessScore = Math.round(completenessFields.filter((field) => field[1]).length / completenessFields.length * 100);
+  const missingFields = completenessFields.filter((field) => !field[1]).map((field) => field[0]);
+
+  // Oportunidade é uma métrica separada. A ausência de site é apenas uma hipótese comercial
+  // quando há evidência de um negócio real; nunca é registrada como inexistência confirmada.
+  let score = 0;
+  const reasons: string[] = [];
+  const add = (points: number, reason: string) => { score += points; reasons.push("+" + points + ": " + reason); };
+  if (normalizedName) add(15, "nome comercial identificado");
+  if (String(category ?? "").trim()) add(5, "categoria identificada");
+  if (hasAddress) add(10, "endereço público disponível");
+  if (hasPhone) add(20, "telefone público disponível");
+  if (rating !== null) {
+    add(rating >= 4.7 ? 15 : rating >= 4.3 ? 12 : rating >= 3.8 ? 8 : 3, "reputação pública de " + rating.toFixed(1) + "/5");
+  }
+  if (reviewCount !== null && reviewCount >= 100) add(10, "volume relevante de avaliações");
+  else if (reviewCount !== null && reviewCount >= 10) add(6, "avaliações públicas disponíveis");
+  if (hasImages) add(5, "fotos públicas identificadas");
+  if (hasHours) add(3, "horários públicos identificados");
+  if (hasCoordinates) add(2, "localização geográfica identificada");
+  if (hasWebsite) add(5, "site público identificado para avaliar qualidade");
+  else if (hasPhone || hasAddress) add(10, "site não identificado nesta coleta; oportunidade a confirmar");
+
   return {
-    score, reasons, missingFields,
+    score: Math.min(100, score),
+    reasons,
+    missingFields,
+    completenessScore,
+    opportunityScore: Math.min(100, score),
     normalized_website: normalizeWebsite(website),
     normalized_phone: normalizePhone(phone, country),
   };
@@ -336,6 +380,8 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
 }
 
 async function createDedupeKey(candidate: Record<string, unknown>) {
+  const featureId = String(first(candidate, ["featureId", "feature_id", "googleFeatureId"]) ?? "").trim();
+  const placeId = String(first(candidate, ["placeId", "place_id", "googlePlaceId"]) ?? "").trim();
   const website = normalizeWebsite(first(candidate, ["website", "websiteUrl", "website_url", "url"]));
   const phone = normalizePhone(first(candidate, ["phone", "phoneNumber", "phone_number", "whatsapp"]), first(candidate, ["countryCode", "country_code"]) ?? "BR");
   const name = normalizeName(String(first(candidate, ["name", "businessName", "business_name", "companyName"]) ?? ""));
@@ -343,12 +389,14 @@ async function createDedupeKey(candidate: Record<string, unknown>) {
   const region = normalizeName(String(first(candidate, ["region", "state", "province"]) ?? ""));
   const country = String(first(candidate, ["countryCode", "country_code"]) ?? "BR").toUpperCase();
   let identity = "";
-  if (website) identity = `website:${website}`;
-  else if (phone) identity = `phone:${phone}`;
-  else if (name && city && region) identity = `name-location:${name}|city:${city}|region:${region}|country:${country}`;
+  if (featureId) identity = "google-feature:" + featureId;
+  else if (placeId) identity = "google-place:" + placeId;
+  else if (website) identity = "website:" + website;
+  else if (phone) identity = "phone:" + phone;
+  else if (name && city && region) identity = "name-location:" + name + "|city:" + city + "|region:" + region + "|country:" + country;
   else return null;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
-  return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+  return "sha256:" + Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: string) {
@@ -383,8 +431,6 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   let lastError: Error | null = null;
 
   for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
-    try {
-
   // Build search query for Google Maps / local business directories
   const segment = String(campaign.segment ?? "barbearia e salão");
   const region = String(campaign.region ?? "São Paulo - SP");
@@ -416,38 +462,152 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
     await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForSelector('[role="feed"]', { timeout: 15000 });
-    const listings = await page.evaluate(() => {
-      const output: Array<Record<string, unknown>> = [];
-      const cards = document.querySelectorAll('a[href*="/maps/place/"]');
-      cards.forEach((card) => {
-        if (output.length >= 100) return;
-        const name = card.getAttribute("aria-label") || card.textContent?.trim() || "";
-        const sourceUrl = (card as HTMLAnchorElement).href;
-        if (!name || !sourceUrl) return;
-        const container = card.closest('[role="article"]') || card.closest('.Nv2PK') || card.parentElement?.parentElement || card.parentElement || card;
-        const parentText = (container as HTMLElement | null)?.innerText || (card as HTMLElement).innerText || "";
-        const lines = parentText.split("\n").map((line) => line.trim()).filter(Boolean);
-        const ratingMatch = parentText.match(/(\d[.,]\d)\s*\(([\d.,]+)\)/);
-        const phoneMatch = parentText.match(/(?:\+?\d[\d ()-]{7,}\d)/);
-        const categoryLine = lines.find((line) => /barbearia|sal[aã]o de beleza|cabeleireir|est[eé]tica|cl[ií]nica de beleza|\bspa\b|manicure|depila[cç][aã]o/i.test(line) && line !== name) || null;
-        const addressLine = lines.find((line) => /\b(rua|r\.|avenida|av\.|travessa|tv\.|estrada|rodovia|praça|praca|alameda|largo)\b/i.test(line)) || null;
-        const websiteLink = container.querySelector('a[data-item-id="authority"]') as HTMLAnchorElement | null;
-        output.push({
-          name,
-          category: categoryLine,
-          address: addressLine,
-          phone: phoneMatch?.[0] ?? null,
-          website: websiteLink?.href ?? null,
-          rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
-          reviews: ratingMatch ? ratingMatch[2] : null,
-          sourceUrl,
-          rawListingText: parentText.slice(0, 2000),
+
+    // Coleta links únicos e rola a lista até alcançar o limite ou ficar sem novos resultados.
+    const listingMap = new Map<string, Record<string, unknown>>();
+    let stagnantRounds = 0;
+    let previousCount = 0;
+    for (let round = 0; round < 35 && listingMap.size < Math.min(limit, 100); round++) {
+      const visibleListings = await page.evaluate(() => {
+        const output: Array<Record<string, unknown>> = [];
+        const seen = new Set<string>();
+        document.querySelectorAll('a[href*="/maps/place/"]').forEach((node) => {
+          const anchor = node as HTMLAnchorElement;
+          const href = anchor.href.split("&")[0];
+          if (!href || seen.has(href)) return;
+          seen.add(href);
+          const container = anchor.closest('[role="article"]') || anchor.closest('.Nv2PK') || anchor.parentElement?.parentElement || anchor.parentElement || anchor;
+          const cardText = ((container as HTMLElement | null)?.innerText || anchor.innerText || "").replace(/\s+/g, " ").trim();
+          const name = (anchor.getAttribute("aria-label") || anchor.querySelector('.qBF1Pd, .fontHeadlineSmall')?.textContent || anchor.textContent || "").replace(/\s+/g, " ").trim();
+          if (!name || !href) return;
+          output.push({ name: name.slice(0, 240), url: href, cardText: cardText.slice(0, 2500) });
         });
+        return output;
       });
-      return output;
-    });
-    scrapedResults = listings.slice(0, Math.min(limit, 100));
+      for (const listing of visibleListings) {
+        const href = String(listing.url || "");
+        if (href && !listingMap.has(href)) listingMap.set(href, listing);
+        if (listingMap.size >= Math.min(limit, 100)) break;
+      }
+      if (listingMap.size === previousCount) stagnantRounds++;
+      else stagnantRounds = 0;
+      previousCount = listingMap.size;
+      if (stagnantRounds >= 3) break;
+      await page.locator('[role="feed"]').evaluate((feed) => { feed.scrollTop = feed.scrollHeight; }).catch(() => {});
+      await page.waitForTimeout(900);
+    }
+
+    const listings = Array.from(listingMap.values()).slice(0, Math.min(limit, 100));
+    scrapedResults = [];
+    for (let index = 0; index < listings.length; index++) {
+      const listing = listings[index];
+      const listingUrl = String(listing.url || "");
+      if (!listingUrl) continue;
+      step = "detail_" + (index + 1);
+      try {
+        await page.goto(listingUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+        await page.waitForTimeout(700);
+        const detail = await page.evaluate(() => {
+          const textOf = (selector: string): string | null => {
+            const element = document.querySelector(selector);
+            const value = (element as HTMLElement | null)?.innerText || element?.getAttribute("aria-label") || "";
+            return value.replace(/\s+/g, " ").trim() || null;
+          };
+          const hrefOf = (selector: string): string | null => {
+            const element = document.querySelector(selector) as HTMLAnchorElement | null;
+            const value = element?.href || null;
+            return value && /^https?:\/\//i.test(value) ? value : null;
+          };
+          const bodyText = document.body?.innerText || "";
+          const ratingLabel = document.querySelector('div.F7nice, [aria-label*="stars"], [aria-label*="estrelas"]')?.getAttribute("aria-label") || "";
+          const ratingText = textOf("div.F7nice") || "";
+          const reviewLabel = document.querySelector('button[aria-label*="reviews"], button[aria-label*="avaliações"], [aria-label*="reviews"], [aria-label*="avaliações"]')?.getAttribute("aria-label") || "";
+          const ratingSource = [ratingLabel, ratingText, reviewLabel, bodyText.slice(0, 8000)].join(" ");
+          const ratingMatch = ratingSource.match(/(?:^|\s)([0-5](?:[.,]\d+)?)\s*(?:estrelas?|stars?)?/i) || bodyText.match(/([0-5][.,]\d)\s*\(/);
+          const reviewMatch = ratingSource.match(/([\d.,]+)\s*(?:avaliações|avaliação|reviews|review|comentários)/i) || bodyText.match(/\(([0-9][0-9.,]*)\)/);
+          const parseCount = (value: string | null): number | null => {
+            if (!value) return null;
+            const digits = value.replace(/[.,](?=\d{3}\b)/g, "").replace(/\D/g, "");
+            const parsed = Number(digits);
+            return Number.isSafeInteger(parsed) ? parsed : null;
+          };
+          const hours = Array.from(document.querySelectorAll('table.eK4R0e tr, table[aria-label*="hours"] tr'))
+            .map((row) => ((row as HTMLElement).innerText || "").replace(/\s+/g, " ").trim())
+            .filter(Boolean).slice(0, 14);
+          const images = Array.from(document.querySelectorAll("img"))
+            .map((image) => (image as HTMLImageElement).currentSrc || (image as HTMLImageElement).src || "")
+            .filter((url) => /^https?:\/\//i.test(url) && /googleusercontent|gstatic/i.test(url));
+          const category = textOf("button.DkEaL") || textOf('button[jsaction*="category"]');
+          const address = textOf('[data-item-id="address"]');
+          const phoneElement = document.querySelector('[data-item-id^="phone:tel"], a[href^="tel:"]') as HTMLAnchorElement | null;
+          const phone = phoneElement?.getAttribute("href")?.startsWith("tel:")
+            ? phoneElement.getAttribute("href")?.slice(4) || null
+            : (phoneElement as HTMLElement | null)?.innerText?.trim() || null;
+          const website = hrefOf('a[data-item-id="authority"]') || hrefOf('a[aria-label*="Website"]') || hrefOf('a[aria-label*="website"]');
+          const coordinates = location.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+          const feature = location.href.match(/!1s([^!/?]+)/);
+          const placeId = location.href.match(/[?&]place_id=([^&]+)/i);
+          const price = bodyText.match(/(?:Preço|Price)\s*[:·]?\s*(\${1,4}|R\${1,4})/i);
+          return {
+            name: textOf("h1.DUwDvf") || document.querySelector("h1")?.textContent?.trim() || null,
+            category,
+            address,
+            phone,
+            website,
+            rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
+            reviewsCount: reviewMatch ? parseCount(reviewMatch[1]) : null,
+            sourceUrl: location.href,
+            placeId: placeId ? decodeURIComponent(placeId[1]) : null,
+            featureId: feature ? decodeURIComponent(feature[1]) : null,
+            latitude: coordinates ? Number(coordinates[1]) : null,
+            longitude: coordinates ? Number(coordinates[2]) : null,
+            images: Array.from(new Set(images)).slice(0, 20),
+            openingHours: hours,
+            priceLevel: price?.[1] || null,
+            editorialSummary: textOf('[class*="PYvSYb"], [class*="WeS02d"]'),
+            rawListingText: bodyText.slice(0, 8000),
+            fieldStatus: {
+              name: "name",
+              category: category ? "found" : "not_found_in_capture",
+              address: address ? "found" : "not_found_in_capture",
+              phone: phone ? "found" : "not_found_in_capture",
+              website: website ? "found" : "not_found_in_capture",
+              rating: ratingMatch ? "found" : "not_found_in_capture",
+              reviewsCount: reviewMatch ? "found" : "not_found_in_capture",
+              images: images.length ? "found" : "not_found_in_capture",
+              openingHours: hours.length ? "found" : "not_found_in_capture",
+            },
+          };
+        });
+        scrapedResults.push({
+          ...listing,
+          ...detail,
+          name: detail.name || listing.name,
+          sourceUrl: detail.sourceUrl || listingUrl,
+          city: region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: region.split(/\s+-\s+/)[1]?.trim() || region,
+          countryCode,
+          provider: "google-maps-cloudflare-playwright",
+          searchQuery,
+        });
+      } catch (detailError) {
+        // Mantém a listagem como evidência parcial; não inventa dados ausentes.
+        scrapedResults.push({
+          ...listing,
+          sourceUrl: listingUrl,
+          city: region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: region.split(/\s+-\s+/)[1]?.trim() || region,
+          countryCode,
+          provider: "google-maps-cloudflare-playwright",
+          searchQuery,
+          fieldStatus: { detailPage: "failed", error: String(detailError instanceof Error ? detailError.message : detailError).slice(0, 250) },
+        });
+      }
+    }
+    lastError = null;
+    await browser?.close().catch(() => {});
   } catch (error) {
+      await browser?.close().catch(() => {});
       lastError = error instanceof Error ? error : new Error(String(error));
       const errorMessage = lastError.message ?? "";
 
@@ -460,8 +620,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
                           errorMessage.includes('throttl');
 
       if (!isRateLimit || retryAttempt === MAX_RETRIES) {
-        // Não é retryável ou excedeu tentativas - lançar erro para marcar como bloqueado
-        throw lastError;
+        // Interrompe o retry; o estado será persistido como bloqueado abaixo.
+        break;
       }
 
       // Extrair Retry-After do erro se disponível
@@ -484,6 +644,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
 
       await new Promise(resolve => setTimeout(resolve, sleepDelay));
     }
+    await browser?.close().catch(() => {});
   }
 
   // Se após todas as tentativas ainda houver erro, marcar como bloqueado
@@ -520,7 +681,10 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const country = String(first(candidate, ["countryCode", "country_code"]) ?? countryCode).slice(0, 3);
     const websiteNormalized = normalizeWebsite(website);
     const phoneNormalized = normalizePhone(phone, country);
-    const sourceUrl = normalizeWebsite(first(candidate, ["sourceUrl", "source_url", "sourceLink"]));
+    const sourceUrlValue = first(candidate, ["sourceUrl", "source_url", "sourceLink"]);
+    const sourceUrl = typeof sourceUrlValue === "string" && /^https?:\/\//i.test(sourceUrlValue.trim())
+      ? sourceUrlValue.trim().slice(0, 2000)
+      : null;
     const identityCandidate = {
       ...candidate,
       city: first(candidate, ["city", "locality"]) ?? region.split(/\s+-\s+/)[0],
@@ -539,7 +703,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       source_url: sourceUrl,
     });
     if (result.score >= 50) qualified++;
-    const providerRecordId = String(first(candidate, ["placeId", "providerId", "provider_record_id"]) ?? "").slice(0, 250) || null;
+    const providerRecordId = String(first(candidate, ["featureId", "feature_id", "placeId", "place_id", "providerId", "provider_record_id"]) ?? "").slice(0, 250) || null;
     const stored = await db(env, "prospecting_candidates?on_conflict=dedupe_key", {
       method: "POST",
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
@@ -566,8 +730,22 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         missing_fields: result.missingFields,
         status: result.score >= 50 ? "qualified" : "discovered",
         raw_evidence: {
+          schemaVersion: 2,
           rating: typeof first(candidate, ["rating", "stars"]) === "number" ? first(candidate, ["rating", "stars"]) : null,
-          reviewsCount: parseCount(first(candidate, ["reviews", "reviewCount", "reviewsCount"])),
+          reviewsCount: parseCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"])),
+          reviewCount: parseCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"])),
+          placeId: first(candidate, ["placeId", "place_id"]) ?? null,
+          featureId: first(candidate, ["featureId", "feature_id"]) ?? null,
+          latitude: first(candidate, ["latitude", "lat"]) ?? null,
+          longitude: first(candidate, ["longitude", "lng", "lon"]) ?? null,
+          images: Array.isArray(candidate.images) ? candidate.images.slice(0, 20) : [],
+          openingHours: Array.isArray(candidate.openingHours) ? candidate.openingHours.slice(0, 14) : [],
+          priceLevel: first(candidate, ["priceLevel", "price_level"]) ?? null,
+          editorialSummary: first(candidate, ["editorialSummary", "editorial_summary"]) ?? null,
+          fieldStatus: candidate.fieldStatus && typeof candidate.fieldStatus === "object" ? candidate.fieldStatus : {},
+          completenessScore: result.completenessScore,
+          opportunityScore: result.opportunityScore,
+          opportunityReasons: result.reasons,
           providerRecordId,
           providerRequestId: null,
           observedAt: new Date().toISOString(),
