@@ -67,6 +67,12 @@ export interface LeadCompany {
   notes: string[];
   followUpDate?: string;
   createdAt: string;
+  // Novos campos alinhados com os 18 do provedor (para SEO/copy na proposta)
+  status?: string;           // Status operacional
+  note?: string;           // Nota / avaliação geral
+  'quantidade-de-avaliacoes'?: string;  // Qtd de avaliações
+  'faixa-de-preco'?: string;            // Faixa de preço
+  horario?: string;        // Horário de funcionamento
 }
 
 export const TEMPLATE_NAMES: Record<string, string> = {
@@ -291,7 +297,15 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   const [selectedCompany, setSelectedCompany] = useState<LeadCompany | null>(null);
   const [proposalCopied, setProposalCopied] = useState(false);
 
-  // CRM stage and template changes are persisted in prospecting_crm_state.
+  // Seleção de plano comercial (nova funcionalidade)
+  const [selectedPlano, setSelectedPlano] = useState<'A' | 'B' | 'C' | null>(null);
+  const [isDefiningPlan, setIsDefiningPlan] = useState<boolean>(false);
+  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<'monthly' | 'yearly' | 'one-time' | null>(null);
+  const [isDefiningBillingPeriod, setIsDefiningBillingPeriod] = useState<boolean>(false);
+  const [selectedPaymentMode, setSelectedPaymentMode] = useState<'code-download' | 'specialist-assistance' | 'one-time' | null>(null);
+  const [isDefiningPaymentMode, setIsDefiningPaymentMode] = useState<boolean>(false);
+
+// CRM stage and template changes are persisted in prospecting_crm_state.
 
   // Metrics calculation (dados reais do CRM persistido)
   const metrics = useMemo(() => {
@@ -328,6 +342,58 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, selectedTemplate: template } : c)));
     if (selectedCompany?.id === companyId) {
       setSelectedCompany((prev) => (prev ? { ...prev, selectedTemplate: template } : null));
+    }
+  };
+
+  // Definir plano comercial
+  const definirPlanoComercial = async () => {
+    if (!selectedPlano) return;
+    if (!supabase) {
+      setIsDefiningPlan(false);
+      return;
+    }
+
+    setIsDefiningPlan(true);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session?.user.id) {
+        setIsDefiningPlan(false);
+        return;
+      }
+
+      const token = sessionData.session.access_token;
+      const response = await fetch(`/api/prospecting/definir-plano?leadId=${selectedCompany.id}&plano=${selectedPlano}&billingPeriod=${selectedBillingPeriod}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.erro || 'Erro ao definir plano');
+      }
+
+      // Atualizar o company localmente com os novos dados
+      setCompanies((prev) =>
+        prev.map((c) =>
+          c.id === selectedCompany.id
+            ? { ...c, planoComercial: selectedPlano, dataEscolhaPlano: new Date().toISOString(), escolhidoPor: 'cliente', billing_period: selectedBillingPeriod }
+            : c
+        )
+      );
+
+      // Resetar seleção após sucesso
+      setSelectedPlano(null);
+      setSelectedBillingPeriod(null);
+      setIsDefiningPlan(false);
+    } catch (error: any) {
+      console.error('❌ Erro ao definir plano:', error);
+      alert(`Erro ao definir plano: ${error.message}`);
+      setIsDefiningPlan(false);
     }
   };
 
@@ -430,7 +496,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
       setSearchExecution((prev) => ({
         ...prev,
-        executionId: responseBody.executionId || prev?.executionId || 
+        executionId: responseBody.executionId || prev?.executionId || '',
         status: initialStatus,
         message: initialMessage,
         error: initialDetail || undefined,
@@ -563,6 +629,12 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       templateName: TEMPLATE_NAMES[templateKey] || 'Modelo Oficial',
       projectVersion: 1,
       generatedAt: new Date().toISOString(),
+      // Novos campos alinhados com os 18 do provedor
+      status: company.status || 'active',
+      note: company.note,
+      'quantidade-de-avaliacoes': company.reviewsCount !== null ? String(company.reviewsCount) : undefined,
+      'faixa-de-preco': company.faixaDePreco || undefined,
+      horario: company.horario,
     })}`;
   };
 
@@ -1517,6 +1589,166 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                   <option value="reuniao">Reunião</option>
                   <option value="fechado">Fechado</option>
                 </select>
+              </div>
+
+              {/* DEFINIR PLANO COMERCIAL */}
+              <div className="mt-4 bg-[#171b23] p-5 rounded-2xl border border-[#202530] space-y-5">
+                <h4 className="font-bold text-white border-b border-[#202530] pb-2">Definir Plano Comercial</h4>
+                <p className="text-neutral-400 text-xs mb-4">
+                  Escolha o plano comercial para {selectedCompany.name}. A decisão é do cliente e o sistema registra a escolha e executa a automação correspondente.
+                </p>
+                <p className="text-neutral-400 text-xs mb-4">
+                  Dados de qualificação: Score {selectedCompany.opportunity === 'alta' ? '≥ 70' : selectedCompany.opportunity === 'media' ? '≥ 40' : '< 40'} | Template: {TEMPLATE_NAMES[selectedCompany.selectedTemplate]}
+                </p>
+                <p className="text-neutral-400 text-xs mb-4">
+                  {selectedCompany.websiteUrl ? 'Site identificado' : 'Sem site identificado no Google Maps'}
+                </p>
+
+                {/* Radio options for plano selection (A, B, C) */}
+                <div className="space-y-3 mb-4">
+                  {/* Plano A */}
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="plano-choice"
+                      value="A"
+                      defaultChecked={selectedCompany.planoComercial === 'A'}
+                      onChange={(e) => setSelectedPlano('A')}
+                      disabled={!selectedCompany.websiteUrl}
+                    />
+                    <div className="flex-1">
+                      <h5 className="font-bold text-white">Plano A</h5>
+                      <p className="text-neutral-400 text-xs">Site no domínio/hospedagem do cliente</p>
+                      <p className="text-neutral-400 text-xs">Entregamos o código para você implantar</p>
+                    </div>
+                  </label>
+
+                  {/* Plano B */}
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="plano-choice"
+                      value="B"
+                      defaultChecked={selectedCompany.planoComercial === 'B'}
+                      onChange={(e) => setSelectedPlano('B')}
+                    />
+                    <div className="flex-1">
+                      <h5 className="font-bold text-white">Plano B</h5>
+                      <p className="text-neutral-400 text-xs">Domínio próprio e hospedagem externa</p>
+                      <p className="text-neutral-400 text-xs">Orientação Hostinger</p>
+                    </div>
+                  </label>
+
+                  {/* Plano C */}
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="plano-choice"
+                      value="C"
+                      defaultChecked={selectedCompany.planoComercial === 'C'}
+                      onChange={(e) => setSelectedPlano('C')}
+                    />
+                    <div className="flex-1">
+                      <h5 className="font-bold text-white">Plano C</h5>
+                      <p className="text-neutral-400 text-xs">Hospedagem gerenciada pela plataforma</p>
+                      <p className="text-neutral-400 text-xs">Mais simples, domínio do sistema (automação)</p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Payment Mode Options - Apenas para Planos A e B */}
+                {selectedPlano && (selectedPlano === 'A' || selectedPlano === 'B') && (
+                  <div className="space-y-3">
+                    <p className="font-bold text-neutral-300 text-xs">Modalidade de Pagamento</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Code Download */}
+                      <label className="flex-1 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
+                        selectedPaymentMode === 'code-download' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
+                      }"
+                        onClick={() => setSelectedPaymentMode('code-download')}
+                        style={{cursor: 'pointer'}}
+                      >
+                        <span>Code-Download</span>
+                        <span className="text-[10px] text-xs">Único: Apenas código fonte</span>
+                      </label>
+
+                      {/* Specialist Assistance */}
+                      <label className="flex-1 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
+                        selectedPaymentMode === 'specialist-assistance' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
+                      }"
+                        onClick={() => setSelectedPaymentMode('specialist-assistance')}
+                        style={{cursor: 'pointer'}}
+                      >
+                        <span>Specialist</span>
+                        <span className="text-[10px] text-xs">Recorrente: Suporte especialista</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recurrence Options - Apenas para Plano C */}
+                {selectedPlano === 'C' && (
+                  <div className="space-y-3">
+                    <p className="font-bold text-neutral-300 text-xs">Período de cobrança</p>
+                    <div className="flex gap-2">
+                      <label className="flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
+                        selectedBillingPeriod === 'monthly' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
+                      }>
+                        <span>Mensal</span>
+                        <span className="text-[10px]">R$ 97,00/mês</span>
+                      </label>
+                      <label className="flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
+                        selectedBillingPeriod === 'yearly' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
+                      }>
+                        <span>Anual</span>
+                        <span className="text-[10px]">R$ 997,00/ano (2ms grátis)</span>
+                      </label>
+                    </div>
+                    <p className="text-neutral-400 text-xs text-center">Plano C inclui publicação no domínio da plataforma</p>
+                  </div>
+                )}
+
+                {/* Selected plan display */}
+                {selectedPlano && (
+                  <div className="p-3 bg-purple-950/50 border border-purple-500/40 rounded-xl mb-4">
+                    <p className="font-bold text-purple-300">Plano selecionado: Plano {selectedPlano}</p>
+                    {selectedPaymentMode && (
+                      <p className="text-neutral-300 text-xs">Modalidade: {selectedPaymentMode === 'code-download' ? 'Code-Download (único)' : 'Specialist (recorrente)'}</p>
+                    )}
+                    {selectedBillingPeriod && (
+                      <p className="text-neutral-300 text-xs">Período: {selectedBillingPeriod === 'monthly' ? 'Mensal' : 'Anual'}</p>
+                    )}
+                    <p className="text-neutral-300 text-xs">Clique em "Definir Plano" para confirmar</p>
+                  </div>
+                )}
+
+                {/* Selected plan display */}
+                {selectedPlano && (
+                  <div className="p-3 bg-purple-950/50 border border-purple-500/40 rounded-xl mb-4">
+                    <p className="font-bold text-purple-300">Plano selecionado: Plano {selectedPlano}</p>
+                    {selectedBillingPeriod && (
+                      <p className="text-neutral-300 text-xs">Período: {selectedBillingPeriod === 'monthly' ? 'Mensal' : 'Anual'}</p>
+                    )}
+                    <p className="text-neutral-300 text-xs">Clique em "Definir Plano" para confirmar</p>
+                  </div>
+                )}
+
+                {/* Definir Plano Button */}
+                <button
+                  onClick={definirPlanoComercial}
+                  disabled={!selectedPlano || isDefiningPlan}
+                  className="w-full py-3 rounded-xl bg-[#facc15] hover:bg-[#fde047] disabled:opacity-50 text-neutral-950 text-sm font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-yellow-500/10 cursor-pointer"
+                >
+                  {isDefiningPlan ? (
+                    <>
+                      <RotateCw className="h-4 w-4 animate-spin" /> Definindo...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" /> Definir Plano
+                    </>
+                  )}
+                </button>
               </div>
 
               {/* AÇÕES DE PROPOSTA */}
