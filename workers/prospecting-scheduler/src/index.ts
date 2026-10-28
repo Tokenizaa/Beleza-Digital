@@ -431,7 +431,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const region = String(campaign.region ?? "São Paulo - SP").trim();
   const countryCode = String(campaign.countryCode ?? "BR").trim().toUpperCase();
   const searchQuery = `${segment} ${region}`.trim();
-  const baseUrl = env.MAPSCRAPE_API_BASE_URL.trim().replace(/\\/+$/, "");
+  const baseUrl = env.MAPSCRAPE_API_BASE_URL.trim().replace(/\/+$/, "");
   const apiKey = env.MAPSCRAPE_API_KEY.trim();
   let scrapedResults: Array<Record<string, unknown>> = [];
   let lastError: Error | null = null;
@@ -554,8 +554,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         source_url: lead.maps_url || lead.source_url,
         placeId: lead.source_place_id || lead.id,
         providerId: lead.id,
-        city: lead.city || region.split(/\\s+-\\s+/)[0]?.trim() || null,
-        region: lead.state || region.split(/\\s+-\\s+/)[1]?.trim() || region,
+        city: lead.city || region.split(/\s+-\s+/)[0]?.trim() || null,
+        region: lead.state || region.split(/\s+-\s+/)[1]?.trim() || region,
         countryCode,
         images: Array.isArray(lead.photos) ? lead.photos : [],
         openingHours: typeof lead.opening_hours === "string" ? [lead.opening_hours] : (Array.isArray(lead.opening_hours) ? lead.opening_hours : []),
