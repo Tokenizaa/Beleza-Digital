@@ -1,0 +1,113 @@
+- generic [ref=f6e4]:
+  - complementary [ref=f6e5]:
+    - generic [ref=f6e6]:
+      - generic [ref=f6e14]:
+        - heading "Painel Administrativo" [level=1] [ref=f6e15]
+        - paragraph [ref=f6e16]: Plataforma para Salões
+      - generic [ref=f6e17]:
+        - generic [ref=f6e18]: Salão Ativo
+        - button [ref=f6e19] [cursor=pointer]:
+          - generic [ref=f6e22]:
+            - paragraph [ref=f6e23]: Salão Modelo
+            - paragraph [ref=f6e24]: /modelo-inicial
+      - navigation [ref=f6e27]:
+        - generic [ref=f6e28]:
+          - button "Gestão do Salão" [ref=f6e29] [cursor=pointer]
+          - generic [ref=f6e40]:
+            - button "Dashboard & Faturamento" [ref=f6e41] [cursor=pointer]
+            - button "Serviços & Preços" [ref=f6e48] [cursor=pointer]
+            - button "Produtos & Estoque" [ref=f6e56] [cursor=pointer]
+            - button "Galeria & Vídeos" [ref=f6e61] [cursor=pointer]
+            - button "Agenda & Horários" [ref=f6e68] [cursor=pointer]
+            - button "Feed Instagram" [ref=f6e72] [cursor=pointer]
+            - button "Configurações do Salão" [ref=f6e77] [cursor=pointer]
+        - button "Prospecção & Raspagem" [active] [ref=f6e83] [cursor=pointer]
+        - generic [ref=f6e91]:
+          - button "Rede & Super Admin" [ref=f6e92] [cursor=pointer]
+          - generic [ref=f6e101]:
+            - button "Salões da Rede (2)" [ref=f6e102] [cursor=pointer]
+            - button "Cadastrar Novo Salão" [ref=f6e108] [cursor=pointer]
+            - button "Administradores Gerais" [ref=f6e111] [cursor=pointer]
+            - button "Auditoria & Logs" [ref=f6e116] [cursor=pointer]
+            - button "Planos & Configurações" [ref=f6e121] [cursor=pointer]
+        - button "5 Modelos de Sites 5" [ref=f6e125] [cursor=pointer]:
+          - generic [ref=f6e126]: 5 Modelos de Sites
+          - generic [ref=f6e131]: "5"
+    - generic [ref=f6e132]:
+      - button "Ver Site Público" [ref=f6e133] [cursor=pointer]
+      - button "Encerrar Sessão" [ref=f6e139] [cursor=pointer]
+  - main [ref=f6e145]:
+    - generic [ref=f6e146]:
+      - generic [ref=f6e147]:
+        - generic [ref=f6e153]:
+          - generic [ref=f6e154]:
+            - heading "Plataforma para Salões" [level=1] [ref=f6e155]
+            - generic [ref=f6e156]: Super Admin
+          - paragraph [ref=f6e157]: Painel Geral de Controle da Rede White Label Multiestabelecimento
+        - generic [ref=f6e158]:
+          - button "Ver Site Público" [ref=f6e159] [cursor=pointer]
+          - button "Sair" [ref=f6e165] [cursor=pointer]
+      - generic [ref=f6e170]:
+        - generic [ref=f6e171]:
+          - textbox "Buscar por nome, slug ou cidade..." [ref=f6e176]
+          - generic [ref=f6e177]:
+            - combobox [ref=f6e178]:
+              - option "Todos os Status" [selected]
+              - option "Somente Ativos"
+              - option "Somente Inativos"
+            - button "Novo Estabelecimento" [ref=f6e179] [cursor=pointer]
+        - generic [ref=f6e182]:
+          - generic [ref=f6e183]:
+            - generic [ref=f6e184]:
+              - generic [ref=f6e185]:
+                - generic [ref=f6e186]:
+                  - img "Salão Modelo" [ref=f6e188]
+                  - generic [ref=f6e189]:
+                    - generic [ref=f6e190]:
+                      - heading "Salão Modelo" [level=3] [ref=f6e191]
+                      - generic [ref=f6e192]: Estabelecimento principal
+                    - generic [ref=f6e193]: /modelo-inicial
+                - button "Ativo" [ref=f6e194] [cursor=pointer]
+              - generic [ref=f6e195]:
+                - generic [ref=f6e196]:
+                  - generic [ref=f6e197]: "0"
+                  - generic [ref=f6e198]: Serviços
+                - generic [ref=f6e199]:
+                  - generic [ref=f6e200]: "0"
+                  - generic [ref=f6e201]: Produtos
+                - generic [ref=f6e202]:
+                  - generic [ref=f6e203]: "0"
+                  - generic [ref=f6e204]: Agendas
+              - generic [ref=f6e205]:
+                - generic [ref=f6e206]: •
+                - generic [ref=f6e214]: Acesso via Supabase Auth (Administrador do estabelecimento)
+            - generic [ref=f6e219]:
+              - button "Entrar no Estabelecimento" [ref=f6e220] [cursor=pointer]
+              - button "Editar Dados do Estabelecimento" [ref=f6e226] [cursor=pointer]
+          - generic [ref=f6e229]:
+            - generic [ref=f6e230]:
+              - generic [ref=f6e231]:
+                - generic [ref=f6e232]:
+                  - img "Estabelecimento de Demonstração" [ref=f6e234]
+                  - generic [ref=f6e235]:
+                    - heading "Estabelecimento de Demonstração" [level=3] [ref=f6e237]
+                    - generic [ref=f6e238]: /demonstracao
+                - button "Ativo" [ref=f6e239] [cursor=pointer]
+              - generic [ref=f6e240]:
+                - generic [ref=f6e241]:
+                  - generic [ref=f6e242]: "0"
+                  - generic [ref=f6e243]: Serviços
+                - generic [ref=f6e244]:
+                  - generic [ref=f6e245]: "0"
+                  - generic [ref=f6e246]: Produtos
+                - generic [ref=f6e247]:
+                  - generic [ref=f6e248]: "0"
+                  - generic [ref=f6e249]: Agendas
+              - generic [ref=f6e250]:
+                - generic [ref=f6e251]: •
+                - generic [ref=f6e259]: Acesso via Supabase Auth (Administrador do estabelecimento)
+            - generic [ref=f6e264]:
+              - button "Entrar no Estabelecimento" [ref=f6e265] [cursor=pointer]
+              - generic [ref=f6e270]:
+                - button "Editar Dados do Estabelecimento" [ref=f6e271] [cursor=pointer]
+                - button "Excluir Estabelecimento" [ref=f6e274] [cursor=pointer]

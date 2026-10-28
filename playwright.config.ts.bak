@@ -1,0 +1,43 @@
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+  timeout: 30000,
+  retries: 0,
+  expect: {
+    timeout: 5000,
+  },
+  fullyParallel: true,
+  workers: 'autoscale',
+  reporter: [['list'], ['html', { open: 'never' }]],
+  
+  // Configure Playwright to use Chrome
+  use: {
+    browser: 'chromium',
+    headless: true,
+    viewport: { width: 1920, height: 1080 },
+    ignoreHTTPSErrors: true,
+    baseURL: 'http://localhost:3000',
+    actionTimeout: 5000,
+    navigationTimeout: 30000,
+    
+    // Collect trace when retrying failed test
+    trace: 'on-first-retry',
+    
+    // Base URL for the application
+    // The dev server should be running separately
+  },
+  
+  // Projects for different browsers
+  projects: [
+    {
+      name: 'Chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+  ],
+  
+  // Output directory for test artifacts
+  outputDir: './test-results/',
+});

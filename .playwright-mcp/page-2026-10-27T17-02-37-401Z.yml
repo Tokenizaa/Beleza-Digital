@@ -1,0 +1,256 @@
+- generic [ref=f3e3]:
+  - banner [ref=f3e4]:
+    - generic [ref=f3e6]:
+      - button "Ir para o início" [ref=f3e7]:
+        - generic [ref=f3e8]: Salão Modelo
+      - navigation "Navegação principal" [ref=f3e9]:
+        - button "Início" [ref=f3e10]
+        - button "Serviços" [ref=f3e11]
+        - button "Produtos" [ref=f3e12]
+        - button "Galeria" [ref=f3e13]
+        - button "Contato" [ref=f3e14]
+      - generic [ref=f3e15]:
+        - button "Agendar" [ref=f3e16]
+        - button "Entrar" [ref=f3e20]
+  - main [ref=f3e25]:
+    - generic [ref=f3e26]:
+      - generic [ref=f3e27]:
+        - img "Salão Modelo" [ref=f3e29]
+        - generic [ref=f3e31]:
+          - generic [ref=f3e32]:
+            - img "Salão Modelo" [ref=f3e34]
+            - generic [ref=f3e35]: Modelo inicial • Personalize sua marca
+          - generic [ref=f3e40]:
+            - heading "Salão Modelo" [level=1] [ref=f3e41]
+            - paragraph [ref=f3e42]: Harmonia, visagismo e autocuidado completo em um só lugar. Cortes masculinos impecáveis, design de sobrancelhas, cílios volumosos, tranças e cosméticos selecionados.
+          - generic [ref=f3e43]:
+            - button "Agendar Horário Online" [ref=f3e44] [cursor=pointer]
+            - link "WhatsApp Direto" [ref=f3e48] [cursor=pointer]:
+              - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+            - button "Ver Serviços" [ref=f3e52] [cursor=pointer]
+          - generic [ref=f3e60]:
+            - generic [ref=f3e65]:
+              - generic [ref=f3e66]: Endereço
+              - text: Endereço não informado
+            - generic [ref=f3e71]:
+              - generic [ref=f3e72]: Instagram
+              - text: Não informado
+            - generic [ref=f3e73]: WhatsApp
+      - generic [ref=f3e79]:
+        - generic [ref=f3e80]:
+          - img "Aplicativo do estabelecimento" [ref=f3e82]
+          - generic [ref=f3e83]:
+            - generic [ref=f3e84]:
+              - generic [ref=f3e85]: Instale o aplicativo do estabelecimento
+              - generic [ref=f3e86]: Grátis
+            - paragraph [ref=f3e87]: Acesse agendamentos, serviços e galeria em 1 clique direto da sua tela inicial (iOS e Android).
+        - button "Salvar no Celular" [ref=f3e88] [cursor=pointer]
+      - generic [ref=f3e94]:
+        - generic [ref=f3e95]:
+          - text: Especialidades
+          - heading "Serviços em Destaque" [level=2] [ref=f3e96]
+          - paragraph [ref=f3e97]: Cuidado com os melhores produtos e atendimento personalizado para homens e mulheres.
+        - button "Ver todos os serviços" [ref=f3e98] [cursor=pointer]
+      - generic [ref=f3e103]:
+        - generic [ref=f3e104]:
+          - generic [ref=f3e105]:
+            - generic [ref=f3e106]: Agenda Aberta & Transparência
+            - heading "Disponibilidade & Agendamento em Tempo Real" [level=2] [ref=f3e111]
+            - paragraph [ref=f3e112]: Navegue pelos meses, verifique horários disponíveis e solicite seu atendimento diretamente pelo WhatsApp. Os horários confirmados ficam automaticamente bloqueados para evitar qualquer conflito.
+          - button "Abrir Agendador Completo" [ref=f3e113] [cursor=pointer]
+        - generic [ref=f3e117]:
+          - generic [ref=f3e118]:
+            - generic [ref=f3e119]:
+              - generic [ref=f3e120]: "Selecione uma data para consultar:"
+              - generic [ref=f3e121]: 27/10/2026
+            - generic [ref=f3e122]:
+              - generic [ref=f3e123]:
+                - heading "Outubro 2026" [level=4] [ref=f3e125]
+                - generic [ref=f3e126]:
+                  - button "Hoje" [ref=f3e127] [cursor=pointer]
+                  - button "Mês anterior" [disabled] [ref=f3e128] [cursor=pointer]
+                  - button "Avançar mês" [ref=f3e131] [cursor=pointer]
+              - generic [ref=f3e134]:
+                - generic [ref=f3e135]: Dom
+                - generic [ref=f3e136]: Seg
+                - generic [ref=f3e137]: Ter
+                - generic [ref=f3e138]: Qua
+                - generic [ref=f3e139]: Qui
+                - generic [ref=f3e140]: Sex
+                - generic [ref=f3e141]: Sáb
+              - generic [ref=f3e142]:
+                - button "1" [disabled] [ref=f3e147]
+                - button "2" [disabled] [ref=f3e149]
+                - button "3" [disabled] [ref=f3e151]
+                - button "4" [disabled] [ref=f3e153]
+                - button "5" [disabled] [ref=f3e155]
+                - button "6" [disabled] [ref=f3e157]
+                - button "7" [disabled] [ref=f3e159]
+                - button "8" [disabled] [ref=f3e161]
+                - button "9" [disabled] [ref=f3e163]
+                - button "10" [disabled] [ref=f3e165]
+                - button "11" [disabled] [ref=f3e167]
+                - button "12" [disabled] [ref=f3e169]
+                - button "13" [disabled] [ref=f3e171]
+                - button "14" [disabled] [ref=f3e173]
+                - button "15" [disabled] [ref=f3e175]
+                - button "16" [disabled] [ref=f3e177]
+                - button "17" [disabled] [ref=f3e179]
+                - button "18" [disabled] [ref=f3e181]
+                - button "19" [disabled] [ref=f3e183]
+                - button "20" [disabled] [ref=f3e185]
+                - button "21" [disabled] [ref=f3e187]
+                - button "22" [disabled] [ref=f3e189]
+                - button "23" [disabled] [ref=f3e191]
+                - button "24" [disabled] [ref=f3e193]
+                - button "25" [disabled] [ref=f3e195]
+                - button "26" [disabled] [ref=f3e197]
+                - button "27" [ref=f3e199] [cursor=pointer]
+                - button "28" [ref=f3e201] [cursor=pointer]
+                - button "29" [ref=f3e203] [cursor=pointer]
+                - button "30" [ref=f3e205] [cursor=pointer]
+                - button "31" [ref=f3e207] [cursor=pointer]
+              - generic [ref=f3e209]:
+                - generic [ref=f3e210]:
+                  - generic [ref=f3e211]: Selecionado
+                  - generic [ref=f3e214]: Com Reservas
+                - generic [ref=f3e217]: Avance nos meses pelas setas acima
+            - paragraph [ref=f3e222]:
+              - strong [ref=f3e223]: "Proteção contra conflitos de horário:"
+              - text: Quando o administrador confirma um horário, ele fica visivelmente travado com o cadeado Reservado para todos os clientes.
+          - generic [ref=f3e224]:
+            - generic [ref=f3e225]:
+              - generic [ref=f3e226]:
+                - text: Grade de Atendimento para
+                - heading "terça-feira, 27 de outubro de 2026" [level=3] [ref=f3e227]
+              - generic [ref=f3e231]: Todos os horários livres
+            - generic [ref=f3e237]:
+              - generic [ref=f3e238]: "Procedimento Desejado:"
+              - combobox [ref=f3e239]
+            - generic [ref=f3e240]:
+              - generic [ref=f3e241]:
+                - generic [ref=f3e242]: "Escolha o horário de preferência:"
+                - generic [ref=f3e243]:
+                  - text: "Horário escolhido:"
+                  - strong [ref=f3e244]: 14:00
+              - generic [ref=f3e245]:
+                - button "09:00 Livre" [ref=f3e246] [cursor=pointer]:
+                  - generic [ref=f3e247]: 09:00
+                  - generic [ref=f3e248]: Livre
+                - button "09:45 Livre" [ref=f3e249] [cursor=pointer]:
+                  - generic [ref=f3e250]: 09:45
+                  - generic [ref=f3e251]: Livre
+                - button "10:30 Livre" [ref=f3e252] [cursor=pointer]:
+                  - generic [ref=f3e253]: 10:30
+                  - generic [ref=f3e254]: Livre
+                - button "11:15 Livre" [ref=f3e255] [cursor=pointer]:
+                  - generic [ref=f3e256]: 11:15
+                  - generic [ref=f3e257]: Livre
+                - button "13:00 Livre" [ref=f3e258] [cursor=pointer]:
+                  - generic [ref=f3e259]: 13:00
+                  - generic [ref=f3e260]: Livre
+                - button "14:00 Livre" [ref=f3e261] [cursor=pointer]:
+                  - generic [ref=f3e262]: 14:00
+                  - generic [ref=f3e263]: Livre
+                - button "15:00 Livre" [ref=f3e264] [cursor=pointer]:
+                  - generic [ref=f3e265]: 15:00
+                  - generic [ref=f3e266]: Livre
+                - button "16:00 Livre" [ref=f3e267] [cursor=pointer]:
+                  - generic [ref=f3e268]: 16:00
+                  - generic [ref=f3e269]: Livre
+                - button "17:00 Livre" [ref=f3e270] [cursor=pointer]:
+                  - generic [ref=f3e271]: 17:00
+                  - generic [ref=f3e272]: Livre
+                - button "18:00 Livre" [ref=f3e273] [cursor=pointer]:
+                  - generic [ref=f3e274]: 18:00
+                  - generic [ref=f3e275]: Livre
+                - button "18:45 Livre" [ref=f3e276] [cursor=pointer]:
+                  - generic [ref=f3e277]: 18:45
+                  - generic [ref=f3e278]: Livre
+                - button "19:30 Livre" [ref=f3e279] [cursor=pointer]:
+                  - generic [ref=f3e280]: 19:30
+                  - generic [ref=f3e281]: Livre
+            - generic [ref=f3e282]:
+              - button "Solicitar 14:00 no WhatsApp" [ref=f3e283] [cursor=pointer]
+              - button "Preencher com Meus Dados" [ref=f3e287] [cursor=pointer]
+      - generic [ref=f3e289]:
+        - generic [ref=f3e290]:
+          - text: Portfólio & Transformações
+          - heading "Trabalhos Recentes" [level=2] [ref=f3e291]
+          - paragraph [ref=f3e292]: Explore os trabalhos e mídias cadastrados pelo estabelecimento.
+        - button "Explorar galeria completa" [ref=f3e293] [cursor=pointer]
+      - generic [ref=f3e298]:
+        - generic [ref=f3e299]:
+          - text: Cosméticos & Cuidados
+          - heading "Produtos em Destaque" [level=2] [ref=f3e300]
+          - paragraph [ref=f3e301]: Linha especial para manutenção do seu estilo em casa. Peça e retire na barbearia.
+        - button "Ver todo o catálogo" [ref=f3e302] [cursor=pointer]
+      - generic [ref=f3e307]:
+        - heading "Pronto para transformar seu visual?" [level=3] [ref=f3e308]
+        - paragraph [ref=f3e309]: Consulte a disponibilidade e entre em contato com Salão Modelo para solicitar seu horário.
+        - link "Falar no WhatsApp com Salão Modelo" [ref=f3e311] [cursor=pointer]:
+          - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+  - contentinfo [ref=f3e315]:
+    - generic [ref=f3e316]:
+      - generic [ref=f3e317]:
+        - generic [ref=f3e318]:
+          - generic [ref=f3e319]:
+            - img "Salão Modelo" [ref=f3e321]
+            - generic [ref=f3e322]:
+              - generic [ref=f3e323]: Salão Modelo
+              - generic [ref=f3e324]: Modelo inicial • Personalize sua marca
+          - paragraph [ref=f3e325]: Conheça os serviços, consulte a disponibilidade e personalize esta página com as informações do seu estabelecimento.
+          - generic [ref=f3e326]:
+            - generic "Instagram" [ref=f3e327]
+            - link "WhatsApp" [ref=f3e331] [cursor=pointer]:
+              - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+        - generic [ref=f3e334]:
+          - heading "Navegação Rápida" [level=4] [ref=f3e335]
+          - list [ref=f3e336]:
+            - listitem [ref=f3e337]:
+              - button "Página Inicial" [ref=f3e338] [cursor=pointer]
+            - listitem [ref=f3e339]:
+              - button "Menu de Serviços" [ref=f3e340] [cursor=pointer]
+            - listitem [ref=f3e341]:
+              - button "Agendar Horário" [ref=f3e342] [cursor=pointer]
+            - listitem [ref=f3e343]:
+              - button "Produtos & Cosméticos" [ref=f3e344] [cursor=pointer]
+            - listitem [ref=f3e345]:
+              - button "Galeria & Trabalhos" [ref=f3e346] [cursor=pointer]
+            - listitem [ref=f3e347]:
+              - button "Localização & Contato" [ref=f3e348] [cursor=pointer]
+        - generic [ref=f3e349]:
+          - heading "Unidade & Atendimento" [level=4] [ref=f3e350]
+          - list [ref=f3e351]:
+            - listitem [ref=f3e352]:
+              - generic:
+                - strong
+            - listitem [ref=f3e356]:
+              - link:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+            - listitem [ref=f3e359]:
+              - link [ref=f3e363] [cursor=pointer]:
+                - /url: ""
+            - listitem [ref=f3e367]:
+              - generic [ref=f3e371]: Atendimento com horário marcado e por ordem de chegada no WhatsApp.
+        - generic [ref=f3e372]:
+          - heading "Atendimento Comercial" [level=4] [ref=f3e373]
+          - paragraph [ref=f3e374]: Agendamentos e dúvidas comerciais são realizados com rapidez diretamente pelo WhatsApp oficial.
+          - link "Falar com o estabelecimento no WhatsApp" [ref=f3e375] [cursor=pointer]:
+            - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+          - generic [ref=f3e376]:
+            - button "Como Salvar o App (iPhone & Android)" [ref=f3e378] [cursor=pointer]
+            - button "Painel de Controle do Administrador" [ref=f3e383]
+      - generic [ref=f3e388]:
+        - paragraph [ref=f3e389]: © 2026 Salão Modelo. Todos os direitos reservados.
+        - paragraph [ref=f3e390]:
+          - generic [ref=f3e391]: •
+          - generic [ref=f3e392]: Feito com excelência
+  - generic:
+    - generic [ref=f3e395]:
+      - paragraph [ref=f3e397]:
+        - text: Atendimento Yeshua no
+        - strong [ref=f3e398]: WhatsApp
+      - button "Fechar dica" [ref=f3e399]
+    - link "Falar conosco no WhatsApp" [ref=f3e403] [cursor=pointer]:
+      - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.

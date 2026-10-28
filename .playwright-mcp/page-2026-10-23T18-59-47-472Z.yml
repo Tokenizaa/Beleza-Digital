@@ -1,0 +1,29 @@
+- main [ref=f34e3]:
+  - generic [ref=f34e4]:
+    - link "Voltar ao site" [ref=f34e5] [cursor=pointer]:
+      - /url: /
+    - generic [ref=f34e8]:
+      - generic [ref=f34e15]:
+        - paragraph [ref=f34e16]: Plataforma de sites personalizados
+        - heading "Criar conta" [level=1] [ref=f34e17]
+      - generic [ref=f34e18]:
+        - generic [ref=f34e19]:
+          - text: Seu nome
+          - textbox "Seu nome" [ref=f34e20]
+        - generic [ref=f34e21]:
+          - text: Nome do salão
+          - textbox "Nome do salão" [ref=f34e22]
+        - generic [ref=f34e23]:
+          - text: Endereço do site (identificador)
+          - textbox "Endereço do site (identificador) Pode ser ajustado posteriormente, se estiver disponível." [ref=f34e24]:
+            - /placeholder: meu-salao
+          - generic [ref=f34e25]: Pode ser ajustado posteriormente, se estiver disponível.
+        - generic [ref=f34e26]:
+          - text: E-mail
+          - textbox "E-mail" [ref=f34e27]
+        - generic [ref=f34e28]:
+          - text: Senha
+          - textbox "Senha" [ref=f34e29]
+        - button "Criar conta e salão" [ref=f34e30]
+        - button "Já tem uma conta? Entrar" [ref=f34e34]
+    - paragraph [ref=f34e35]: Cada salão possui sua própria conta e seus próprios dados. A confirmação do pagamento é processada no servidor.

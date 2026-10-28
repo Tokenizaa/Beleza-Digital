@@ -1,0 +1,18 @@
+- main [ref=f3e3]:
+  - generic [ref=f3e4]:
+    - link "Voltar ao site" [ref=f3e5] [cursor=pointer]:
+      - /url: /
+    - generic [ref=f3e8]:
+      - generic [ref=f3e15]:
+        - paragraph [ref=f3e16]: Plataforma de sites personalizados
+        - heading "Entrar na plataforma" [level=1] [ref=f3e17]
+      - generic [ref=f3e18]:
+        - generic [ref=f3e19]:
+          - text: E-mail
+          - textbox "E-mail" [ref=f3e20]
+        - generic [ref=f3e21]:
+          - text: Senha
+          - textbox "Senha" [ref=f3e22]
+        - button "Entrar" [ref=f3e23]
+        - button "Ainda não tem conta? Cadastrar salão" [ref=f3e27]
+    - paragraph [ref=f3e28]: Cada salão possui sua própria conta e seus próprios dados. A confirmação do pagamento é processada no servidor.

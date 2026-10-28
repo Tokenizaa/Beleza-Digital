@@ -1,0 +1,18 @@
+- main [ref=f26e3]:
+  - generic [ref=f26e4]:
+    - link "Voltar ao site" [ref=f26e5] [cursor=pointer]:
+      - /url: /
+    - generic [ref=f26e8]:
+      - generic [ref=f26e15]:
+        - paragraph [ref=f26e16]: Plataforma de sites personalizados
+        - heading "Entrar na plataforma" [level=1] [ref=f26e17]
+      - generic [ref=f26e18]:
+        - generic [ref=f26e19]:
+          - text: E-mail
+          - textbox "E-mail" [ref=f26e20]: olfnetto@gmail.com
+        - generic [ref=f26e21]:
+          - text: Senha
+          - textbox "Senha" [ref=f26e22]: Netto@964212$
+        - button "Entrar" [ref=f26e23]
+        - button "Ainda não tem conta? Cadastrar salão" [ref=f26e27]
+    - paragraph [ref=f26e28]: Cada salão possui sua própria conta e seus próprios dados. A confirmação do pagamento é processada no servidor.

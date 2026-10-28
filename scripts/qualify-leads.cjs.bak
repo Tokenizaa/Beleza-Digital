@@ -1,0 +1,621 @@
+/**
+ * Lead Qualification & Demo Generation Processor
+ * 
+ * Works on existing prospecting_candidates records in Supabase.
+ * Applies deduplication, qualification with Playwright inspection,
+ * promotes eligible candidates, creates site projects and versions,
+ * and generates secure public demo links.
+ * 
+ * All steps are idempotent - re-running does not duplicate records.
+ * 
+ * Note: Schema uses these columns from prospecting_candidates:
+ * - qualification_score (integer)
+ * - qualification_reasons (jsonb)
+ * - missing_fields (jsonb)
+ * - status (text enum: discovered, qualified, disqualified, promoted, duplicate, blocked)
+ * - raw_evidence (jsonb)
+ * - No inspection_state column - stored in qualification_reasons
+ */
+
+const { createClient } = require('@supabase/supabase-js');
+const { chromium } = require('playwright');
+const crypto = require('crypto');
+
+const supabaseUrl = process.env.SUPABASE_URL || 'https://ifkqrtjhdnolkuucgbpb.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment variables.');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Helper functions
+function normalizeBusinessName(value) {
+  if (!value) return '';
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' e ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function normalizeWebsite(value) {
+  if (!value?.trim()) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
+    url.hostname = url.hostname.toLowerCase().replace(/^www\./, '');
+    url.hash = '';
+    url.search = '';
+    url.pathname = url.pathname.replace(/\/+$/, '');
+    return `${url.hostname}${url.pathname === '/' ? '' : url.pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePhone(value, countryCode = 'BR') {
+  if (!value?.trim()) return null;
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < 8 || digits.length > 15) return null;
+  if (countryCode.toUpperCase() === 'BR' && (digits.length === 10 || digits.length === 11)) {
+    return `55${digits}`;
+  }
+  return digits;
+}
+
+async function createProspectDedupeKey(websiteUrl, phone, businessName, city, region, countryCode) {
+  const website = normalizeWebsite(websiteUrl);
+  const phoneNorm = normalizePhone(phone, countryCode || 'BR');
+  const name = normalizeBusinessName(businessName);
+  const cityNorm = normalizeBusinessName(city);
+  const regionNorm = normalizeBusinessName(region);
+
+  let identity = '';
+
+  if (website) identity = `website:${website}`;
+  else if (phoneNorm) identity = `phone:${phoneNorm}`;
+  else if (name && cityNorm && regionNorm) {
+    identity = `name-location:${name}|city:${cityNorm}|region:${regionNorm}|country:${(countryCode || 'BR').toUpperCase()}`;
+  } else return null;
+
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity));
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `sha256:${hex}`;
+}
+
+function qualifyProspect(websiteUrl, category, phone, email, address, description, sourceUrl, businessName, city, region, countryCode) {
+  const reasons = [];
+  const missingFields = [];
+  let score = 0;
+
+  const add = (field, points, present, reason) => {
+    if (present) {
+      score += points;
+      reasons.push(`+${points}: ${reason}`);
+    } else {
+      missingFields.push(field);
+      reasons.push(`0: ${field} ausente; ${reason}`);
+    }
+  };
+
+  add('businessName', 20, Boolean(normalizeBusinessName(businessName)), 'nome comercial identificado');
+  add('category', 10, Boolean(category && category.trim()), 'categoria identificada');
+  add('websiteUrl', 20, Boolean(normalizeWebsite(websiteUrl)), 'site público identificável');
+  add('phone', 20, Boolean(normalizePhone(phone, countryCode || 'BR')), 'telefone em formato válido');
+  add('email', 10, Boolean(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())), 'e-mail em formato válido');
+  add('address', 10, Boolean(address && address.trim()), 'endereço disponível');
+  add('description', 5, Boolean(description && description.trim()), 'descrição pública disponível');
+  add('sourceUrl', 5, Boolean(normalizeWebsite(sourceUrl)), 'origem pública registrada');
+
+  let inspectionState;
+  if (!websiteUrl) {
+    inspectionState = 'no_website';
+  } else if (!/^https?:\/\//i.test(websiteUrl)) {
+    inspectionState = 'inconclusive';
+  } else {
+    inspectionState = 'website_identified';
+  }
+
+  let nextAction;
+  if (score >= 80) {
+    nextAction = 'solicitar demonstração';
+  } else if (score >= 50) {
+    nextAction = 'completar dados e solicitar demonstração';
+  } else if (score > 0) {
+    nextAction = 'qualificar dados e reavaliar';
+  } else {
+    nextAction = 'coletar dados mínimos antes de qualificar';
+  }
+
+  const collectedAt = new Date().toISOString();
+
+  return {
+    score,
+    reasons,
+    missingFields,
+    evidence: {
+      businessName,
+      category,
+      websiteUrl,
+      phone,
+      email,
+      address,
+      description,
+      sourceUrl,
+      countryCode,
+    },
+    inspectionState,
+    nextAction,
+    collectedAt,
+  };
+}
+
+async function inspectWebsiteWithPlaywright(url) {
+  const result = {
+    accessible: false,
+    hasContent: false,
+    hasContact: false,
+    hasBooking: false,
+    issues: [],
+    classification: 'inconclusive',
+  };
+
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      userAgent: 'YeshuaLeadResearch/1.0 (+public-business-metadata)',
+    });
+    const page = await context.newPage();
+
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+
+    const html = await page.content();
+    const lowerHtml = html.toLowerCase();
+    const isBlocked = lowerHtml.includes('just a moment...') ||
+                      lowerHtml.includes('attention required') ||
+                      lowerHtml.includes('cf-browser-verification') ||
+                      lowerHtml.includes('ddos-guard');
+
+    if (isBlocked) {
+      result.issues.push('Site protegido por verificação anti-bot (Cloudflare/CAPTCHA)');
+      return result;
+    }
+
+    const bodyText = (await page.textContent('body')) || '';
+    result.hasContent = bodyText && bodyText.trim().length > 50;
+    result.hasContact = /whatsapp|telefone|phone|contato|endereco|address/i.test(bodyText);
+    result.hasBooking = /agendar|agendamento|horario|book|schedule|reservar|reservation/i.test(bodyText);
+
+    if (result.hasContent && result.hasContact) {
+      result.classification = 'website_accessible';
+      result.accessible = true;
+    } else if (result.hasContent) {
+      result.classification = 'website_with_issues';
+      result.accessible = true;
+      if (/CAPTCHA|blocked|erro 403|problema|sem disponibilidade/i.test(bodyText)) {
+        result.issues.push('Página carregou mas apresenta limitações ou mensagens de erro');
+      }
+    } else if (/[a-zA-Z]/.test((await page.title()) || '') && !isBlocked) {
+      result.classification = 'inconclusive';
+      result.issues.push('Página carregou mas conteúdo mínimo não detectado');
+    }
+
+    return result;
+  } catch (err) {
+    result.issues.push(`Erro durante inspeção: ${err.message}`);
+    return result;
+  } finally {
+    if (browser) await browser.close();
+  }
+}
+
+// Main processor
+async function main() {
+  console.log('=== Lead Qualification & Demo Generation Processor ===');
+  console.log('');
+
+  // 1. Fetch all prospecting_candidates
+  const { data: allCandidates, error: fetchError } = await supabase
+    .from('prospecting_candidates')
+    .select(`
+      id, business_name, category, website_url, normalized_website, 
+      qualification_score, status, source_url, raw_evidence, 
+      phone, email, address, description, city, region, country_code,
+      dedupe_key, created_at
+    `)
+    .order('created_at', { ascending: true });
+
+  if (fetchError) {
+    console.error('Erro ao buscar candidatos:', fetchError);
+    process.exit(1);
+  }
+
+  // Filter candidates that need qualification
+  const candidates = (allCandidates || []).filter(c =>
+    !c.qualification_score || c.status === 'discovered' || c.status === 'collected'
+  );
+
+  if (!candidates || candidates.length === 0) {
+    console.log('Nenhum candidato encontrado para qualificação.');
+    process.exit(0);
+  }
+
+  console.log(`Encontrados ${candidates.length} candidatos para processamento.`);
+  console.log('');
+
+  // 2. Initialize Playwright browser
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    console.log('Navegador Playwright iniciado');
+  } catch (err) {
+    console.error('Falha ao iniciar Playwright:', err.message);
+    process.exit(1);
+  }
+
+  let qualifiedCount = 0;
+  let inspectedCount = 0;
+  let skippedCount = 0;
+  let errorCount = 0;
+
+  // 3. Process each candidate
+  for (const candidate of candidates) {
+    const id = candidate.id;
+    console.log(`--- Processando ${id}: ${candidate.business_name} ---`);
+
+    // Skip if already qualified
+    if (candidate.qualification_score !== null && candidate.qualification_score > 0) {
+      console.log(`Ja qualificado (score: ${candidate.qualification_score}), pulando.`);
+      skippedCount++;
+      continue;
+    }
+
+    // Create deduplication key and check for duplicates
+    const dedupeKey = await createProspectDedupeKey(
+      candidate.website_url,
+      candidate.phone,
+      candidate.business_name,
+      candidate.city,
+      candidate.region,
+      candidate.country_code
+    );
+
+    const { data: existingDupe } = await supabase
+      .from('prospecting_candidates')
+      .select('id, business_name, qualification_score')
+      .eq('dedupe_key', dedupeKey)
+      .neq('id', id)
+      .maybeSingle();
+
+    if (existingDupe) {
+      console.log(`Duplicata encontrada: ${existingDupe.business_name} (score: ${existingDupe.qualification_score})`);
+      await supabase
+        .from('prospecting_candidates')
+        .update({ status: 'duplicate', raw_evidence: JSON.stringify({ ...candidate.raw_evidence, dedupe_conflict: existingDupe.id }) })
+        .eq('id', id);
+      skippedCount++;
+      continue;
+    }
+
+    // Apply qualification
+    const qualification = qualifyProspect(
+      candidate.website_url,
+      candidate.category,
+      candidate.phone,
+      candidate.email,
+      candidate.address,
+      candidate.description,
+      candidate.source_url,
+      candidate.business_name,
+      candidate.city,
+      candidate.region,
+      candidate.country_code
+    );
+
+    qualifiedCount++;
+    console.log(`Score: ${qualification.score}`);
+    console.log(`Inspection State: ${qualification.inspectionState}`);
+    console.log(`Next Action: ${qualification.nextAction}`);
+    console.log(`Reasons: ${qualification.reasons.join('; ')}`);
+
+    // If website identified, inspect with Playwright
+    if (qualification.inspectionState === 'website_identified' && candidate.website_url) {
+      inspectedCount++;
+      console.log('Inspecionando site com Playwright...');
+
+      const inspection = await inspectWebsiteWithPlaywright(candidate.website_url);
+
+      let enhancedReasons = [...qualification.reasons];
+      if (inspection.issues.length > 0) {
+        enhancedReasons.push(...inspection.issues.map(i => `inspecao: ${i}`));
+      }
+      if (inspection.classification === 'website_accessible') {
+        enhancedReasons.push(`site:${inspection.hasContent ? 'acessivel' : 'limitado'} ${inspection.hasContact ? 'com-contato' : 'sem-contato'}`);
+      }
+
+      // Update candidate with qualification and inspection in reasons
+      await supabase
+        .from('prospecting_candidates')
+        .update({ 
+          qualification_score: qualification.score,
+          qualification_reasons: enhancedReasons,
+          missing_fields: qualification.missingFields,
+          status: 'qualified',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      console.log(`Qualificacao concluida: status=qualified`);
+      if (inspection.issues.length > 0) {
+        console.log(`Issues: ${inspection.issues.join('; ')}`);
+      }
+    } else {
+      // No website inspection needed
+      await supabase
+        .from('prospecting_candidates')
+        .update({ 
+          qualification_score: qualification.score,
+          qualification_reasons: qualification.reasons,
+          missing_fields: qualification.missingFields,
+          status: 'qualified',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      console.log(`Qualificacao concluida: status=qualified`);
+    }
+
+    // If qualified (score >= 50), promote to site project and generate demo
+    if (qualification.score >= 50 && qualification.inspectionState !== 'inconclusive') {
+      console.log('Score >= 50, promovendo para demonstracao...');
+
+      // Normalize data for template selection
+      const websiteNorm = normalizeWebsite(candidate.website_url) || null;
+      const phoneNorm = normalizePhone(candidate.phone, candidate.country_code || 'BR') || null;
+      const catLower = (candidate.category || '').toLowerCase();
+
+      // Select template based on segment
+      let templateKey;
+      if (/cabeleireiro|estetica|spa|beauty/i.test(catLower)) {
+        templateKey = 'minimal-studio';
+      } else if (new RegExp('barbearia|barbeiro').test(catLower)) {
+        templateKey = 'ouro-classico';
+      } else if (new RegExp('salão|beauty salon|beauty').test(catLower)) {
+        templateKey = 'minimal-studio';
+      } else {
+        templateKey = 'ouro-classico';
+      }
+
+      // Template config lookup
+      const templateMap = {
+        'ouro-classico': {
+          name: 'Ouro & Ambar Classico',
+          recommendedFor: 'Barbearias tradicionais, barbearias vintage e saloes masculinos de alto padrao',
+        },
+        'preto-esmeralda': {
+          name: 'Preto Fosco & Esmeralda Urbano',
+          recommendedFor: 'Barbearias urbanas, barbearias jovens, conceito fade e freestyle',
+        },
+        'minimal-studio': {
+          name: 'Minimal Studio & Platina',
+          recommendedFor: 'Estudios unissex, saloes de beleza boutique, clinicas de estetica e visagismo',
+        },
+        'safira-executivo': {
+          name: 'Safira Real Executivo',
+          recommendedFor: 'Barbearias executivas em centros comerciais, lounges VIP e barbearias de hotéis',
+        },
+        'rubi-lounge': {
+          name: 'Rubi & Vinho Lounge',
+          recommendedFor: 'Saloes de beleza conceituais, spas urbanos, barbearias com bar e cafe',
+        },
+      };
+      const templateConfig = templateMap[templateKey] || {
+        name: 'Ouro & Ambar Classico',
+        recommendedFor: 'Barbearias tradicionais',
+      };
+
+      // Create or find site_project for this prospect
+      const { data: existingProject } = await supabase
+        .from('site_projects')
+        .select('id, name, status, template_version_id, generated_content, public_slug, published_url')
+        .or(`prospect_id.eq.${id},establishment_id.is.null`)
+        .maybeSingle();
+
+      if (existingProject) {
+        console.log(`Projeto de demonstracao ja existe: ${existingProject.id} (status: ${existingProject.status})`);
+        if (existingProject.status !== 'demo_pending' && existingProject.status !== 'demo_ready') {
+          await supabase
+            .from('site_projects')
+            .update({ 
+              status: 'demo_ready',
+              template_version_id: templateKey,
+              generated_content: JSON.stringify({
+                name: candidate.business_name,
+                category: candidate.category || '',
+                tagline: candidate.description ? candidate.description.substring(0, 50) : '',
+                description: candidate.description || '',
+                phone: phoneNorm || candidate.phone || '',
+                whatsapp: phoneNorm || candidate.phone || '',
+                address: candidate.address || '',
+                city: candidate.city || '',
+                state: candidate.region || '',
+                logoUrl: '',
+                coverUrl: '',
+                instagramHandle: '',
+                instagramUrl: '',
+                services: [],
+                products: [],
+                media: [],
+              }),
+              design_overrides: JSON.stringify({}),
+              public_slug: `${candidate.business_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}-${id.slice(0, 8)}`,
+            })
+            .eq('id', existingProject.id);
+          console.log('Projeto atualizado para status demo_ready');
+        }
+      } else {
+        // Create new site_project
+        const { data: newProject, error: projectError } = await supabase
+          .from('site_projects')
+          .insert({
+            prospect_id: id,
+            name: `${candidate.business_name} - Demonstracao`,
+            template_version_id: templateKey,
+            status: 'demo_pending',
+            generated_content: JSON.stringify({
+              name: candidate.business_name,
+              category: candidate.category || '',
+              tagline: candidate.description ? candidate.description.substring(0, 50) : '',
+              description: candidate.description || '',
+              phone: phoneNorm || candidate.phone || '',
+              whatsapp: phoneNorm || candidate.phone || '',
+              address: candidate.address || '',
+              city: candidate.city || '',
+              state: candidate.region || '',
+              logoUrl: '',
+              coverUrl: '',
+              instagramHandle: '',
+              instagramUrl: '',
+              services: [],
+              products: [],
+              media: [],
+            }),
+            design_overrides: JSON.stringify({}),
+            public_slug: `${candidate.business_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}-${id.slice(0, 8)}`,
+          })
+          .select()
+          .single();
+
+        if (projectError) {
+          console.error('Erro ao criar projeto:', projectError);
+          errorCount++;
+          continue;
+        }
+
+        console.log(`Projeto criado: ${newProject.id} (slug: ${newProject.public_slug})`);
+
+        // Create initial site_project_version with verified data only
+        const { error: versionError } = await supabase
+          .from('site_project_versions')
+          .insert({
+            site_project_id: newProject.id,
+            version: 1,
+            template_version_id: templateKey,
+            generated_content: JSON.stringify({
+              name: candidate.business_name,
+              category: candidate.category || '',
+              tagline: candidate.description ? candidate.description.substring(0, 50) : '',
+              description: candidate.description || '',
+              phone: phoneNorm || candidate.phone || '',
+              whatsapp: phoneNorm || candidate.phone || '',
+              address: candidate.address || '',
+              city: candidate.city || '',
+              state: candidate.region || '',
+              logoUrl: '',
+              coverUrl: '',
+              instagramHandle: '',
+              instagramUrl: '',
+              services: [],
+              products: [],
+              media: [],
+            }),
+            design_overrides: JSON.stringify({}),
+            selected_by_prospect: true,
+            selection_source: 'initial_qualification',
+            generation_task_id: `qualify_${id}_${Date.now()}`,
+          });
+
+        if (versionError) {
+          console.error('Erro ao criar versao:', versionError);
+          errorCount++;
+          continue;
+        }
+
+        console.log(`Versao inicial criada v1 (template: ${templateKey})`);
+
+        // Generate secure public demo link with token hash
+        const token = crypto.randomUUID() + '_' + Date.now();
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex').substring(0, 16);
+
+        const { error: linkError } = await supabase
+          .from('site_demo_public_links')
+          .insert({
+            site_project_id: newProject.id,
+            token_hash: tokenHash,
+            status: 'active',
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+            selected_version_id: versionError ? null : versionError.id,
+            publish_task_id: null,
+          });
+
+        if (linkError) {
+          console.error('Erro ao criar link:', linkError);
+          errorCount++;
+          continue;
+        }
+
+        console.log(`Link publico gerado (hash: ${tokenHash}, valido 30 dias)`);
+
+        // Update candidate status to reflect demo generation
+        await supabase
+          .from('prospecting_candidates')
+          .update({ 
+            status: 'demo_generated',
+            raw_evidence: JSON.stringify({
+              ...candidate.raw_evidence,
+              demo: {
+                projectId: newProject.id,
+                version: 1,
+                template: templateKey,
+                linkHash: tokenHash,
+                generatedAt: new Date().toISOString(),
+              }
+            }),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id);
+
+        console.log(`Candidate ${id} totalmente processado: qualificado + demo gerada`);
+      }
+
+      // Score < 50 but still qualified - just mark as qualified
+    } else if (qualification.score < 50) {
+      await supabase
+        .from('prospecting_candidates')
+        .update({ 
+          qualification_score: qualification.score,
+          qualification_reasons: qualification.reasons,
+          missing_fields: qualification.missingFields,
+          status: 'qualified',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      console.log(`Score ${qualification.score} < 50, candidate mantido com qualificacao baixa`);
+    }
+  }
+
+  // Close browser
+  await browser.close();
+
+  console.log('=== Resumo do Processamento ===');
+  console.log(`Candidatos processados: ${candidates.length}`);
+  console.log(`Qualificados (novos): ${qualifiedCount}`);
+  console.log(`Inspecionados com Playwright: ${inspectedCount}`);
+  console.log(`Pulados (já qualificado): ${skippedCount}`);
+  console.log(`Com erros: ${errorCount}`);
+  console.log('');
+  console.log('=== Processo Concluido ===');
+}
+
+main().catch(err => {
+  console.error('Erro fatal no processador:', err);
+  process.exit(1);
+});

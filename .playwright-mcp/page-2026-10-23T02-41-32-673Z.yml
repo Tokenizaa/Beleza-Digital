@@ -1,0 +1,4 @@
+- main [ref=f2e3]:
+  - generic [ref=f2e4]:
+    - heading "Acesso à plataforma" [level=1] [ref=f2e7]
+    - paragraph [ref=f2e8]: A autenticação não está configurada neste ambiente. Defina as variáveis públicas do Supabase no ambiente de build.

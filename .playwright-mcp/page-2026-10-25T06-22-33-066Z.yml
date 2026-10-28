@@ -1,0 +1,101 @@
+- generic [ref=f5e3]:
+  - complementary [ref=f5e4]:
+    - generic [ref=f5e5]:
+      - generic [ref=f5e13]:
+        - heading "Painel Administrativo" [level=1] [ref=f5e14]
+        - paragraph [ref=f5e15]: Plataforma para Salões
+      - generic [ref=f5e16]:
+        - generic [ref=f5e17]: Salão Ativo
+        - button [ref=f5e18] [cursor=pointer]:
+          - generic [ref=f5e21]:
+            - paragraph [ref=f5e22]: Salão Modelo
+            - paragraph [ref=f5e23]: /modelo-inicial
+      - navigation [ref=f5e26]:
+        - generic [ref=f5e27]:
+          - button "Gestão do Salão" [ref=f5e28] [cursor=pointer]
+          - generic [ref=f5e39]:
+            - button "Dashboard & Faturamento" [ref=f5e40] [cursor=pointer]
+            - button "Serviços & Preços" [ref=f5e47] [cursor=pointer]
+            - button "Produtos & Estoque" [ref=f5e55] [cursor=pointer]
+            - button "Galeria & Vídeos" [ref=f5e60] [cursor=pointer]
+            - button "Agenda & Horários" [ref=f5e67] [cursor=pointer]
+            - button "Feed Instagram" [ref=f5e71] [cursor=pointer]
+            - button "Configurações do Salão" [ref=f5e76] [cursor=pointer]
+        - generic [ref=f5e81]:
+          - button "Prospecção & Raspagem" [ref=f5e82] [cursor=pointer]
+          - generic [ref=f5e90]:
+            - button "Painel do Dia (Hoje)" [ref=f5e91] [cursor=pointer]
+            - button "Nova Busca & Raspagem" [active] [ref=f5e96] [cursor=pointer]
+            - button "Pipeline CRM & Empresas" [ref=f5e101] [cursor=pointer]
+        - generic [ref=f5e108]:
+          - button "Rede & Super Admin" [ref=f5e109] [cursor=pointer]
+          - generic [ref=f5e118]:
+            - button "Salões da Rede (2)" [ref=f5e119] [cursor=pointer]
+            - button "Cadastrar Novo Salão" [ref=f5e125] [cursor=pointer]
+            - button "Administradores Gerais" [ref=f5e128] [cursor=pointer]
+            - button "Auditoria & Logs" [ref=f5e133] [cursor=pointer]
+            - button "Planos & Configurações" [ref=f5e138] [cursor=pointer]
+        - button "5 Modelos de Sites 5" [ref=f5e142] [cursor=pointer]:
+          - generic [ref=f5e143]: 5 Modelos de Sites
+          - generic [ref=f5e148]: "5"
+    - generic [ref=f5e149]:
+      - button "Ver Site Público" [ref=f5e150] [cursor=pointer]
+      - button "Encerrar Sessão" [ref=f5e156] [cursor=pointer]
+  - main [ref=f5e162]:
+    - generic [ref=f5e296]:
+      - generic [ref=f5e297]:
+        - generic [ref=f5e298]:
+          - generic [ref=f5e299]:
+            - button "Hoje" [ref=f5e300] [cursor=pointer]
+            - button "Nova busca" [ref=f5e301] [cursor=pointer]
+            - button "CRM / Empresas" [ref=f5e302] [cursor=pointer]
+          - generic [ref=f5e303]: 5 Modelos Integrados
+        - generic [ref=f5e304]:
+          - link "Ver Site" [ref=f5e305] [cursor=pointer]:
+            - /url: /
+          - generic [ref=f5e306]: Banco conectado
+      - main [ref=f5e309]:
+        - generic [ref=f5e310]:
+          - paragraph [ref=f5e311]: NOVA BUSCA
+          - heading "Encontre quem precisa do que você vende." [level=1] [ref=f5e312]
+        - generic [ref=f5e313]:
+          - generic [ref=f5e314]:
+            - generic [ref=f5e316]:
+              - heading "Nova busca" [level=2] [ref=f5e317]
+              - paragraph [ref=f5e318]: Nicho e cidade. A busca só exibirá dados retornados por uma fonte real.
+            - generic [ref=f5e322]:
+              - generic [ref=f5e323]:
+                - generic [ref=f5e324]: Nicho
+                - 'textbox "Ex: Barbearia, Salão de Beleza, Clínica Estética" [ref=f5e325]': Barbearia
+              - generic [ref=f5e326]:
+                - generic [ref=f5e327]: Estado
+                - combobox [ref=f5e328]:
+                  - option "Rio Grande do Sul (RS)" [selected]
+                  - option "São Paulo (SP)"
+                  - option "Rio de Janeiro (RJ)"
+                  - option "Minas Gerais (MG)"
+                  - option "Paraná (PR)"
+                  - option "Santa Catarina (SC)"
+                  - option "Bahia (BA)"
+                  - option "Amazonas (AM)"
+                  - option "Distrito Federal (DF)"
+            - generic [ref=f5e329]:
+              - generic [ref=f5e330]: Cidade
+              - textbox "Digite a cidade..." [ref=f5e331]: Porto Alegre
+              - paragraph [ref=f5e332]: Nicho e cidade fora da lista podem ser escritos. Bairro e raio ficam para um refinamento posterior.
+            - generic [ref=f5e333]:
+              - generic [ref=f5e334]:
+                - generic [ref=f5e335]: Quantidade
+                - generic [ref=f5e336]: 5 empresas
+              - slider [ref=f5e337]: "5"
+              - generic [ref=f5e338]:
+                - generic [ref=f5e339]: 5 empresas
+                - generic [ref=f5e340]: "20"
+                - generic [ref=f5e341]: "35"
+                - generic [ref=f5e342]: 50 empresas
+            - generic [ref=f5e343]:
+              - button "Buscar 5 empresas" [ref=f5e344] [cursor=pointer]
+              - paragraph [ref=f5e348]: A busca é processada pelo Worker do Cloudflare. Os resultados só aparecem após a coleta real e a gravação no banco.
+          - generic [ref=f5e351]:
+            - heading "Suas buscas" [level=3] [ref=f5e352]
+            - generic [ref=f5e353]: Histórico

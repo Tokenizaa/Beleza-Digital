@@ -1,0 +1,1316 @@
+- generic [ref=f30e8]:
+  - generic [ref=f30e13]:
+    - complementary [ref=f30e15]:
+      - generic [ref=f30e17]:
+        - generic [ref=f30e19]:
+          - link [ref=f30e1670] [cursor=pointer]:
+            - /url: /
+          - button [ref=f30e1671] [cursor=pointer]:
+            - generic [ref=f30e28]: Olfnetto@gmail.com's Account
+        - navigation [ref=f30e32]:
+          - generic [ref=f30e36]:
+            - button [ref=f30e1673] [cursor=pointer]:
+              - generic [ref=f30e40]:
+                - generic [ref=f30e43]: Pesquisa rápida…
+                - generic [ref=f30e44]: Ctrl K
+            - list [ref=f30e45]:
+              - listitem [ref=f30e46]:
+                - link [ref=f30e1674] [cursor=pointer]:
+                  - /url: /bc6ce307250399af9e2c337787f16259/home
+                  - generic [ref=f30e48]: Página inicial da conta
+              - listitem [ref=f30e53]:
+                - generic [ref=f30e54]:
+                  - button [ref=f30e1675] [cursor=pointer]:
+                    - generic [ref=f30e56]: Recentes
+                  - list [ref=f30e63]:
+                    - listitem [aria-hidden]
+                    - listitem [ref=f30e64]:
+                      - link [ref=f30e65] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/workers/services/view/test-worker-beleza/production
+                        - generic [ref=f30e66]:
+                          - generic [ref=f30e67]: test-worker-beleza
+                          - generic [ref=f30e68]: Workers
+                      - button [ref=f30e71] [cursor=pointer]
+                    - listitem [ref=f30e80]:
+                      - link [ref=f30e81] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/workers-and-pages
+                        - generic [ref=f30e82]:
+                          - generic [ref=f30e83]: Workers e Pages
+                          - generic [ref=f30e84]: Computação
+                      - button [ref=f30e87] [cursor=pointer]
+                    - listitem [ref=f30e96]:
+                      - link [ref=f30e97] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/workers/services/view/carlos-burigo/production/builds/621f1386-42f7-4958-b184-140c2e5472bb
+                        - generic [ref=f30e98]:
+                          - generic [ref=f30e99]: carlos-burigo
+                          - generic [ref=f30e100]: Workers
+                      - button [ref=f30e103] [cursor=pointer]
+                    - listitem [ref=f30e112]:
+                      - link [ref=f30e113] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/workers/services/view/deputado-carlos-burigo/production
+                        - generic [ref=f30e114]:
+                          - generic [ref=f30e115]: deputado-carlos-burigo
+                          - generic [ref=f30e116]: Workers
+                      - button [ref=f30e119] [cursor=pointer]
+                    - listitem [ref=f30e128]:
+                      - link [ref=f30e129] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/workers/services/view/intelei/production/builds/b569cf81-b695-485d-a9d4-8e139af6b52d
+                        - generic [ref=f30e130]:
+                          - generic [ref=f30e131]: intelei
+                          - generic [ref=f30e132]: Workers
+                      - button [ref=f30e135] [cursor=pointer]
+              - listitem [ref=f30e144]:
+                - generic [ref=f30e145]:
+                  - button [ref=f30e1676] [cursor=pointer]:
+                    - generic [ref=f30e147]: Domínios
+                  - list [ref=f30e154]:
+                    - listitem [aria-hidden]
+                    - listitem [ref=f30e155]:
+                      - link [ref=f30e156] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/domains/overview
+                        - generic [ref=f30e157]: Visão geral
+                    - listitem [ref=f30e159]:
+                      - link [ref=f30e160] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/domains/registrations
+                        - generic [ref=f30e161]: Registros
+                    - listitem [ref=f30e163]:
+                      - link [ref=f30e164] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/domains/transfers
+                        - generic [ref=f30e165]: Transferências
+              - listitem [ref=f30e167]:
+                - generic [ref=f30e168]:
+                  - button [ref=f30e1677] [cursor=pointer]:
+                    - generic [ref=f30e173]:
+                      - generic [ref=f30e174]: Observability
+                      - generic [ref=f30e175]: Novo
+                  - list [ref=f30e179]:
+                    - listitem [aria-hidden]
+                    - listitem [ref=f30e180]:
+                      - link [ref=f30e181] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/observability/logs
+                        - generic [ref=f30e182]: Logs
+                    - listitem [ref=f30e184]:
+                      - link [ref=f30e185] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/traces
+                        - generic [ref=f30e186]:
+                          - generic [ref=f30e187]: Rastros
+                          - generic [ref=f30e188]: Beta
+                    - listitem [ref=f30e190]:
+                      - generic [ref=f30e191]:
+                        - button [ref=f30e192] [cursor=pointer]:
+                          - generic [ref=f30e193]: Análise
+                        - list [ref=f30e198]:
+                          - listitem [aria-hidden]
+                          - listitem [ref=f30e199]:
+                            - link [ref=f30e200] [cursor=pointer]:
+                              - /url: /bc6ce307250399af9e2c337787f16259/analytics
+                              - generic [ref=f30e201]: Account Analytics
+                          - listitem [ref=f30e203]:
+                            - link [ref=f30e204] [cursor=pointer]:
+                              - /url: /bc6ce307250399af9e2c337787f16259/web-analytics
+                              - generic [ref=f30e205]: Web Analytics
+                    - listitem [ref=f30e207]:
+                      - generic [ref=f30e208]:
+                        - button [ref=f30e209] [cursor=pointer]:
+                          - generic [ref=f30e210]: Exportação
+                        - list [ref=f30e215]:
+                          - listitem [aria-hidden]
+                          - listitem [ref=f30e216]:
+                            - link [ref=f30e217] [cursor=pointer]:
+                              - /url: /bc6ce307250399af9e2c337787f16259/logs
+                              - generic [ref=f30e218]: Logpush
+                          - listitem [ref=f30e220]:
+                            - link [ref=f30e221] [cursor=pointer]:
+                              - /url: /bc6ce307250399af9e2c337787f16259/observability/destinations
+                              - generic [ref=f30e222]: OpenTelemetry
+                    - listitem [ref=f30e224]:
+                      - generic [ref=f30e225]:
+                        - button [ref=f30e226] [cursor=pointer]:
+                          - generic [ref=f30e227]: Alertas
+                        - list [ref=f30e231]:
+                          - listitem [aria-hidden]
+                          - link [ref=f30e232] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/notifications/custom
+                            - generic [ref=f30e233]: Monitores
+                          - link [ref=f30e235] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/notifications/cloudflare
+                            - generic [ref=f30e236]: Notificações da plataforma
+                          - link [ref=f30e238] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/notifications/destinations
+                            - generic [ref=f30e239]: Destinos
+                          - link [ref=f30e241] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/notifications/silences
+                            - generic [ref=f30e242]: Silenciamentos
+                    - listitem [ref=f30e244]:
+                      - link [ref=f30e245] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/dashboards
+                        - generic [ref=f30e246]: Painéis
+            - generic [ref=f30e248]:
+              - generic [ref=f30e249]: Build
+              - list [ref=f30e252]:
+                - listitem [ref=f30e253]:
+                  - generic [ref=f30e254]:
+                    - button [expanded] [ref=f30e1678] [cursor=pointer]:
+                      - generic [ref=f30e256]: Computação
+                    - region [ref=f30e263]:
+                      - list [ref=f30e265]:
+                        - listitem [aria-hidden]
+                        - listitem [ref=f30e266]:
+                          - link [ref=f30e1679] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers-and-pages
+                            - generic [ref=f30e268]: Workers e Pages
+                        - listitem [ref=f30e270]:
+                          - link [ref=f30e1680] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/observability
+                            - generic [ref=f30e272]: Observability
+                        - listitem [ref=f30e274]:
+                          - link [ref=f30e1681] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers-for-platforms
+                            - generic [ref=f30e276]: Workers for Platforms
+                        - listitem [ref=f30e278]:
+                          - link [ref=f30e1682] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers/containers
+                            - generic [ref=f30e280]: Containers
+                        - listitem [ref=f30e282]:
+                          - link [ref=f30e1683] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers/durable-objects
+                            - generic [ref=f30e284]: Durable Objects
+                        - listitem [ref=f30e286]:
+                          - link [ref=f30e1684] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers/queues
+                            - generic [ref=f30e288]: Queues
+                        - listitem [ref=f30e290]:
+                          - link [ref=f30e1685] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers/workflows
+                            - generic [ref=f30e292]: Fluxos de trabalho
+                        - listitem [ref=f30e294]:
+                          - link [ref=f30e1686] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers/browser-run
+                            - generic [ref=f30e296]: Execução do navegador
+                        - listitem [ref=f30e298]:
+                          - link [ref=f30e1687] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers/vpc
+                            - generic [ref=f30e300]:
+                              - generic [ref=f30e301]: VPC
+                              - generic [ref=f30e302]: Beta
+                        - listitem [ref=f30e304]:
+                          - generic [ref=f30e305]:
+                            - button [ref=f30e1688] [cursor=pointer]:
+                              - generic [ref=f30e307]: Serviço de hospedagem de email
+                            - list [ref=f30e311]:
+                              - listitem [aria-hidden]
+                              - link [ref=f30e312] [cursor=pointer]:
+                                - /url: /bc6ce307250399af9e2c337787f16259/email-service/sending
+                                - generic [ref=f30e313]:
+                                  - generic [ref=f30e314]: Envio de emails
+                                  - generic [ref=f30e315]: Beta
+                              - link [ref=f30e317] [cursor=pointer]:
+                                - /url: /bc6ce307250399af9e2c337787f16259/email-service/routing
+                                - generic [ref=f30e318]: Encaminhamento de emails
+                        - listitem [ref=f30e320]:
+                          - link [ref=f30e1689] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/workers/plans
+                            - generic [ref=f30e322]: Planos do Workers
+                        - listitem [ref=f30e324]:
+                          - link [ref=f30e1690] [cursor=pointer]:
+                            - /url: /bc6ce307250399af9e2c337787f16259/flagship
+                            - generic [ref=f30e326]:
+                              - generic [ref=f30e327]: Flagship
+                              - generic [ref=f30e328]: Beta
+                - listitem [ref=f30e330]:
+                  - generic [ref=f30e331]:
+                    - button [ref=f30e1691] [cursor=pointer]:
+                      - generic [ref=f30e333]: IA
+                    - list [ref=f30e340]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e341]:
+                        - link [ref=f30e342] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/ai/models
+                          - generic [ref=f30e343]: Modelos
+                      - listitem [ref=f30e345]:
+                        - link [ref=f30e346] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/ai/workers-ai
+                          - generic [ref=f30e347]: Workers AI
+                      - listitem [ref=f30e349]:
+                        - link [ref=f30e350] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/ai/ai-gateway
+                          - generic [ref=f30e351]: Gateway de AI
+                      - listitem [ref=f30e353]:
+                        - link [ref=f30e354] [cursor=pointer]:
+                          - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/access-controls/ai-controls/mcp-server-portal
+                          - generic [ref=f30e355]: Portais MCP
+                      - listitem [ref=f30e357]:
+                        - link [ref=f30e358] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/ai/vectorize
+                          - generic [ref=f30e359]: Vectorize
+                      - listitem [ref=f30e361]:
+                        - link [ref=f30e362] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/ai/ai-search
+                          - generic [ref=f30e363]: Pesquisa de IA
+                      - listitem [ref=f30e365]:
+                        - link [ref=f30e366] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/agents
+                          - generic [ref=f30e367]: Rastreamento de agentes
+                - listitem [ref=f30e369]:
+                  - generic [ref=f30e370]:
+                    - button [ref=f30e1692] [cursor=pointer]:
+                      - generic [ref=f30e372]: Armazenamento e bancos de dados
+                    - list [ref=f30e379]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e380]:
+                        - link [ref=f30e381] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/r2/overview
+                          - generic [ref=f30e382]: Armazenamento de objetos R2
+                      - listitem [ref=f30e384]:
+                        - link [ref=f30e385] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/workers/hyperdrive
+                          - generic [ref=f30e386]: Postgres e MySQL (Hyperdrive)
+                      - listitem [ref=f30e388]:
+                        - link [ref=f30e389] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/workers/kv/namespaces
+                          - generic [ref=f30e390]: Workers KV
+                      - listitem [ref=f30e392]:
+                        - link [ref=f30e393] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/workers/d1
+                          - generic [ref=f30e394]: Banco de dados SQLite D1
+                      - listitem [ref=f30e396]:
+                        - link [ref=f30e397] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/workers/analytics-engine
+                          - generic [ref=f30e398]: Mecanismo de análise de dados
+                      - listitem [ref=f30e400]:
+                        - link [ref=f30e401] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/data-catalog
+                          - generic [ref=f30e402]: Basin Catalog
+                      - listitem [ref=f30e404]:
+                        - generic [ref=f30e405]:
+                          - button [ref=f30e406] [cursor=pointer]:
+                            - generic [ref=f30e407]: Basin Pipelines
+                          - list [ref=f30e411]:
+                            - listitem [aria-hidden]
+                            - link [ref=f30e412] [cursor=pointer]:
+                              - /url: /bc6ce307250399af9e2c337787f16259/pipelines/overview
+                              - generic [ref=f30e413]: Pipelines
+                      - listitem [ref=f30e415]:
+                        - link [ref=f30e416] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/k2
+                          - generic [ref=f30e417]:
+                            - generic [ref=f30e418]: K2 Streams
+                            - generic [ref=f30e419]: Beta
+                      - listitem [ref=f30e421]:
+                        - link [ref=f30e422] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/secrets-store
+                          - generic [ref=f30e423]:
+                            - generic [ref=f30e424]: Secrets Store
+                            - generic [ref=f30e425]: Novo
+                - listitem [ref=f30e427]:
+                  - generic [ref=f30e428]:
+                    - button [ref=f30e1693] [cursor=pointer]:
+                      - generic [ref=f30e430]: Images & Stream
+                    - list [ref=f30e437]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e438]:
+                        - link [ref=f30e439] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/media/transformations
+                          - generic [ref=f30e440]: Transformações
+                      - listitem [ref=f30e442]:
+                        - link [ref=f30e443] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/images/hosted
+                          - generic [ref=f30e444]: Imagens hospedadas
+                      - listitem [ref=f30e446]:
+                        - link [ref=f30e447] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/stream/videos
+                          - generic [ref=f30e448]: Vídeos hospedados
+                      - listitem [ref=f30e450]:
+                        - link [ref=f30e451] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/stream/inputs
+                          - generic [ref=f30e452]: Entradas ao vivo
+                      - listitem [ref=f30e454]:
+                        - link [ref=f30e455] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/stream/analytics
+                          - generic [ref=f30e456]: Análise de dados do Stream
+                      - listitem [ref=f30e458]:
+                        - link [ref=f30e459] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/media/plans
+                          - generic [ref=f30e460]: Planos
+                - listitem [ref=f30e462]:
+                  - generic [ref=f30e463]:
+                    - button [ref=f30e1694] [cursor=pointer]:
+                      - generic [ref=f30e465]: Realtime
+                    - list [ref=f30e472]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e473]:
+                        - link [ref=f30e474] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/realtime/kit
+                          - generic [ref=f30e475]: RealtimeKit
+                      - listitem [ref=f30e477]:
+                        - link [ref=f30e478] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/realtime/turn
+                          - generic [ref=f30e479]: Servidor TURN
+                      - listitem [ref=f30e481]:
+                        - link [ref=f30e482] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/realtime/sfu
+                          - generic [ref=f30e483]: Serverless SFU
+                      - listitem [ref=f30e485]:
+                        - link [ref=f30e486] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/realtime/moq
+                          - generic [ref=f30e487]:
+                            - generic [ref=f30e488]: MoQ Relay
+                            - generic [ref=f30e489]: Beta
+            - generic [ref=f30e491]:
+              - generic [ref=f30e492]: Proteger e conectar
+              - list [ref=f30e495]:
+                - listitem [ref=f30e496]:
+                  - generic [ref=f30e497]:
+                    - button [ref=f30e1695] [cursor=pointer]:
+                      - generic [ref=f30e499]: Segurança do aplicativo
+                    - list [ref=f30e506]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e507]:
+                        - link [ref=f30e508] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/security-center
+                          - generic [ref=f30e509]: Insights de segurança
+                      - listitem [ref=f30e511]:
+                        - link [ref=f30e512] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/application-security/waf
+                          - generic [ref=f30e513]: WAF
+                      - listitem [ref=f30e515]:
+                        - link [ref=f30e516] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/application-security/botbase
+                          - generic [ref=f30e517]: BotBase
+                      - listitem [ref=f30e519]:
+                        - link [ref=f30e520] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/security-center/inventory
+                          - generic [ref=f30e521]: Infraestrutura
+                      - listitem [ref=f30e523]:
+                        - link [ref=f30e524] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/turnstile
+                          - generic [ref=f30e525]: Turnstile
+                      - listitem [ref=f30e527]:
+                        - link [ref=f30e528] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/dls
+                          - generic [ref=f30e529]: Suíte de localização de dados
+                - listitem [ref=f30e531]:
+                  - generic [ref=f30e532]:
+                    - button [ref=f30e1696] [cursor=pointer]:
+                      - generic [ref=f30e534]: Zero Trust
+                    - list [ref=f30e541]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e542]:
+                        - link [ref=f30e543] [cursor=pointer]:
+                          - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/overview
+                          - generic [ref=f30e544]: Visão geral
+                      - listitem [ref=f30e546]:
+                        - generic [ref=f30e547]:
+                          - button [ref=f30e548] [cursor=pointer]:
+                            - generic [ref=f30e549]: Insights
+                          - list [ref=f30e554]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e555]:
+                              - link [ref=f30e556] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/insights/overview
+                                - generic [ref=f30e557]: Visão geral
+                            - listitem [ref=f30e559]:
+                              - link [ref=f30e560] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/insights/dashboards
+                                - generic [ref=f30e561]: Painéis
+                            - listitem [ref=f30e563]:
+                              - link [ref=f30e564] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/insights/logs
+                                - generic [ref=f30e565]: Logs
+                      - listitem [ref=f30e567]:
+                        - generic [ref=f30e568]:
+                          - button [ref=f30e569] [cursor=pointer]:
+                            - generic [ref=f30e570]: Equipe e recursos
+                          - list [ref=f30e575]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e576]:
+                              - link [ref=f30e577] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/team-resources/application-library
+                                - generic [ref=f30e578]: Biblioteca de aplicativos
+                            - listitem [ref=f30e580]:
+                              - link [ref=f30e581] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/team-resources/devices
+                                - generic [ref=f30e582]: Dispositivos
+                            - listitem [ref=f30e584]:
+                              - link [ref=f30e585] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/team-resources/users
+                                - generic [ref=f30e586]: Usuários
+                      - listitem [ref=f30e588]:
+                        - generic [ref=f30e589]:
+                          - button [ref=f30e590] [cursor=pointer]:
+                            - generic [ref=f30e591]: Controles de acesso
+                          - list [ref=f30e596]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e597]:
+                              - link [ref=f30e598] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/access-controls/overview
+                                - generic [ref=f30e599]: Visão geral
+                            - listitem [ref=f30e601]:
+                              - link [ref=f30e602] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/access-controls/apps
+                                - generic [ref=f30e603]: Aplicativos
+                            - listitem [ref=f30e605]:
+                              - link [ref=f30e606] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/access-controls/policies
+                                - generic [ref=f30e607]: Políticas
+                            - listitem [ref=f30e609]:
+                              - link [ref=f30e610] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/access-controls/ai-controls
+                                - generic [ref=f30e611]: Controles de IA
+                            - listitem [ref=f30e613]:
+                              - link [ref=f30e614] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/access-controls/targets
+                                - generic [ref=f30e615]: Alvos
+                            - listitem [ref=f30e617]:
+                              - link [ref=f30e618] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/access-controls/service-credentials
+                                - generic [ref=f30e619]: Credenciais de serviço
+                            - listitem [ref=f30e621]:
+                              - link [ref=f30e622] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/access-controls/settings
+                                - generic [ref=f30e623]: Configurações de acesso
+                      - listitem [ref=f30e625]:
+                        - generic [ref=f30e626]:
+                          - button [ref=f30e627] [cursor=pointer]:
+                            - generic [ref=f30e628]: Políticas de tráfego
+                          - list [ref=f30e633]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e634]:
+                              - link [ref=f30e635] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/traffic-controls/overview
+                                - generic [ref=f30e636]: Visão geral
+                            - listitem [ref=f30e638]:
+                              - link [ref=f30e639] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/traffic-controls/resolvers-proxies
+                                - generic [ref=f30e640]: Resolvedores e proxies
+                            - listitem [ref=f30e642]:
+                              - link [ref=f30e643] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/traffic-controls/policies
+                                - generic [ref=f30e644]: Políticas de firewall
+                            - listitem [ref=f30e646]:
+                              - link [ref=f30e647] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/traffic-controls/resolver-policies
+                                - generic [ref=f30e648]:
+                                  - generic [ref=f30e649]: Políticas do resolvedor
+                                  - generic [ref=f30e650]: Novo
+                            - listitem [ref=f30e652]:
+                              - link [ref=f30e653] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/traffic-controls/egress-policies
+                                - generic [ref=f30e654]: Políticas de saída
+                            - listitem [ref=f30e656]:
+                              - link [ref=f30e657] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/traffic-controls/traffic-settings
+                                - generic [ref=f30e658]: Configurações de tráfego
+                      - listitem [ref=f30e660]:
+                        - generic [ref=f30e661]:
+                          - button [ref=f30e662] [cursor=pointer]:
+                            - generic [ref=f30e663]: Prevenção contra perda de dados
+                          - list [ref=f30e668]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e669]:
+                              - link [ref=f30e670] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/dlp/overview
+                                - generic [ref=f30e671]: Overview
+                            - listitem [ref=f30e673]:
+                              - link [ref=f30e674] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/dlp/profiles
+                                - generic [ref=f30e675]: Perfis
+                            - listitem [ref=f30e677]:
+                              - link [ref=f30e678] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/dlp/data-classification
+                                - generic [ref=f30e679]: Classificação de dados
+                            - listitem [ref=f30e681]:
+                              - link [ref=f30e682] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/dlp/validators
+                                - generic [ref=f30e683]: Validadores
+                            - listitem [ref=f30e685]:
+                              - link [ref=f30e686] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/dlp/test-scan
+                                - generic [ref=f30e687]: Verificação de teste
+                            - listitem [ref=f30e689]:
+                              - link [ref=f30e690] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/dlp/settings
+                                - generic [ref=f30e691]: Configurações de DLP
+                      - listitem [ref=f30e693]:
+                        - generic [ref=f30e694]:
+                          - button [ref=f30e695] [cursor=pointer]:
+                            - generic [ref=f30e697]:
+                              - generic [ref=f30e698]: Cloud Workload Security
+                              - generic [ref=f30e699]: Beta
+                          - list [ref=f30e703]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e704]:
+                              - link [ref=f30e705] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/deployments
+                                - generic [ref=f30e706]: Implantações
+                            - listitem [ref=f30e708]:
+                              - link [ref=f30e709] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/policy-sets
+                                - generic [ref=f30e710]: Conjuntos de políticas
+                            - listitem [ref=f30e712]:
+                              - link [ref=f30e713] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/workloads
+                                - generic [ref=f30e714]: Cargas de trabalho
+                            - listitem [ref=f30e716]:
+                              - link [ref=f30e717] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/policies
+                                - generic [ref=f30e718]: Políticas
+                            - listitem [ref=f30e720]:
+                              - generic [ref=f30e721]:
+                                - button [ref=f30e722] [cursor=pointer]:
+                                  - generic [ref=f30e723]: Referência de política
+                                - list [ref=f30e728]:
+                                  - listitem [aria-hidden]
+                                  - listitem [ref=f30e729]:
+                                    - link [ref=f30e730] [cursor=pointer]:
+                                      - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/rego-metadata
+                                      - generic [ref=f30e731]: Metadados Rego
+                                  - listitem [ref=f30e733]:
+                                    - link [ref=f30e734] [cursor=pointer]:
+                                      - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/rego-modules
+                                      - generic [ref=f30e735]: Módulos Rego
+                                  - listitem [ref=f30e737]:
+                                    - link [ref=f30e738] [cursor=pointer]:
+                                      - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/tenant-structures
+                                      - generic [ref=f30e739]: Estruturas de locatário
+                            - listitem [ref=f30e741]:
+                              - generic [ref=f30e742]:
+                                - button [ref=f30e743] [cursor=pointer]:
+                                  - generic [ref=f30e744]: Escopo de tráfego
+                                - list [ref=f30e749]:
+                                  - listitem [aria-hidden]
+                                  - listitem [ref=f30e750]:
+                                    - link [ref=f30e751] [cursor=pointer]:
+                                      - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/credentials
+                                      - generic [ref=f30e752]: Credenciais
+                                  - listitem [ref=f30e754]:
+                                    - link [ref=f30e755] [cursor=pointer]:
+                                      - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-workload-security/domain-acls
+                                      - generic [ref=f30e756]: ACLs de domínio
+                      - listitem [ref=f30e758]:
+                        - generic [ref=f30e759]:
+                          - button [ref=f30e760] [cursor=pointer]:
+                            - generic [ref=f30e761]: Descobertas de nuvem e SaaS
+                          - list [ref=f30e766]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e767]:
+                              - link [ref=f30e768] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-saas-findings/overview
+                                - generic [ref=f30e769]: Visão geral
+                            - listitem [ref=f30e771]:
+                              - link [ref=f30e772] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-saas-findings/posture
+                                - generic [ref=f30e773]: Descobertas de postura
+                            - listitem [ref=f30e775]:
+                              - link [ref=f30e776] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-saas-findings/content
+                                - generic [ref=f30e777]: Descobertas de conteúdo
+                            - listitem [ref=f30e779]:
+                              - link [ref=f30e780] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/cloud-saas-findings/findings-catalog
+                                - generic [ref=f30e781]:
+                                  - generic [ref=f30e782]: Biblioteca de tipos de descobertas
+                                  - generic [ref=f30e783]: Novo
+                      - listitem [ref=f30e785]:
+                        - generic [ref=f30e786]:
+                          - button [ref=f30e787] [cursor=pointer]:
+                            - generic [ref=f30e788]: Segurança de e-mail
+                          - list [ref=f30e793]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e794]:
+                              - link [ref=f30e795] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/email-security/overview
+                                - generic [ref=f30e796]: Visão geral
+                            - listitem [ref=f30e798]:
+                              - link [ref=f30e799] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/email-security/monitoring
+                                - generic [ref=f30e800]: Monitoramento
+                            - listitem [ref=f30e802]:
+                              - link [ref=f30e803] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/email-security/submissions
+                                - generic [ref=f30e804]: Submissões
+                            - listitem [ref=f30e806]:
+                              - link [ref=f30e807] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/email-security/investigation
+                                - generic [ref=f30e808]: Investigação
+                            - listitem [ref=f30e810]:
+                              - link [ref=f30e811] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/email-security/policies
+                                - generic [ref=f30e812]: Políticas e regras
+                            - listitem [ref=f30e814]:
+                              - link [ref=f30e815] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/email-security/phishguard
+                                - generic [ref=f30e816]: PhishGuard
+                            - listitem [ref=f30e818]:
+                              - link [ref=f30e819] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/email-security/settings
+                                - generic [ref=f30e820]: Configurações de segurança de e-mail
+                      - listitem [ref=f30e822]:
+                        - generic [ref=f30e823]:
+                          - button [ref=f30e824] [cursor=pointer]:
+                            - generic [ref=f30e825]: Isolamento do navegador
+                          - list [ref=f30e830]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e831]:
+                              - link [ref=f30e832] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/browser-isolation/overview
+                                - generic [ref=f30e833]: Visão geral
+                            - listitem [ref=f30e835]:
+                              - link [ref=f30e836] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/browser-isolation/settings
+                                - generic [ref=f30e837]: Configurações de isolamento do navegador
+                      - listitem [ref=f30e839]:
+                        - generic [ref=f30e840]:
+                          - button [ref=f30e841] [cursor=pointer]:
+                            - generic [ref=f30e842]: Componentes reutilizáveis
+                          - list [ref=f30e847]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e848]:
+                              - link [ref=f30e849] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/reusable-components/lists
+                                - generic [ref=f30e850]: Listas
+                            - listitem [ref=f30e852]:
+                              - link [ref=f30e853] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/reusable-components/tags
+                                - generic [ref=f30e854]: Tags
+                            - listitem [ref=f30e856]:
+                              - link [ref=f30e857] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/reusable-components/posture-checks
+                                - generic [ref=f30e858]: Verificações de postura
+                            - listitem [ref=f30e860]:
+                              - link [ref=f30e861] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/reusable-components/custom-pages
+                                - generic [ref=f30e862]: Páginas personalizadas
+                      - listitem [ref=f30e864]:
+                        - generic [ref=f30e865]:
+                          - button [ref=f30e866] [cursor=pointer]:
+                            - generic [ref=f30e867]: Integrações
+                          - list [ref=f30e872]:
+                            - listitem [aria-hidden]
+                            - listitem [ref=f30e873]:
+                              - link [ref=f30e874] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/integrations/cloud-and-saas
+                                - generic [ref=f30e875]: Nuvem e SaaS
+                            - listitem [ref=f30e877]:
+                              - link [ref=f30e878] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/integrations/identity-providers
+                                - generic [ref=f30e879]: Provedores de identidade
+                            - listitem [ref=f30e881]:
+                              - link [ref=f30e882] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/integrations/service-providers
+                                - generic [ref=f30e883]: Provedores de serviço
+                            - listitem [ref=f30e885]:
+                              - link [ref=f30e886] [cursor=pointer]:
+                                - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/integrations/webhooks
+                                - generic [ref=f30e887]: Webhooks
+                      - listitem [ref=f30e889]:
+                        - link [ref=f30e890] [cursor=pointer]:
+                          - /url: https://dash.cloudflare.com/bc6ce307250399af9e2c337787f16259/one/settings
+                          - generic [ref=f30e891]: Configurações
+                - listitem [ref=f30e893]:
+                  - generic [ref=f30e894]:
+                    - button [ref=f30e1697] [cursor=pointer]:
+                      - generic [ref=f30e896]: Rede
+                    - list [ref=f30e903]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e904]:
+                        - link [ref=f30e905] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/magic-networks/overview
+                          - generic [ref=f30e906]:
+                            - generic [ref=f30e907]: Visão geral
+                            - generic [ref=f30e908]: Novo
+                      - listitem [ref=f30e910]:
+                        - generic [ref=f30e911]:
+                          - button [ref=f30e912] [cursor=pointer]:
+                            - generic [ref=f30e913]: Insights
+                          - list [ref=f30e917]:
+                            - listitem [aria-hidden]
+                            - link [ref=f30e918] [cursor=pointer]:
+                              - /url: /bc6ce307250399af9e2c337787f16259/networking-insights/analytics/network-analytics/flow-analytics
+                              - generic [ref=f30e919]: Fluxo de rede
+                      - listitem [ref=f30e921]:
+                        - link [ref=f30e922] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/tunnels
+                          - generic [ref=f30e923]: Túneis
+                      - listitem [ref=f30e925]:
+                        - link [ref=f30e926] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/mesh
+                          - generic [ref=f30e927]:
+                            - generic [ref=f30e928]: Mesh
+                            - generic [ref=f30e929]: Beta
+                      - listitem [ref=f30e931]:
+                        - link [ref=f30e932] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/magic-networks/routes
+                          - generic [ref=f30e933]:
+                            - generic [ref=f30e934]: Rotas
+                            - generic [ref=f30e935]: Novo
+                      - listitem [ref=f30e937]:
+                        - generic [ref=f30e938]:
+                          - button [ref=f30e939] [cursor=pointer]:
+                            - generic [ref=f30e940]: Endereços IP
+                          - list [ref=f30e944]:
+                            - listitem [aria-hidden]
+                            - link [ref=f30e945] [cursor=pointer]:
+                              - /url: /bc6ce307250399af9e2c337787f16259/ip-addresses/address-space
+                              - generic [ref=f30e946]: Espaço de endereçamento
+                            - link [ref=f30e948] [cursor=pointer]:
+                              - /url: /bc6ce307250399af9e2c337787f16259/ip-addresses/proxy-ips
+                              - generic [ref=f30e949]: Mapas de endereços
+                - listitem [ref=f30e951]:
+                  - generic [ref=f30e952]:
+                    - button [ref=f30e1698] [cursor=pointer]:
+                      - generic [ref=f30e954]: Ameaças e defesa
+                    - list [ref=f30e961]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e962]:
+                        - link [ref=f30e963] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/threats-defense
+                          - generic [ref=f30e964]: Visão geral
+                      - listitem [ref=f30e966]:
+                        - link [ref=f30e967] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/threat-intelligence
+                          - generic [ref=f30e968]: Inteligência de ameaças
+                      - listitem [ref=f30e970]:
+                        - link [ref=f30e971] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/threat-intelligence/investigate
+                          - generic [ref=f30e972]: Investigar
+                - listitem [ref=f30e974]:
+                  - generic [ref=f30e975]:
+                    - button [ref=f30e1699] [cursor=pointer]:
+                      - generic [ref=f30e980]:
+                        - generic [ref=f30e981]: Monetização
+                        - generic [ref=f30e982]: Novo
+                    - list [ref=f30e986]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e987]:
+                        - link [ref=f30e988] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/monetize/monetization-gateway
+                          - generic [ref=f30e989]:
+                            - generic [ref=f30e990]: Monetization Gateway
+                            - generic [ref=f30e991]: Beta
+                - listitem [ref=f30e993]:
+                  - generic [ref=f30e994]:
+                    - button [ref=f30e1700] [cursor=pointer]:
+                      - generic [ref=f30e996]: Entrega e desempenho
+                    - list [ref=f30e1003]:
+                      - listitem [aria-hidden]
+                      - listitem [ref=f30e1004]:
+                        - link [ref=f30e1005] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/bulk-redirects
+                          - generic [ref=f30e1006]: Redirecionamentos em massa
+                      - listitem [ref=f30e1008]:
+                        - link [ref=f30e1009] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/load-balancing
+                          - generic [ref=f30e1010]: Balanceamento de carga
+                      - listitem [ref=f30e1012]:
+                        - link [ref=f30e1013] [cursor=pointer]:
+                          - /url: /bc6ce307250399af9e2c337787f16259/tag-management/zaraz
+                          - generic [ref=f30e1014]: Gerenciamento de tags da Web
+            - list [ref=f30e1018]:
+              - listitem [ref=f30e1019]:
+                - generic [ref=f30e1020]:
+                  - button [ref=f30e1701] [cursor=pointer]:
+                    - generic [ref=f30e1022]: Gerenciar conta
+                  - list [ref=f30e1029]:
+                    - listitem [aria-hidden]
+                    - listitem [ref=f30e1030]:
+                      - link [ref=f30e1031] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/members
+                        - generic [ref=f30e1032]: Membros
+                    - listitem [ref=f30e1034]:
+                      - link [ref=f30e1035] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/billing
+                        - generic [ref=f30e1036]: Cobrança
+                    - listitem [ref=f30e1038]:
+                      - link [ref=f30e1039] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/api-tokens
+                        - generic [ref=f30e1040]: Tokens de API da conta
+                    - listitem [ref=f30e1042]:
+                      - link [ref=f30e1043] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/oauth-clients
+                        - generic [ref=f30e1044]: Clientes OAuth
+                    - listitem [ref=f30e1046]:
+                      - link [ref=f30e1047] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/audit-log
+                        - generic [ref=f30e1048]: Logs de auditoria
+                    - listitem [ref=f30e1050]:
+                      - link [ref=f30e1051] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/blocked-content
+                        - generic [ref=f30e1052]: Conteúdo bloqueado
+                    - listitem [ref=f30e1054]:
+                      - link [ref=f30e1055] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/abuse-reports
+                        - generic [ref=f30e1056]: Relatórios de abuso
+                    - listitem [ref=f30e1058]:
+                      - link [ref=f30e1059] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/carbon
+                        - generic [ref=f30e1060]: Relatório de impacto de carbono
+                    - listitem [ref=f30e1062]:
+                      - link [ref=f30e1063] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/configurations
+                        - generic [ref=f30e1064]: Configurações
+                    - listitem [ref=f30e1066]:
+                      - link [ref=f30e1067] [cursor=pointer]:
+                        - /url: /bc6ce307250399af9e2c337787f16259/tags
+                        - generic [ref=f30e1068]:
+                          - generic [ref=f30e1069]: Etiquetas de recursos
+                          - generic [ref=f30e1070]: Beta
+        - button [expanded] [ref=f30e1702] [cursor=pointer]
+    - generic [ref=f30e1079]:
+      - banner [ref=f30e1080]:
+        - navigation [ref=f30e1703]:
+          - generic [ref=f30e1083]:
+            - link [ref=f30e1704] [cursor=pointer]:
+              - /url: /bc6ce307250399af9e2c337787f16259/workers-and-pages
+              - generic [ref=f30e1088]: Workers e Pages
+            - generic [ref=f30e1094]: test-worker-beleza
+            - combobox [ref=f30e1100] [cursor=pointer]:
+              - generic [ref=f30e1101]: Produção
+            - textbox [aria-hidden] [ref=f30e1108]: "{\"kind\":\"production\",\"id\":\"production\",\"name\":\"Produção\"}"
+        - generic [ref=f30e1109]:
+          - button [ref=f30e1705] [cursor=pointer]:
+            - generic [ref=f30e1113]: Perguntar à IA
+          - link [ref=f30e1706] [cursor=pointer]:
+            - /url: /?to=/:account/support
+            - generic [ref=f30e1119]: Suporte
+          - button [ref=f30e1707] [cursor=pointer]
+      - generic [ref=f30e1124]:
+        - navigation [ref=f30e1125]:
+          - generic [ref=f30e1126]:
+            - tablist [ref=f30e1128]:
+              - tab [ref=f30e1708] [cursor=pointer]: Visão geral
+              - tab [ref=f30e1709] [cursor=pointer]: Métrica
+              - tab [ref=f30e1710] [cursor=pointer]: Implantações
+              - tab [ref=f30e1711] [cursor=pointer]: Observability
+              - tab [ref=f30e1712] [cursor=pointer]: Problemas
+              - tab [ref=f30e1713] [cursor=pointer]: Domínios
+              - tab [ref=f30e1714] [cursor=pointer]: Access
+              - tab [selected] [ref=f30e1715] [cursor=pointer]: Configurações
+            - button [aria-hidden]
+            - button [aria-hidden]
+          - generic [ref=f30e1137]:
+            - button [ref=f30e1716]:
+              - button [ref=f30e1717] [cursor=pointer]:
+                - generic [ref=f30e1348]: Convidar
+            - link [ref=f30e1718] [cursor=pointer]:
+              - /url: /bc6ce307250399af9e2c337787f16259/workers/services/edit/test-worker-beleza/production
+              - generic [ref=f30e1353]: Editar código
+            - link [ref=f30e1719] [cursor=pointer]:
+              - /url: https://test-worker-beleza.olfnetto.workers.dev
+              - generic [ref=f30e1360]:
+                - generic [ref=f30e1361]: Visite
+                - text: ↗
+        - generic [ref=f30e1140]:
+          - generic [ref=f30e1141]:
+            - generic [ref=f30e1142]:
+              - generic [ref=f30e1143]:
+                - heading [level=2] [ref=f30e1720]: Variáveis e segredos em tempo de execução
+                - generic [ref=f30e1146]:
+                  - generic [ref=f30e1148]:
+                    - tablist [ref=f30e1150]:
+                      - tab [selected] [ref=f30e1721] [cursor=pointer]:
+                        - generic [ref=f30e1152]: Produção
+                      - tab [ref=f30e1722] [cursor=pointer]:
+                        - generic [ref=f30e1154]: Base de Prévias
+                    - button [aria-hidden]
+                    - button [aria-hidden]
+                  - toolbar [ref=f30e1160]:
+                    - button [ref=f30e1723] [cursor=pointer]:
+                      - generic [ref=f30e1164]: Adicionar variável
+              - table [ref=f30e1363]:
+                - rowgroup [ref=f30e1369]:
+                  - row [ref=f30e1724]:
+                    - columnheader [ref=f30e1725]:
+                      - paragraph [ref=f30e1372]: Tipo
+                    - columnheader [ref=f30e1726]:
+                      - paragraph [ref=f30e1374]: Nome
+                    - columnheader [ref=f30e1727]:
+                      - paragraph [ref=f30e1376]: Valor
+                    - columnheader [ref=f30e1728]:
+                      - generic [ref=f30e1378]: Ações
+                - rowgroup [ref=f30e1379]:
+                  - row [ref=f30e1729]:
+                    - cell [ref=f30e1730]:
+                      - generic [ref=f30e1382]: Configurar tokens de API e outras variáveis de tempo de execução
+            - generic [ref=f30e1172]:
+              - generic [ref=f30e1173]:
+                - heading [level=2] [ref=f30e1731]: Associações
+                - generic [ref=f30e1176]:
+                  - generic [ref=f30e1178]:
+                    - tablist [ref=f30e1180]:
+                      - tab [selected] [ref=f30e1732] [cursor=pointer]:
+                        - generic [ref=f30e1182]: Produção
+                      - tab [ref=f30e1733] [cursor=pointer]:
+                        - generic [ref=f30e1184]: Base de Prévias
+                    - button [aria-hidden]
+                    - button [aria-hidden]
+                  - toolbar [ref=f30e1190]:
+                    - button [ref=f30e1734] [cursor=pointer]:
+                      - generic [ref=f30e1194]: Adicionar associação
+              - table [ref=f30e1385]:
+                - rowgroup [ref=f30e1391]:
+                  - row [ref=f30e1735]:
+                    - columnheader [ref=f30e1736]:
+                      - paragraph [ref=f30e1394]: Tipo
+                    - columnheader [ref=f30e1737]:
+                      - paragraph [ref=f30e1396]: Nome
+                    - columnheader [ref=f30e1738]:
+                      - paragraph [ref=f30e1398]: Valor
+                    - columnheader [ref=f30e1739]:
+                      - generic [ref=f30e1400]: Ações
+                - rowgroup [ref=f30e1401]:
+                  - row [ref=f30e1740]:
+                    - cell [ref=f30e1741]:
+                      - generic [ref=f30e1404]: Sem associações conectadas
+            - generic [ref=f30e1201]:
+              - generic [ref=f30e1202]:
+                - heading [level=2] [ref=f30e1742]: Observabilidade
+                - generic [ref=f30e1207]:
+                  - tablist [ref=f30e1209]:
+                    - tab [selected] [ref=f30e1743] [cursor=pointer]:
+                      - generic [ref=f30e1211]: Produção
+                    - tab [ref=f30e1744] [cursor=pointer]:
+                      - generic [ref=f30e1213]: Base de Prévias
+                  - button [aria-hidden]
+                  - button [aria-hidden]
+              - generic [ref=f30e1406]:
+                - generic [ref=f30e1408]:
+                  - generic [ref=f30e1409]:
+                    - generic [ref=f30e1411]:
+                      - text: Logs no Workers
+                      - button [ref=f30e1745] [cursor=pointer]
+                    - switch [checked] [ref=f30e1746] [cursor=pointer]
+                    - checkbox [checked] [aria-hidden] [ref=f30e1417]
+                  - generic [ref=f30e1420]:
+                    - generic [ref=f30e1421] [cursor=pointer]:
+                      - checkbox [checked] [ref=f30e1747]
+                      - checkbox [checked] [aria-hidden] [ref=f30e1426]
+                      - generic [ref=f30e1427]: Inclua logs de invocação
+                    - generic [ref=f30e1428] [cursor=pointer]:
+                      - checkbox [checked] [ref=f30e1748]
+                      - checkbox [checked] [aria-hidden] [ref=f30e1433]
+                      - generic [ref=f30e1434]: Persistir os logs no painel dos Workers
+                - generic [ref=f30e1436]:
+                  - generic [ref=f30e1437]:
+                    - generic [ref=f30e1439]:
+                      - text: Rastreamentos dos Workers
+                      - button [ref=f30e1749] [cursor=pointer]
+                    - switch [ref=f30e1750] [cursor=pointer]
+                    - checkbox [aria-hidden] [ref=f30e1445]
+                  - generic [ref=f30e1447] [cursor=pointer]:
+                    - checkbox [checked] [ref=f30e1448]
+                    - checkbox [checked] [aria-hidden] [ref=f30e1452]
+                    - generic [ref=f30e1453]: Manter os rastreamentos no painel dos Workers
+                - generic [ref=f30e1455]:
+                  - generic [ref=f30e1457]:
+                    - text: Problemas
+                    - button [ref=f30e1751] [cursor=pointer]
+                  - switch [ref=f30e1752] [cursor=pointer]
+                  - checkbox [aria-hidden] [ref=f30e1463]
+                - generic [ref=f30e1464]:
+                  - generic [ref=f30e1466]:
+                    - generic [ref=f30e1467]: Exportações
+                    - button [ref=f30e1753] [cursor=pointer]
+                  - generic [ref=f30e1471]:
+                    - text: Nenhum destino disponível.
+                    - link [ref=f30e1754] [cursor=pointer]:
+                      - /url: /bc6ce307250399af9e2c337787f16259/observability/destinations
+                      - generic [ref=f30e1473]: Criar um destino
+                    - text: para exportar telemetria.
+                - generic [ref=f30e1475]:
+                  - generic [ref=f30e1477]:
+                    - generic [ref=f30e1478]: Amostragem
+                    - button [ref=f30e1755] [cursor=pointer]
+                  - generic [ref=f30e1482]:
+                    - generic [ref=f30e1484]:
+                      - generic: Logs no Workers
+                      - textbox [ref=f30e1756]: "100"
+                      - generic: "%"
+                    - generic [ref=f30e1486]:
+                      - generic:
+                        - generic: Rastreamentos dos Workers
+                        - textbox [disabled]: "100"
+                        - generic: "%"
+            - generic [ref=f30e1224]:
+              - generic [ref=f30e1225]:
+                - heading [level=2] [ref=f30e1757]: Tempo de execução
+                - generic [ref=f30e1230]:
+                  - tablist [ref=f30e1232]:
+                    - tab [selected] [ref=f30e1758] [cursor=pointer]:
+                      - generic [ref=f30e1234]: Produção
+                    - tab [ref=f30e1759] [cursor=pointer]:
+                      - generic [ref=f30e1236]: Base de Prévias
+                  - button [aria-hidden]
+                  - button [aria-hidden]
+              - generic [ref=f30e1488]:
+                - generic [ref=f30e1490]:
+                  - generic [ref=f30e1492]:
+                    - generic [ref=f30e1493]: Posicionamento
+                    - button [ref=f30e1494] [cursor=pointer]
+                  - generic [ref=f30e1500]:
+                    - combobox [ref=f30e1760] [cursor=pointer]:
+                      - generic [ref=f30e1502]: Padrão
+                    - textbox [aria-hidden] [ref=f30e1506]: "off"
+                - generic [ref=f30e1508]:
+                  - generic [ref=f30e1510]:
+                    - generic [ref=f30e1511]: Data de compatibilidade
+                    - button [ref=f30e1512] [cursor=pointer]
+                  - button [ref=f30e1761] [cursor=pointer]: 2026-10-23
+                - generic [ref=f30e1521]:
+                  - generic [ref=f30e1523]:
+                    - generic [ref=f30e1524]: Sinalizadores de compatibilidade
+                    - button [ref=f30e1525] [cursor=pointer]
+                  - generic [ref=f30e1529]:
+                    - combobox [ref=f30e1762]
+                    - textbox [aria-hidden] [ref=f30e1533]
+                - generic [ref=f30e1535]:
+                  - generic [ref=f30e1537]:
+                    - generic [ref=f30e1538]: Cache
+                    - button [ref=f30e1539] [cursor=pointer]
+                  - generic [ref=f30e1543]:
+                    - combobox [ref=f30e1763] [cursor=pointer]:
+                      - generic [ref=f30e1545]: Desabilitado
+                    - textbox [aria-hidden] [ref=f30e1549]: "false"
+            - generic [ref=f30e1246]:
+              - heading [level=2] [ref=f30e1764]: Compilações
+              - generic [ref=f30e1550]:
+                - generic [ref=f30e1552]:
+                  - generic [ref=f30e1553]: Repositório Git
+                  - button [ref=f30e1765] [cursor=pointer]:
+                    - generic [ref=f30e1557]: Conectar
+                - generic [ref=f30e1560]:
+                  - generic [ref=f30e1561]:
+                    - generic [ref=f30e1562]: API token for external CI/CD
+                    - paragraph [ref=f30e1563]: Create an account API token that can deploy only this Worker from GitHub Actions, GitLab CI, or another CI/CD system.
+                  - button [ref=f30e1766] [cursor=pointer]: Create token
+            - generic [ref=f30e1255]:
+              - heading [level=2] [ref=f30e1767]: Eventos de gatilho
+              - generic [ref=f30e1567]:
+                - generic [ref=f30e1568]:
+                  - generic [ref=f30e1570]:
+                    - generic [ref=f30e1571]: Gatilhos cron
+                    - button [ref=f30e1572] [cursor=pointer]
+                  - generic [ref=f30e1575]:
+                    - generic [ref=f30e1576]: Nenhum gatilho cron configurado
+                    - button [ref=f30e1768] [cursor=pointer]:
+                      - generic [ref=f30e1581]: Adicionar
+                - generic [ref=f30e1583]:
+                  - generic [ref=f30e1585]:
+                    - generic [ref=f30e1586]: Queues
+                    - button [ref=f30e1587] [cursor=pointer]
+                  - generic [ref=f30e1590]:
+                    - generic [ref=f30e1591]: Nenhum consumidor de fila configurado
+                    - button [ref=f30e1769] [cursor=pointer]:
+                      - generic [ref=f30e1596]: Adicionar
+                - generic [ref=f30e1598]:
+                  - generic [ref=f30e1600]:
+                    - generic [ref=f30e1601]: Disparadores de e-mail
+                    - button [ref=f30e1602] [cursor=pointer]
+                  - generic [ref=f30e1605]:
+                    - generic [ref=f30e1606]: Nenhuma regra de roteamento envia e-mail para este Worker
+                    - link [ref=f30e1770] [cursor=pointer]:
+                      - /url: /bc6ce307250399af9e2c337787f16259/email-service/routing
+                      - generic [ref=f30e1609]: Acesse o Email Routing
+            - generic [ref=f30e1264]:
+              - heading [level=2] [ref=f30e1771]: Geral
+              - generic [ref=f30e1613]:
+                - generic [ref=f30e1615]:
+                  - generic [ref=f30e1616]: Nome
+                  - button [ref=f30e1617] [cursor=pointer]
+                - textbox [ref=f30e1772]:
+                  - /placeholder: my-worker
+                  - text: test-worker-beleza
+            - generic [ref=f30e1272]:
+              - heading [level=2] [ref=f30e1773]: Zona de perigo
+              - generic [ref=f30e1623]:
+                - generic [ref=f30e1625]:
+                  - generic [ref=f30e1626]: Excluir Worker
+                  - button [ref=f30e1627] [cursor=pointer]
+                - button [ref=f30e1774] [cursor=pointer]:
+                  - generic [ref=f30e1632]: Excluir
+          - complementary [ref=f30e1280]:
+            - navigation [ref=f30e1282]:
+              - list [ref=f30e1283]:
+                - listitem [ref=f30e1284]:
+                  - link [ref=f30e1775] [cursor=pointer]:
+                    - /url: "#variables"
+                    - generic [ref=f30e1286]: Variáveis e segredos
+                - listitem [ref=f30e1287]:
+                  - link [ref=f30e1776] [cursor=pointer]:
+                    - /url: "#bindings"
+                    - generic [ref=f30e1289]: Associações
+                - listitem [ref=f30e1290]:
+                  - link [ref=f30e1777] [cursor=pointer]:
+                    - /url: "#observability"
+                    - generic [ref=f30e1292]: Observabilidade
+                - listitem [ref=f30e1293]:
+                  - link [ref=f30e1778] [cursor=pointer]:
+                    - /url: "#runtime-section"
+                    - generic [ref=f30e1295]: Tempo de execução
+                - listitem [ref=f30e1296]:
+                  - link [ref=f30e1779] [cursor=pointer]:
+                    - /url: "#builds"
+                    - generic [ref=f30e1298]: Compilações
+                - listitem [ref=f30e1299]:
+                  - link [ref=f30e1780] [cursor=pointer]:
+                    - /url: "#trigger-events"
+                    - generic [ref=f30e1301]: Eventos de gatilho
+                - listitem [ref=f30e1302]:
+                  - link [ref=f30e1781] [cursor=pointer]:
+                    - /url: "#general"
+                    - generic [ref=f30e1304]: Geral
+                - listitem [ref=f30e1305]:
+                  - link [ref=f30e1782] [cursor=pointer]:
+                    - /url: "#danger-zone"
+                    - generic [ref=f30e1307]: Zona de perigo
+        - generic [ref=f30e1309]:
+          - generic [ref=f30e1310]:
+            - generic [ref=f30e1311]:
+              - heading [level=3] [ref=f30e1783]: Pré-visualizações do Worker
+              - generic [ref=f30e1313]: Novo
+            - button [ref=f30e1784] [cursor=pointer]
+          - paragraph [ref=f30e1318]: Todos os branches e pull requests agora têm seu próprio ambiente de pré-visualização.
+          - button [ref=f30e1785] [cursor=pointer]:
+            - generic [ref=f30e1321]: Fazer um tour
+      - contentinfo [ref=f30e1322]:
+        - list [ref=f30e1324]:
+          - listitem [ref=f30e1325]:
+            - link [ref=f30e1786] [cursor=pointer]:
+              - /url: https://support.cloudflare.com
+              - text: Suporte
+          - listitem [ref=f30e1327]:
+            - link [ref=f30e1787] [cursor=pointer]:
+              - /url: https://www.cloudflarestatus.com
+              - text: Status do sistema
+          - listitem [ref=f30e1329]:
+            - link [ref=f30e1788] [cursor=pointer]:
+              - /url: https://www.cloudflare.com/careers/
+              - text: Carreiras
+          - listitem [ref=f30e1331]:
+            - link [ref=f30e1789] [cursor=pointer]:
+              - /url: https://www.cloudflare.com/website-terms/
+              - text: Termos de uso
+          - listitem [ref=f30e1333]:
+            - link [ref=f30e1790] [cursor=pointer]:
+              - /url: https://www.cloudflare.com/disclosure/
+              - text: Relatar problemas de segurança
+          - listitem [ref=f30e1335]:
+            - link [ref=f30e1791] [cursor=pointer]:
+              - /url: https://www.cloudflare.com/privacypolicy/
+              - text: Política de Privacidade
+          - listitem [ref=f30e1337]:
+            - button [ref=f30e1792] [cursor=pointer]: Preferências de cookies
+          - listitem [ref=f30e1340]:
+            - generic [ref=f30e1341]: © 2026 Cloudflare, Inc.
+  - generic:
+    - region "Notifications"
+  - dialog [ref=f30e1797]:
+    - banner [ref=f30e1798]:
+      - heading "Adicione uma associação" [level=2] [ref=f30e1799]
+      - paragraph [ref=f30e1800]: Adicione e conecte um recurso externo ao seu aplicativo Worker.
+    - generic [ref=f30e1801]:
+      - complementary [ref=f30e1802]:
+        - listbox "List of supported bindings" [ref=f30e1803]:
+          - option "Mecanismo de análise" [ref=f30e1804] [cursor=pointer]
+          - option "Execução do navegador" [ref=f30e1809] [cursor=pointer]
+          - option "Banco de dados D1" [active] [selected] [ref=f30e1814] [cursor=pointer]
+          - option "Durable Object" [ref=f30e1819] [cursor=pointer]
+          - option "Serviço de email" [ref=f30e1824] [cursor=pointer]
+          - option "Flagship" [ref=f30e1829] [cursor=pointer]
+          - option "Hyperdrive" [ref=f30e1834] [cursor=pointer]
+          - option "Images" [ref=f30e1839] [cursor=pointer]
+          - option "Mídia" [ref=f30e1844] [cursor=pointer]
+          - option "Namespace de KV" [ref=f30e1849] [cursor=pointer]
+          - option "Certificado mTLS" [ref=f30e1854] [cursor=pointer]
+          - option "Fila" [ref=f30e1859] [cursor=pointer]
+          - option "Limitador de taxa" [ref=f30e1864] [cursor=pointer]
+          - option "Secrets Store" [ref=f30e1869] [cursor=pointer]
+          - option "Associação de serviço" [ref=f30e1874] [cursor=pointer]
+          - option "Stream" [ref=f30e1879] [cursor=pointer]
+          - option "Serviço de VPC" [ref=f30e1884] [cursor=pointer]
+          - option "Rede VPC" [ref=f30e1889] [cursor=pointer]
+          - option "Índice do Vectorize" [ref=f30e1894] [cursor=pointer]
+          - option "Metadados da versão" [ref=f30e1899] [cursor=pointer]
+          - option "Workers AI" [ref=f30e1904] [cursor=pointer]
+          - option "Namespace do AI Search" [ref=f30e1909] [cursor=pointer]
+          - option "AI Search" [ref=f30e1914] [cursor=pointer]
+          - option "Fluxo de trabalho" [ref=f30e1919] [cursor=pointer]
+          - group "Descobrir mais" [ref=f30e1924]:
+            - option "Namespace de expedição" [ref=f30e1926] [cursor=pointer]
+            - option "Workers dinâmico" [ref=f30e1931] [cursor=pointer]
+            - option "Bucket R2" [ref=f30e1936] [cursor=pointer]
+      - article [ref=f30e1941]:
+        - generic [ref=f30e1942]:
+          - generic [ref=f30e1943]:
+            - heading "Banco de dados D1" [level=2] [ref=f30e1944]
+            - link "Exibir documentos ↗" [ref=f30e1948] [cursor=pointer]:
+              - /url: https://developers.cloudflare.com/d1
+          - paragraph [ref=f30e1949]: Armazene dados relacionais com banco de dados SQL sem servidor
+        - paragraph [ref=f30e1950]: D1 é o banco de dados nativo sem servidor da Cloudflare que permite criar aplicativos que lidam com grandes quantidades de usuários sem nenhum custo extra.
+        - generic [ref=f30e1952]:
+          - generic [ref=f30e1953]:
+            - generic [ref=f30e1954]: type
+            - generic [ref=f30e1956]: OrderRow
+            - generic [ref=f30e1958]: =
+            - generic [ref=f30e1959]: "{"
+          - generic [ref=f30e1960]:
+            - generic [ref=f30e1962]: Id
+            - generic [ref=f30e1963]: ":"
+            - generic [ref=f30e1965]: string
+            - generic [ref=f30e1966]: ;
+          - generic [ref=f30e1967]:
+            - generic [ref=f30e1969]: CustomerName
+            - generic [ref=f30e1970]: ":"
+            - generic [ref=f30e1972]: string
+            - generic [ref=f30e1973]: ;
+          - generic [ref=f30e1974]:
+            - generic [ref=f30e1976]: OrderDate
+            - generic [ref=f30e1977]: ":"
+            - generic [ref=f30e1979]: number
+            - generic [ref=f30e1980]: ;
+          - generic [ref=f30e1981]: "};"
+          - generic [ref=f30e1984]:
+            - generic [ref=f30e1985]: export
+            - generic [ref=f30e1987]: default
+            - generic [ref=f30e1988]: "{"
+          - generic [ref=f30e1989]:
+            - generic [ref=f30e1991]: async
+            - generic [ref=f30e1993]: fetch
+            - generic [ref=f30e1994]: (
+            - generic [ref=f30e1995]: request
+            - generic [ref=f30e1996]: ","
+            - generic [ref=f30e1997]: env
+            - generic [ref=f30e1998]: ") {"
+          - generic [ref=f30e1999]:
+            - generic [ref=f30e2001]: const
+            - generic [ref=f30e2003]: result
+            - generic [ref=f30e2005]: =
+            - generic [ref=f30e2007]: await
+            - generic [ref=f30e2008]: env.
+            - generic [ref=f30e2009]: MY_DB
+            - generic [ref=f30e2010]: .
+            - generic [ref=f30e2011]: prepare
+            - generic [ref=f30e2012]: (
+          - generic [ref=f30e2013]:
+            - generic [ref=f30e2015]: "\"SELECT Id, CustomerName, OrderDate FROM [Order] ORDER BY ShippedDate DESC LIMIT 100\""
+            - generic [ref=f30e2016]: ","
+          - generic [ref=f30e2017]:
+            - generic [ref=f30e2018]: ).
+            - generic [ref=f30e2019]: run
+            - generic [ref=f30e2020]: <
+            - generic [ref=f30e2021]: OrderRow
+            - generic [ref=f30e2022]: ">();"
+          - generic [ref=f30e2023]:
+            - generic [ref=f30e2025]: return
+            - generic [ref=f30e2027]: new
+            - generic [ref=f30e2029]: Response
+            - generic [ref=f30e2030]: (
+            - generic [ref=f30e2031]: JSON
+            - generic [ref=f30e2032]: .
+            - generic [ref=f30e2033]: stringify
+            - generic [ref=f30e2034]: (result));
+          - generic [ref=f30e2035]: "}"
+          - generic [ref=f30e2037]: "}"
+    - contentinfo [ref=f30e2039]:
+      - button "Cancelar" [ref=f30e2040]
+      - button "Adicionar associação" [ref=f30e2042] [cursor=pointer]

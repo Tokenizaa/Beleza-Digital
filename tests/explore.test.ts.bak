@@ -1,0 +1,65 @@
+import { test, expect } from '@playwright/test';
+
+test('Explore app flow - Phase A', async () => {
+  // Open the app - using npgrogrammatic approach
+  const { chromium } = require('playwright');
+  const browser = await chromium.launch({ headless: false });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  
+  // Open the app
+  await page.goto('http://localhost:3000');
+  await page.waitForLoadState('networkidle');
+  
+  console.log('=== PAGE TITLE ===');
+  console.log(await page.title());
+  
+  const pageBody = await page.textContent('body');
+  const lower = pageBody.toLowerCase();
+  
+  // Look for login elements
+  const hasLogin = page.locator('text=Entrar').count() > 0 || page.locator('text=Acesso').count() > 0;
+  console.log('Has login elements:', hasLogin);
+  
+  // Look for establishment name
+  const yeshua = await page.locator('text=Salão Modelo').count();
+  console.log('Salão Modelo found:', yeshua);
+  
+  // Look for Cadastrar Novo
+  const cadastrar = await page.locator(':has-text("Cadastrar Novo")').count();
+  console.log('Cadastrar Novo found:', cadastrar);
+  
+  // Look for Super Admin
+  const superAdmin = await page.locator(':has-text("Super Administrador")').count();
+  console.log('Super Admin found:', superAdmin);
+  
+  // Look for template variation buttons
+  const variationLabels = ['ouro-classico', 'preto-esmeralda', 'minimal-studio', 'safira-executivo', 'rubi-lounge'];
+  for (const v of variationLabels) {
+    const found = lower.includes(v.toLowerCase());
+    console.log(`Variation "${v}": ${found}`);
+  }
+  
+  // Look for input fields
+  const inputs = await page.locator('input').count();
+  console.log('Total inputs:', inputs);
+  
+  // Look for buttons
+  const buttons = await page.locator('button').count();
+  console.log('Total buttons:', buttons);
+  
+  // Print first few button texts
+  for (let i = 0; i < Math.min(buttons, 20); i++) {
+    const btn = page.locator('button').nth(i);
+    const text = await btn.textContent();
+    if (text && text.trim()) {
+      console.log(`Button ${i}: "${text.trim()}"`);
+    }
+  }
+  
+  // Save a screenshot
+  await page.screenshot({ path: '/tmp/screenshot-initial.png' });
+  console.log('Screenshot saved to /tmp/screenshot-initial.png');
+  
+  await browser.close();
+});

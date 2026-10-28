@@ -1,0 +1,88 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e13]:
+        - heading "Painel Administrativo" [level=1] [ref=f2e14]
+        - paragraph [ref=f2e15]: Plataforma para Salões
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17]: Salão Ativo
+        - button [ref=f2e18] [cursor=pointer]:
+          - generic [ref=f2e21]:
+            - paragraph [ref=f2e22]: Salão Modelo
+            - paragraph [ref=f2e23]: /modelo-inicial
+      - navigation [ref=f2e26]:
+        - generic [ref=f2e27]:
+          - button "Gestão do Salão" [ref=f2e28] [cursor=pointer]
+          - generic [ref=f2e39]:
+            - button "Dashboard & Faturamento" [active] [ref=f2e40] [cursor=pointer]
+            - button "Serviços & Preços" [ref=f2e47] [cursor=pointer]
+            - button "Produtos & Estoque" [ref=f2e55] [cursor=pointer]
+            - button "Galeria & Vídeos" [ref=f2e60] [cursor=pointer]
+            - button "Agenda & Horários" [ref=f2e67] [cursor=pointer]
+            - button "Feed Instagram" [ref=f2e71] [cursor=pointer]
+            - button "Configurações do Salão" [ref=f2e76] [cursor=pointer]
+        - generic [ref=f2e81]:
+          - button "Prospecção & Raspagem" [ref=f2e82] [cursor=pointer]
+          - generic [ref=f2e90]:
+            - button "Painel do Dia (Hoje)" [ref=f2e91] [cursor=pointer]
+            - button "Nova Busca & Raspagem" [ref=f2e96] [cursor=pointer]
+            - button "Pipeline CRM & Empresas" [ref=f2e101] [cursor=pointer]
+        - generic [ref=f2e108]:
+          - button "Rede & Super Admin" [ref=f2e109] [cursor=pointer]
+          - generic [ref=f2e118]:
+            - button "Salões da Rede (2)" [ref=f2e119] [cursor=pointer]
+            - button "Cadastrar Novo Salão" [ref=f2e125] [cursor=pointer]
+            - button "Administradores Gerais" [ref=f2e128] [cursor=pointer]
+            - button "Auditoria & Logs" [ref=f2e133] [cursor=pointer]
+            - button "Planos & Configurações" [ref=f2e138] [cursor=pointer]
+        - button "5 Modelos de Sites 5" [ref=f2e142] [cursor=pointer]:
+          - generic [ref=f2e143]: 5 Modelos de Sites
+          - generic [ref=f2e148]: "5"
+    - generic [ref=f2e149]:
+      - button "Ver Site Público" [ref=f2e150] [cursor=pointer]
+      - button "Encerrar Sessão" [ref=f2e156] [cursor=pointer]
+  - main [ref=f2e162]:
+    - generic [ref=f2e295]:
+      - generic [ref=f2e296]:
+        - generic [ref=f2e297]:
+          - generic [ref=f2e298]: Gestão Comercial • Salão Modelo
+          - heading "Painel do Administrador Local" [level=1] [ref=f2e299]
+          - paragraph [ref=f2e300]: "ID: est-yeshua (/modelo-inicial) •"
+        - generic [ref=f2e301]:
+          - button "Ver Site" [ref=f2e302] [cursor=pointer]
+          - button "Sair do Painel" [ref=f2e308] [cursor=pointer]
+      - generic [ref=f2e313]:
+        - generic [ref=f2e314]:
+          - generic [ref=f2e315]:
+            - text: Total de Serviços
+            - generic [ref=f2e316]: "0"
+            - generic [ref=f2e317]: 0 em destaque na Home
+          - generic [ref=f2e318]:
+            - text: Produtos no Catálogo
+            - generic [ref=f2e319]: "0"
+            - generic [ref=f2e320]: 0 disponíveis
+          - generic [ref=f2e321]:
+            - text: Mídias da Galeria
+            - generic [ref=f2e322]: "0"
+            - generic [ref=f2e323]: 0 fotos / 0 vídeos
+          - generic [ref=f2e324]:
+            - text: Instagram Embeds
+            - generic [ref=f2e325]: "0"
+          - generic [ref=f2e326]:
+            - text: Canal de Atendimento
+            - generic [ref=f2e327]: Conectado e ativo
+        - generic [ref=f2e330]:
+          - heading "Ações Rápidas" [level=3] [ref=f2e331]
+          - generic [ref=f2e332]:
+            - button [ref=f2e333] [cursor=pointer]:
+              - heading "+ Adicionar Serviço" [level=4] [ref=f2e340]
+              - paragraph [ref=f2e341]: Corte, extensão de cílios ou unhas
+            - button [ref=f2e342] [cursor=pointer]:
+              - heading "+ Adicionar Produto" [level=4] [ref=f2e346]
+              - paragraph [ref=f2e347]: Cadastrar cosmético ou pomada
+            - button [ref=f2e348] [cursor=pointer]:
+              - heading "+ Foto ou Vídeo" [level=4] [ref=f2e354]
+              - paragraph [ref=f2e355]: Publicar na galeria própria
+            - button [ref=f2e356] [cursor=pointer]:
+              - heading "+ Embedar Instagram" [level=4] [ref=f2e360]
+              - paragraph [ref=f2e361]: Colar link de post ou reel

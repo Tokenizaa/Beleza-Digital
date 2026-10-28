@@ -1,0 +1,74 @@
+- generic [ref=f17e4]:
+  - generic [ref=f17e5]:
+    - generic [ref=f17e11]:
+      - generic [ref=f17e12]:
+        - heading "Plataforma para Salões" [level=1] [ref=f17e13]
+        - generic [ref=f17e14]: Super Admin
+      - paragraph [ref=f17e15]: Painel Geral de Controle da Rede White Label Multiestabelecimento
+    - generic [ref=f17e16]:
+      - button "Ver Site Público" [ref=f17e17] [cursor=pointer]
+      - button "Sair" [ref=f17e23] [cursor=pointer]
+  - generic [ref=f17e28]:
+    - button "Visão Geral & Métricas" [ref=f17e29] [cursor=pointer]
+    - button "Estabelecimentos (2)" [ref=f17e33] [cursor=pointer]
+    - button "Cadastrar Novo" [ref=f17e39] [cursor=pointer]
+    - button "Administradores Vinculados" [ref=f17e42] [cursor=pointer]
+    - button "Auditoria & Segurança" [ref=f17e49] [cursor=pointer]
+    - button "Prospecção de Leads" [ref=f17e54] [cursor=pointer]
+    - button "Configurações Globais" [ref=f17e61] [cursor=pointer]
+  - generic [ref=f17e66]:
+    - generic [ref=f17e67]:
+      - generic [ref=f17e68]:
+        - text: Total de Estabelecimentos
+        - generic [ref=f17e69]:
+          - generic [ref=f17e70]: "2"
+          - generic [ref=f17e71]: 2 ativos
+      - generic [ref=f17e72]:
+        - text: Serviços no Catálogo Geral
+        - generic [ref=f17e73]:
+          - generic [ref=f17e74]: "8"
+          - generic [ref=f17e75]: na plataforma
+      - generic [ref=f17e76]:
+        - text: Produtos Disponíveis
+        - generic [ref=f17e77]:
+          - generic [ref=f17e78]: "4"
+          - generic [ref=f17e79]: itens cadastrados
+      - generic [ref=f17e80]:
+        - text: Agendamentos Realizados
+        - generic [ref=f17e81]:
+          - generic [ref=f17e82]: "3"
+          - generic [ref=f17e83]: 2 confirmados
+    - generic [ref=f17e84]:
+      - generic [ref=f17e85]:
+        - generic [ref=f17e86]:
+          - heading "Estabelecimentos Registrados" [level=3] [ref=f17e87]
+          - button "Novo" [ref=f17e93] [cursor=pointer]
+        - generic [ref=f17e96]:
+          - generic [ref=f17e97]:
+            - generic [ref=f17e98]:
+              - img "Salão Modelo" [ref=f17e100]
+              - generic [ref=f17e101]:
+                - generic [ref=f17e102]:
+                  - generic [ref=f17e103]: Salão Modelo
+                  - generic [ref=f17e104]: Modelo inicial
+                  - generic [ref=f17e105]: Ativo
+                - generic [ref=f17e106]: "slug: /modelo-inicial • • WhatsApp:"
+            - button "Acessar Painel" [ref=f17e108] [cursor=pointer]
+          - generic [ref=f17e113]:
+            - generic [ref=f17e114]:
+              - img "Estabelecimento de Demonstração" [ref=f17e116]
+              - generic [ref=f17e117]:
+                - generic [ref=f17e118]:
+                  - generic [ref=f17e119]: Estabelecimento de Demonstração
+                  - generic [ref=f17e120]: Ativo
+                - generic [ref=f17e121]: "slug: /demonstracao • • WhatsApp:"
+            - button "Acessar Painel" [ref=f17e123] [cursor=pointer]
+      - generic [ref=f17e128]:
+        - generic [ref=f17e129]:
+          - heading "Auditoria Recente" [level=3] [ref=f17e130]
+          - button "Ver todos" [ref=f17e135] [cursor=pointer]
+        - generic [ref=f17e137]:
+          - generic [ref=f17e138]:
+            - generic [ref=f17e139]: PLATFORM_INITIALIZATION
+            - generic [ref=f17e140]: 15:55
+          - paragraph [ref=f17e141]: Plataforma multiestabelecimento inicializada com dados neutros de demonstração.

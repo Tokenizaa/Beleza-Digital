@@ -1,0 +1,400 @@
+- generic [ref=f20e3]:
+  - banner [ref=f20e4]:
+    - generic [ref=f20e6]:
+      - button "Ir para o início" [ref=f20e7]:
+        - generic [ref=f20e8]: Salão Modelo
+      - navigation "Navegação principal" [ref=f20e9]:
+        - button "Início" [ref=f20e10]
+        - button "Serviços" [ref=f20e11]
+        - button "Produtos" [ref=f20e12]
+        - button "Galeria" [ref=f20e13]
+        - button "Contato" [ref=f20e14]
+      - generic [ref=f20e15]:
+        - button "Agendar" [ref=f20e16]
+        - button "Abrir opções adicionais" [ref=f20e21]:
+          - generic [ref=f20e22]: Mais
+  - main [ref=f20e25]:
+    - generic [ref=f20e26]:
+      - generic [ref=f20e27]:
+        - img "Salão Modelo" [ref=f20e29]
+        - generic [ref=f20e31]:
+          - generic [ref=f20e32]:
+            - img "Salão Modelo" [ref=f20e34]
+            - generic [ref=f20e35]: Modelo inicial • Personalize sua marca
+          - generic [ref=f20e40]:
+            - heading "Salão Modelo" [level=1] [ref=f20e41]
+            - paragraph [ref=f20e42]: Harmonia, visagismo e autocuidado completo em um só lugar. Cortes masculinos impecáveis, design de sobrancelhas, cílios volumosos, tranças e cosméticos selecionados.
+          - generic [ref=f20e43]:
+            - button "Agendar Horário Online" [ref=f20e44] [cursor=pointer]
+            - link "WhatsApp Direto" [ref=f20e48] [cursor=pointer]:
+              - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+            - button "Ver Serviços" [ref=f20e52] [cursor=pointer]
+          - generic [ref=f20e60]:
+            - generic [ref=f20e61]: Endereço
+            - generic [ref=f20e67]: Instagram
+            - generic [ref=f20e73]: WhatsApp
+      - generic [ref=f20e79]:
+        - generic [ref=f20e80]:
+          - img "Aplicativo do estabelecimento" [ref=f20e82]
+          - generic [ref=f20e83]:
+            - generic [ref=f20e84]:
+              - generic [ref=f20e85]: Instale o aplicativo do estabelecimento
+              - generic [ref=f20e86]: Grátis
+            - paragraph [ref=f20e87]: Acesse agendamentos, serviços e galeria em 1 clique direto da sua tela inicial (iOS e Android).
+        - button "Salvar no Celular" [ref=f20e88] [cursor=pointer]
+      - generic [ref=f20e93]:
+        - generic [ref=f20e94]:
+          - generic [ref=f20e95]:
+            - text: Especialidades
+            - heading "Serviços em Destaque" [level=2] [ref=f20e96]
+            - paragraph [ref=f20e97]: Cuidado com os melhores produtos e atendimento personalizado para homens e mulheres.
+          - button "Ver todos os serviços" [ref=f20e98] [cursor=pointer]
+        - generic [ref=f20e102]:
+          - generic [ref=f20e103]:
+            - generic [ref=f20e104]:
+              - generic [ref=f20e105]:
+                - img "Corte de Cabelo Masculino & Barba" [ref=f20e106]
+                - generic [ref=f20e107]: Barbearia
+              - generic [ref=f20e108]:
+                - heading "Corte de Cabelo Masculino & Barba" [level=3] [ref=f20e109]
+                - paragraph [ref=f20e110]: Design de barba e corte masculino com finalização profissional.
+                - generic [ref=f20e111]: 45 min
+            - generic [ref=f20e116]:
+              - button "Agendar Horário" [ref=f20e117] [cursor=pointer]
+              - link "WhatsApp Direto" [ref=f20e121] [cursor=pointer]:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20o%20servi%C3%A7o%20de%20Corte%20de%20Cabelo%20Masculino%20%26%20Barba.
+          - generic [ref=f20e124]:
+            - generic [ref=f20e125]:
+              - generic [ref=f20e126]:
+                - img "Extensão de Cílios" [ref=f20e127]
+                - generic [ref=f20e128]: Cílios
+              - generic [ref=f20e129]:
+                - heading "Extensão de Cílios" [level=3] [ref=f20e130]
+                - paragraph [ref=f20e131]: Aplicação e manutenção de extensão de cílios com técnica especializada.
+                - generic [ref=f20e132]: 90 min
+            - generic [ref=f20e137]:
+              - button "Agendar Horário" [ref=f20e138] [cursor=pointer]
+              - link "WhatsApp Direto" [ref=f20e142] [cursor=pointer]:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20o%20servi%C3%A7o%20de%20Extens%C3%A3o%20de%20C%C3%ADlios.
+          - generic [ref=f20e145]:
+            - generic [ref=f20e146]:
+              - generic [ref=f20e147]:
+                - img "Design de Sobrancelhas" [ref=f20e148]
+                - generic [ref=f20e149]: Sobrancelhas
+              - generic [ref=f20e150]:
+                - heading "Design de Sobrancelhas" [level=3] [ref=f20e151]
+                - paragraph [ref=f20e152]: Alinhamento, visagismo e harmonização do olhar.
+                - generic [ref=f20e153]: 30 min
+            - generic [ref=f20e158]:
+              - button "Agendar Horário" [ref=f20e159] [cursor=pointer]
+              - link "WhatsApp Direto" [ref=f20e163] [cursor=pointer]:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20o%20servi%C3%A7o%20de%20Design%20de%20Sobrancelhas.
+          - generic [ref=f20e166]:
+            - generic [ref=f20e167]:
+              - generic [ref=f20e168]:
+                - img "Tranças & Penteados" [ref=f20e169]
+                - generic [ref=f20e170]: Tranças
+              - generic [ref=f20e171]:
+                - heading "Tranças & Penteados" [level=3] [ref=f20e172]
+                - paragraph [ref=f20e173]: Tranças nagô, box braids e penteados exclusivos.
+                - generic [ref=f20e174]: 120 min
+            - generic [ref=f20e179]:
+              - button "Agendar Horário" [ref=f20e180] [cursor=pointer]
+              - link "WhatsApp Direto" [ref=f20e184] [cursor=pointer]:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20o%20servi%C3%A7o%20de%20Tran%C3%A7as%20%26%20Penteados.
+      - generic [ref=f20e188]:
+        - generic [ref=f20e189]:
+          - generic [ref=f20e190]:
+            - generic [ref=f20e191]: Agenda Aberta & Transparência
+            - heading "Disponibilidade & Agendamento em Tempo Real" [level=2] [ref=f20e196]
+            - paragraph [ref=f20e197]: Navegue pelos meses, verifique horários disponíveis e solicite seu atendimento diretamente pelo WhatsApp. Os horários confirmados ficam automaticamente bloqueados para evitar qualquer conflito.
+          - button "Abrir Agendador Completo" [ref=f20e198] [cursor=pointer]
+        - generic [ref=f20e202]:
+          - generic [ref=f20e203]:
+            - generic [ref=f20e204]:
+              - generic [ref=f20e205]: "Selecione uma data para consultar:"
+              - generic [ref=f20e206]: 23/10/2026
+            - generic [ref=f20e207]:
+              - generic [ref=f20e208]:
+                - heading "Outubro 2026" [level=4] [ref=f20e210]
+                - generic [ref=f20e211]:
+                  - button "Hoje" [ref=f20e212] [cursor=pointer]
+                  - button "Mês anterior" [disabled] [ref=f20e213] [cursor=pointer]
+                  - button "Avançar mês" [ref=f20e216] [cursor=pointer]
+              - generic [ref=f20e219]:
+                - generic [ref=f20e220]: Dom
+                - generic [ref=f20e221]: Seg
+                - generic [ref=f20e222]: Ter
+                - generic [ref=f20e223]: Qua
+                - generic [ref=f20e224]: Qui
+                - generic [ref=f20e225]: Sex
+                - generic [ref=f20e226]: Sáb
+              - generic [ref=f20e227]:
+                - button "1" [disabled] [ref=f20e232]
+                - button "2" [disabled] [ref=f20e234]
+                - button "3" [disabled] [ref=f20e236]
+                - button "4" [disabled] [ref=f20e238]
+                - button "5" [disabled] [ref=f20e240]
+                - button "6" [disabled] [ref=f20e242]
+                - button "7" [disabled] [ref=f20e244]
+                - button "8" [disabled] [ref=f20e246]
+                - button "9" [disabled] [ref=f20e248]
+                - button "10" [disabled] [ref=f20e250]
+                - button "11" [disabled] [ref=f20e252]
+                - button "12" [disabled] [ref=f20e254]
+                - button "13" [disabled] [ref=f20e256]
+                - button "14" [disabled] [ref=f20e258]
+                - button "15" [disabled] [ref=f20e260]
+                - button "16" [disabled] [ref=f20e262]
+                - button "17" [disabled] [ref=f20e264]
+                - button "18" [disabled] [ref=f20e266]
+                - button "19" [disabled] [ref=f20e268]
+                - button "20" [disabled] [ref=f20e270]
+                - button "21" [disabled] [ref=f20e272]
+                - button "22" [disabled] [ref=f20e274]
+                - button "23" [ref=f20e276] [cursor=pointer]
+                - button "24 1 horário(s) já reservado(s)" [ref=f20e278] [cursor=pointer]:
+                  - generic [ref=f20e279]: "24"
+                  - generic "1 horário(s) já reservado(s)" [ref=f20e281]
+                - button "25" [ref=f20e282] [cursor=pointer]
+                - button "26" [ref=f20e284] [cursor=pointer]
+                - button "27" [ref=f20e286] [cursor=pointer]
+                - button "28" [ref=f20e288] [cursor=pointer]
+                - button "29" [ref=f20e290] [cursor=pointer]
+                - button "30" [ref=f20e292] [cursor=pointer]
+                - button "31" [ref=f20e294] [cursor=pointer]
+              - generic [ref=f20e296]:
+                - generic [ref=f20e297]:
+                  - generic [ref=f20e298]: Selecionado
+                  - generic [ref=f20e301]: Com Reservas
+                - generic [ref=f20e304]: Avance nos meses pelas setas acima
+            - paragraph [ref=f20e309]:
+              - strong [ref=f20e310]: "Proteção contra conflitos de horário:"
+              - text: Quando o administrador confirma um horário, ele fica visivelmente travado com o cadeado Reservado para todos os clientes.
+          - generic [ref=f20e311]:
+            - generic [ref=f20e312]:
+              - generic [ref=f20e313]:
+                - text: Grade de Atendimento para
+                - heading "sexta-feira, 23 de outubro de 2026" [level=3] [ref=f20e314]
+              - generic [ref=f20e318]: Todos os horários livres
+            - generic [ref=f20e324]:
+              - generic [ref=f20e325]: "Procedimento Desejado:"
+              - combobox [ref=f20e326]:
+                - option "Corte de Cabelo Masculino & Barba (45 min)" [selected]
+                - option "Extensão de Cílios (90 min)"
+                - option "Design de Sobrancelhas (30 min)"
+                - option "Tranças & Penteados (120 min)"
+                - option "Tratamentos Capilares & Escova (60 min)"
+                - option "Manicure & Pedicure (50 min)"
+            - generic [ref=f20e327]:
+              - generic [ref=f20e328]:
+                - generic [ref=f20e329]: "Escolha o horário de preferência:"
+                - generic [ref=f20e330]:
+                  - text: "Horário escolhido:"
+                  - strong [ref=f20e331]: 14:00
+              - generic [ref=f20e332]:
+                - button "09:00 Livre" [ref=f20e333] [cursor=pointer]:
+                  - generic [ref=f20e334]: 09:00
+                  - generic [ref=f20e335]: Livre
+                - button "09:45 Livre" [ref=f20e336] [cursor=pointer]:
+                  - generic [ref=f20e337]: 09:45
+                  - generic [ref=f20e338]: Livre
+                - button "10:30 Livre" [ref=f20e339] [cursor=pointer]:
+                  - generic [ref=f20e340]: 10:30
+                  - generic [ref=f20e341]: Livre
+                - button "11:15 Livre" [ref=f20e342] [cursor=pointer]:
+                  - generic [ref=f20e343]: 11:15
+                  - generic [ref=f20e344]: Livre
+                - button "13:00 Livre" [ref=f20e345] [cursor=pointer]:
+                  - generic [ref=f20e346]: 13:00
+                  - generic [ref=f20e347]: Livre
+                - button "14:00 Livre" [ref=f20e348] [cursor=pointer]:
+                  - generic [ref=f20e349]: 14:00
+                  - generic [ref=f20e350]: Livre
+                - button "15:00 Livre" [ref=f20e351] [cursor=pointer]:
+                  - generic [ref=f20e352]: 15:00
+                  - generic [ref=f20e353]: Livre
+                - button "16:00 Livre" [ref=f20e354] [cursor=pointer]:
+                  - generic [ref=f20e355]: 16:00
+                  - generic [ref=f20e356]: Livre
+                - button "17:00 Livre" [ref=f20e357] [cursor=pointer]:
+                  - generic [ref=f20e358]: 17:00
+                  - generic [ref=f20e359]: Livre
+                - button "18:00 Livre" [ref=f20e360] [cursor=pointer]:
+                  - generic [ref=f20e361]: 18:00
+                  - generic [ref=f20e362]: Livre
+                - button "18:45 Livre" [ref=f20e363] [cursor=pointer]:
+                  - generic [ref=f20e364]: 18:45
+                  - generic [ref=f20e365]: Livre
+                - button "19:30 Livre" [ref=f20e366] [cursor=pointer]:
+                  - generic [ref=f20e367]: 19:30
+                  - generic [ref=f20e368]: Livre
+            - generic [ref=f20e369]:
+              - button "Solicitar 14:00 no WhatsApp" [ref=f20e370] [cursor=pointer]
+              - button "Preencher com Meus Dados" [ref=f20e374] [cursor=pointer]
+      - generic [ref=f20e375]:
+        - generic [ref=f20e376]:
+          - generic [ref=f20e377]:
+            - text: Portfólio & Transformações
+            - heading "Trabalhos Recentes" [level=2] [ref=f20e378]
+            - paragraph [ref=f20e379]: Explore os trabalhos e mídias cadastrados pelo estabelecimento.
+          - button "Explorar galeria completa" [ref=f20e380] [cursor=pointer]
+        - generic [ref=f20e384]:
+          - generic [ref=f20e385] [cursor=pointer]:
+            - img "Exemplo de trabalho — corte e acabamento" [ref=f20e386]
+            - generic [ref=f20e387]:
+              - generic [ref=f20e388]: Barbearia
+              - paragraph [ref=f20e389]: Exemplo de trabalho — corte e acabamento
+          - generic [ref=f20e390] [cursor=pointer]:
+            - img "Design de Barba & Barbaterapia com Toalha Quente" [ref=f20e391]
+            - generic [ref=f20e392]:
+              - generic [ref=f20e393]: Barbearia
+              - paragraph [ref=f20e394]: Design de Barba & Barbaterapia com Toalha Quente
+          - generic [ref=f20e395] [cursor=pointer]:
+            - img "Estética Facial & Design de Sobrancelhas" [ref=f20e396]
+            - generic [ref=f20e397]:
+              - generic [ref=f20e398]: Sobrancelhas
+              - paragraph [ref=f20e399]: Estética Facial & Design de Sobrancelhas
+          - generic [ref=f20e400] [cursor=pointer]:
+            - img "Espaço do estabelecimento — imagem de demonstração" [ref=f20e401]
+            - generic [ref=f20e402]:
+              - generic [ref=f20e403]: Ambiente
+              - paragraph [ref=f20e404]: Espaço do estabelecimento — imagem de demonstração
+          - generic [ref=f20e405] [cursor=pointer]:
+            - img "Logo do estabelecimento — substitua pela sua marca" [ref=f20e406]
+            - generic [ref=f20e407]:
+              - generic [ref=f20e408]: Ambiente
+              - paragraph [ref=f20e409]: Logo do estabelecimento — substitua pela sua marca
+          - generic [ref=f20e410] [cursor=pointer]:
+            - img "Tranças Nagô & Acabamento Artístico" [ref=f20e411]
+            - generic [ref=f20e412]:
+              - generic [ref=f20e413]: Tranças
+              - paragraph [ref=f20e414]: Tranças Nagô & Acabamento Artístico
+      - generic [ref=f20e415]:
+        - generic [ref=f20e416]:
+          - text: Vídeos & Reels
+          - heading "Conteúdo em Destaque" [level=2] [ref=f20e417]
+          - paragraph [ref=f20e418]: Assista aos bastidores e resultados dos nossos procedimentos.
+        - generic [ref=f20e420] [cursor=pointer]:
+          - generic [ref=f20e421]:
+            - img "Transformação Visual e Finalização Barbearia" [ref=f20e422]
+            - generic [ref=f20e427]: Barbearia
+          - generic [ref=f20e428]:
+            - heading "Transformação Visual e Finalização Barbearia" [level=4] [ref=f20e429]
+            - generic [ref=f20e430]: Assistir
+      - generic [ref=f20e431]:
+        - generic [ref=f20e432]:
+          - generic [ref=f20e433]:
+            - text: Cosméticos & Cuidados
+            - heading "Produtos em Destaque" [level=2] [ref=f20e434]
+            - paragraph [ref=f20e435]: Linha especial para manutenção do seu estilo em casa. Peça e retire na barbearia.
+          - button "Ver todo o catálogo" [ref=f20e436] [cursor=pointer]
+        - generic [ref=f20e440]:
+          - generic [ref=f20e441]:
+            - generic [ref=f20e442] [cursor=pointer]:
+              - generic [ref=f20e443]:
+                - img "Pomada Modeladora — Demonstração" [ref=f20e444]
+                - generic [ref=f20e445]: Barbearia
+              - generic [ref=f20e446]:
+                - heading "Pomada Modeladora — Demonstração" [level=3] [ref=f20e447]
+                - paragraph [ref=f20e448]: Fixação forte e acabamento natural sem brilho excessivo. Ideal para penteados diários.
+                - generic [ref=f20e449]: R$ 35,00
+            - generic [ref=f20e450]:
+              - button "Ver Detalhes" [ref=f20e451] [cursor=pointer]
+              - link "Comprar" [ref=f20e452] [cursor=pointer]:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20saber%20mais%20sobre%20o%20produto%20Pomada%20Modeladora%20%E2%80%94%20Demonstra%C3%A7%C3%A3o.
+          - generic [ref=f20e456]:
+            - generic [ref=f20e457] [cursor=pointer]:
+              - generic [ref=f20e458]:
+                - img "Óleo Nutritivo para Barba e Cabelo" [ref=f20e459]
+                - generic [ref=f20e460]: Barbearia
+              - generic [ref=f20e461]:
+                - heading "Óleo Nutritivo para Barba e Cabelo" [level=3] [ref=f20e462]
+                - paragraph [ref=f20e463]: Hidratação profunda dos fios, reduz o frizz e perfuma suavemente.
+                - generic [ref=f20e464]: R$ 42,00
+            - generic [ref=f20e465]:
+              - button "Ver Detalhes" [ref=f20e466] [cursor=pointer]
+              - link "Comprar" [ref=f20e467] [cursor=pointer]:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20saber%20mais%20sobre%20o%20produto%20%C3%93leo%20Nutritivo%20para%20Barba%20e%20Cabelo.
+          - generic [ref=f20e471]:
+            - generic [ref=f20e472] [cursor=pointer]:
+              - generic [ref=f20e473]:
+                - img "Sérum Fortalecedor para Sobrancelhas e Cílios" [ref=f20e474]
+                - generic [ref=f20e475]: Estética
+              - generic [ref=f20e476]:
+                - heading "Sérum Fortalecedor para Sobrancelhas e Cílios" [level=3] [ref=f20e477]
+                - paragraph [ref=f20e478]: Fórmula nutritiva que estimula o crescimento e alinhamento dos fios.
+                - generic [ref=f20e479]: R$ 49,90
+            - generic [ref=f20e480]:
+              - button "Ver Detalhes" [ref=f20e481] [cursor=pointer]
+              - link "Comprar" [ref=f20e482] [cursor=pointer]:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20saber%20mais%20sobre%20o%20produto%20S%C3%A9rum%20Fortalecedor%20para%20Sobrancelhas%20e%20C%C3%ADlios.
+      - generic [ref=f20e487]:
+        - heading "Pronto para transformar seu visual?" [level=3] [ref=f20e488]
+        - paragraph [ref=f20e489]: Consulte a disponibilidade e entre em contato com Salão Modelo para solicitar seu horário.
+        - link "Falar no WhatsApp com Salão Modelo" [ref=f20e491] [cursor=pointer]:
+          - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+  - contentinfo [ref=f20e495]:
+    - generic [ref=f20e496]:
+      - generic [ref=f20e497]:
+        - generic [ref=f20e498]:
+          - generic [ref=f20e499]:
+            - img "Salão Modelo" [ref=f20e501]
+            - generic [ref=f20e502]:
+              - generic [ref=f20e503]: Salão Modelo
+              - generic [ref=f20e504]: Modelo inicial • Personalize sua marca
+          - paragraph [ref=f20e505]: Conheça os serviços, consulte a disponibilidade e personalize esta página com as informações do seu estabelecimento.
+          - generic [ref=f20e506]:
+            - generic "Instagram" [ref=f20e507]
+            - link "WhatsApp" [ref=f20e511] [cursor=pointer]:
+              - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+        - generic [ref=f20e514]:
+          - heading "Navegação Rápida" [level=4] [ref=f20e515]
+          - list [ref=f20e516]:
+            - listitem [ref=f20e517]:
+              - button "Página Inicial" [ref=f20e518] [cursor=pointer]
+            - listitem [ref=f20e519]:
+              - button "Menu de Serviços" [ref=f20e520] [cursor=pointer]
+            - listitem [ref=f20e521]:
+              - button "Agendar Horário" [ref=f20e522] [cursor=pointer]
+            - listitem [ref=f20e523]:
+              - button "Produtos & Cosméticos" [ref=f20e524] [cursor=pointer]
+            - listitem [ref=f20e525]:
+              - button "Galeria & Trabalhos" [ref=f20e526] [cursor=pointer]
+            - listitem [ref=f20e527]:
+              - button "Localização & Contato" [ref=f20e528] [cursor=pointer]
+        - generic [ref=f20e529]:
+          - heading "Unidade & Atendimento" [level=4] [ref=f20e530]
+          - list [ref=f20e531]:
+            - listitem [ref=f20e532]:
+              - generic:
+                - strong
+            - listitem [ref=f20e536]:
+              - link:
+                - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+            - listitem [ref=f20e539]:
+              - link [ref=f20e543] [cursor=pointer]:
+                - /url: ""
+            - listitem [ref=f20e547]:
+              - generic [ref=f20e551]: Atendimento com horário marcado e por ordem de chegada no WhatsApp.
+        - generic [ref=f20e552]:
+          - heading "Atendimento Comercial" [level=4] [ref=f20e553]
+          - paragraph [ref=f20e554]: Agendamentos e dúvidas comerciais são realizados com rapidez diretamente pelo WhatsApp oficial.
+          - link "Falar com o estabelecimento no WhatsApp" [ref=f20e555] [cursor=pointer]:
+            - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
+          - generic [ref=f20e556]:
+            - button "Como Salvar o App (iPhone & Android)" [ref=f20e558] [cursor=pointer]
+            - button "Painel de Controle do Administrador" [ref=f20e563]
+      - generic [ref=f20e568]:
+        - paragraph [ref=f20e569]: © 2026 Salão Modelo. Todos os direitos reservados.
+        - paragraph [ref=f20e570]:
+          - generic [ref=f20e571]: •
+          - generic [ref=f20e572]: Feito com excelência
+  - generic:
+    - generic [ref=f20e575]:
+      - paragraph [ref=f20e577]:
+        - text: Atendimento Yeshua no
+        - strong [ref=f20e578]: WhatsApp
+      - button "Fechar dica" [ref=f20e579]
+    - link "Falar conosco no WhatsApp" [ref=f20e583] [cursor=pointer]:
+      - /url: https://wa.me/?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Sal%C3%A3o%20Modelo%20e%20gostaria%20de%20agendar%20um%20hor%C3%A1rio.
