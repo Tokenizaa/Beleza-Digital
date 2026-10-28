@@ -37,7 +37,7 @@ jobs:
         run: bun run test
 
       - name: Type-check prospecting worker independently
-        run: bunx tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM --strict --skipLibCheck workers/prospecting-scheduler/src/index.ts
+        run: bunx tsc --ignoreConfig --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM --strict --skipLibCheck workers/prospecting-scheduler/src/index.ts
 
       - name: Type-check
         run: bun run lint
