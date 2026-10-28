@@ -1667,9 +1667,9 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                     <p className="font-bold text-neutral-300 text-xs">Modalidade de Pagamento</p>
                     <div className="grid grid-cols-2 gap-2">
                       {/* Code Download */}
-                      <label className="flex-1 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
+                      <label className={`flex-1 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
                         selectedPaymentMode === 'code-download' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
-                      }"
+                      }`}
                         onClick={() => setSelectedPaymentMode('code-download')}
                         style={{cursor: 'pointer'}}
                       >
@@ -1678,9 +1678,9 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                       </label>
 
                       {/* Specialist Assistance */}
-                      <label className="flex-1 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
+                      <label className={`flex-1 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
                         selectedPaymentMode === 'specialist-assistance' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
-                      }"
+                      }`}
                         onClick={() => setSelectedPaymentMode('specialist-assistance')}
                         style={{cursor: 'pointer'}}
                       >
@@ -1696,15 +1696,15 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                   <div className="space-y-3">
                     <p className="font-bold text-neutral-300 text-xs">Período de cobrança</p>
                     <div className="flex gap-2">
-                      <label className="flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
+                      <label className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
                         selectedBillingPeriod === 'monthly' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
-                      }>
+                      }`}>
                         <span>Mensal</span>
                         <span className="text-[10px]">R$ 97,00/mês</span>
                       </label>
-                      <label className="flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
+                      <label className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
                         selectedBillingPeriod === 'yearly' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
-                      }>
+                      }`}>
                         <span>Anual</span>
                         <span className="text-[10px]">R$ 997,00/ano (2ms grátis)</span>
                       </label>
