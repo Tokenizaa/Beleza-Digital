@@ -5,5 +5,7 @@ dev-dist/
 coverage/
 .DS_Store
 *.log
+Copia.env
+Copia.txt
 .env*
 !.env.example
