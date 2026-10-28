@@ -173,8 +173,6 @@ function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
-  if (!env.MAPSCRAPE_API_BASE_URL?.trim()) return "MAPSCRAPE_API_BASE_URL ausente";
-  if (!env.MAPSCRAPE_API_KEY?.trim()) return "MAPSCRAPE_API_KEY ausente";
   return null;
 }
 
@@ -431,7 +429,17 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const region = String(campaign.region ?? "São Paulo - SP").trim();
   const countryCode = String(campaign.countryCode ?? "BR").trim().toUpperCase();
   const searchQuery = `${segment} ${region}`.trim();
-  const baseUrl = env.MAPSCRAPE_API_BASE_URL.trim().replace(/\/+$/, "");
+  if (!env.MAPSCRAPE_API_BASE_URL?.trim() || !env.MAPSCRAPE_API_KEY?.trim()) {
+    await updateTask(env, task, workerId, {
+      status: "blocked",
+      last_error_code: "mapscrape_not_configured",
+      last_error: "Configure MAPSCRAPE_API_BASE_URL e MAPSCRAPE_API_KEY no Worker antes de iniciar novas coletas.",
+      completed_at: new Date().toISOString(),
+      result: { ...(task.result ?? {}), outcome: "blocked", reason: "mapscrape_not_configured", searchQuery },
+    });
+    return "blocked";
+  }
+  const baseUrl = env.MAPSCRAPE_API_BASE_URL.trim().replace(/\\/+$/, "");
   const apiKey = env.MAPSCRAPE_API_KEY.trim();
   let scrapedResults: Array<Record<string, unknown>> = [];
   let lastError: Error | null = null;
