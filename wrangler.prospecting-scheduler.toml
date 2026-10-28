@@ -9,6 +9,7 @@ crons = ["*/5 * * * *"]
 
 [vars]
 PROSPECTING_BATCH_SIZE = "10"
+MAPSCRAPE_API_BASE_URL = "https://mapscrape-v2.vercel.app"
 
 
 # Configure these as encrypted Worker secrets (wrangler secret put):
