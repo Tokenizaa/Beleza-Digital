@@ -10,12 +10,14 @@ crons = ["*/5 * * * *"]
 [vars]
 PROSPECTING_BATCH_SIZE = "10"
 
-[browser]
-binding = "PROSPECTING_BROWSER"
 
 # Configure these as encrypted Worker secrets (wrangler secret put):
 # wrangler secret put SUPABASE_URL --config wrangler.prospecting-scheduler.toml
 # wrangler secret put SUPABASE_SERVICE_ROLE_KEY --config wrangler.prospecting-scheduler.toml
+# wrangler secret put PROSPECTING_WORKER_SECRET --config wrangler.prospecting-scheduler.toml
+# wrangler secret put MAPSCRAPE_API_KEY --config wrangler.prospecting-scheduler.toml
+# Configure the MapScrape endpoint as a non-secret Worker variable:
+# MAPSCRAPE_API_BASE_URL = "https://mapscrape-v2.vercel.app"
 
 # WhatsApp — Evolution API (futuro) ou manual por enquanto
 # wrangler secret put WHATSAPP_EVOLUTION_URL --config wrangler.prospecting-scheduler.toml
