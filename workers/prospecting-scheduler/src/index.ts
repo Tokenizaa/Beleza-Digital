@@ -1,3 +1,5 @@
+import { extractPlaceDetails } from "./native-scraper/extractor";
+
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
@@ -507,89 +509,39 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       try {
         await page.goto(listingUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
         await page.waitForTimeout(700);
-        const detail = await page.evaluate(() => {
-          const textOf = (selector: string): string | null => {
-            const element = document.querySelector(selector);
-            const value = (element as HTMLElement | null)?.innerText || element?.getAttribute("aria-label") || "";
-            return value.replace(/\s+/g, " ").trim() || null;
-          };
-          const hrefOf = (selector: string): string | null => {
-            const element = document.querySelector(selector) as HTMLAnchorElement | null;
-            const value = element?.href || null;
-            return value && /^https?:\/\//i.test(value) ? value : null;
-          };
-          const bodyText = document.body?.innerText || "";
-          const ratingLabel = document.querySelector('div.F7nice, [aria-label*="stars"], [aria-label*="estrelas"]')?.getAttribute("aria-label") || "";
-          const ratingText = textOf("div.F7nice") || "";
-          const reviewLabel = document.querySelector('button[aria-label*="reviews"], button[aria-label*="avaliações"], [aria-label*="reviews"], [aria-label*="avaliações"]')?.getAttribute("aria-label") || "";
-          const ratingSource = [ratingLabel, ratingText, reviewLabel, bodyText.slice(0, 8000)].join(" ");
-          const ratingMatch = ratingSource.match(/(?:^|\s)([0-5](?:[.,]\d+)?)\s*(?:estrelas?|stars?)?/i) || bodyText.match(/([0-5][.,]\d)\s*\(/);
-          const reviewMatch = ratingSource.match(/([\d.,]+)\s*(?:avaliações|avaliação|reviews|review|comentários)/i) || bodyText.match(/\(([0-9][0-9.,]*)\)/);
-          const parseCount = (value: string | null): number | null => {
-            if (!value) return null;
-            const digits = value.replace(/[.,](?=\d{3}\b)/g, "").replace(/\D/g, "");
-            const parsed = Number(digits);
-            return Number.isSafeInteger(parsed) ? parsed : null;
-          };
-          const hours = Array.from(document.querySelectorAll('table.eK4R0e tr, table[aria-label*="hours"] tr'))
-            .map((row) => ((row as HTMLElement).innerText || "").replace(/\s+/g, " ").trim())
-            .filter(Boolean).slice(0, 14);
-          const images = Array.from(document.querySelectorAll("img"))
-            .map((image) => (image as HTMLImageElement).currentSrc || (image as HTMLImageElement).src || "")
-            .filter((url) => /^https?:\/\//i.test(url) && /googleusercontent|gstatic/i.test(url));
-          const category = textOf("button.DkEaL") || textOf('button[jsaction*="category"]');
-          const address = textOf('[data-item-id="address"]');
-          const phoneElement = document.querySelector('[data-item-id^="phone:tel"], a[href^="tel:"]') as HTMLAnchorElement | null;
-          const phone = phoneElement?.getAttribute("href")?.startsWith("tel:")
-            ? phoneElement.getAttribute("href")?.slice(4) || null
-            : (phoneElement as HTMLElement | null)?.innerText?.trim() || null;
-          const website = hrefOf('a[data-item-id="authority"]') || hrefOf('a[aria-label*="Website"]') || hrefOf('a[aria-label*="website"]');
-          const coordinates = location.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-          const feature = location.href.match(/!1s([^!/?]+)/);
-          const placeId = location.href.match(/[?&]place_id=([^&]+)/i);
-          const price = bodyText.match(/(?:Preço|Price)\s*[:·]?\s*(\${1,4}|R\${1,4})/i);
-          return {
-            name: textOf("h1.DUwDvf") || document.querySelector("h1")?.textContent?.trim() || null,
-            category,
-            address,
-            phone,
-            website,
-            rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
-            reviewsCount: reviewMatch ? parseCount(reviewMatch[1]) : null,
-            sourceUrl: location.href,
-            placeId: placeId ? decodeURIComponent(placeId[1]) : null,
-            featureId: feature ? decodeURIComponent(feature[1]) : null,
-            latitude: coordinates ? Number(coordinates[1]) : null,
-            longitude: coordinates ? Number(coordinates[2]) : null,
-            images: Array.from(new Set(images)).slice(0, 20),
-            openingHours: hours,
-            priceLevel: price?.[1] || null,
-            editorialSummary: textOf('[class*="PYvSYb"], [class*="WeS02d"]'),
-            rawListingText: bodyText.slice(0, 8000),
-            fieldStatus: {
-              name: "name",
-              category: category ? "found" : "not_found_in_capture",
-              address: address ? "found" : "not_found_in_capture",
-              phone: phone ? "found" : "not_found_in_capture",
-              website: website ? "found" : "not_found_in_capture",
-              rating: ratingMatch ? "found" : "not_found_in_capture",
-              reviewsCount: reviewMatch ? "found" : "not_found_in_capture",
-              images: images.length ? "found" : "not_found_in_capture",
-              openingHours: hours.length ? "found" : "not_found_in_capture",
-            },
-          };
-        });
+        const detail = await extractPlaceDetails(page, String(task.id), listingUrl);
+        const numericRating = detail.rating ? Number(String(detail.rating).replace(",", ".")) : null;
+        const imageUrls = String(detail.photos || "").split(" | ").map((value) => value.trim()).filter(Boolean);
+        const hours = String(detail.opening_hours || "").split(" | ").map((value) => value.trim()).filter(Boolean);
+        let fieldStatus: Record<string, unknown> = {};
+        try { fieldStatus = JSON.parse(detail.field_status || "{}") as Record<string, unknown>; } catch {}
         scrapedResults.push({
           ...listing,
           ...detail,
           name: detail.name || listing.name,
-          sourceUrl: detail.sourceUrl || listingUrl,
-          city: region.split(/\s+-\s+/)[0]?.trim() || null,
-          region: region.split(/\s+-\s+/)[1]?.trim() || region,
+          rating: numericRating !== null && Number.isFinite(numericRating) ? numericRating : null,
+          reviewsCount: parseCount(detail.review_count),
+          reviewCount: parseCount(detail.review_count),
+          review_count: detail.review_count || null,
+          sourceUrl: detail.source_url || detail.maps_url || listingUrl,
+          source_url: detail.source_url || detail.maps_url || listingUrl,
+          placeId: detail.source_place_id || null,
+          featureId: detail.source_place_id || null,
+          latitude: detail.latitude ? Number(detail.latitude) : null,
+          longitude: detail.longitude ? Number(detail.longitude) : null,
+          images: imageUrls,
+          openingHours: hours,
+          priceLevel: detail.price_range || null,
+          editorialSummary: detail.description || null,
+          fieldStatus,
+          rawListingText: listing.cardText || null,
+          city: detail.city || region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: detail.state || region.split(/\s+-\s+/)[1]?.trim() || region,
           countryCode,
-          provider: "google-maps-cloudflare-playwright",
+          provider: "google-maps-native-playwright",
           searchQuery,
         });
+
       } catch (detailError) {
         // Mantém a listagem como evidência parcial; não inventa dados ausentes.
         scrapedResults.push({
@@ -598,7 +550,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           city: region.split(/\s+-\s+/)[0]?.trim() || null,
           region: region.split(/\s+-\s+/)[1]?.trim() || region,
           countryCode,
-          provider: "google-maps-cloudflare-playwright",
+          provider: "google-maps-native-playwright",
           searchQuery,
           fieldStatus: { detailPage: "failed", error: String(detailError instanceof Error ? detailError.message : detailError).slice(0, 250) },
         });
@@ -709,7 +661,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
         campaign_id: campaign.campaignId ?? null,
-        provider: "google-maps-cloudflare-playwright",
+        provider: "google-maps-native-playwright",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
         business_name: businessName,
@@ -749,7 +701,21 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           providerRecordId,
           providerRequestId: null,
           observedAt: new Date().toISOString(),
-          evidence: { scraped: true, searchQuery, sourceUrl: candidate.sourceUrl, listingText: candidate.rawListingText ?? null },
+          mapsScrapeFields: candidate,
+          reviews: candidate.reviews ?? null,
+          reviewTopics: candidate.review_topics ?? null,
+          additionalAttributes: candidate.additional_attributes ?? null,
+          mediaItems: candidate.media_items ?? null,
+          socialLinks: candidate.social_links ?? null,
+          bookingUrl: candidate.booking_url ?? null,
+          popularTimes: candidate.popular_times ?? null,
+          ratingDistribution: candidate.rating_distribution ?? null,
+          reviewHighlights: candidate.review_highlights ?? null,
+          accessibilityAttributes: candidate.accessibility_attributes ?? null,
+          sourcePlaceId: candidate.source_place_id ?? candidate.placeId ?? null,
+          sourceUrl: candidate.sourceUrl ?? candidate.source_url ?? null,
+          fieldStatus: candidate.fieldStatus ?? candidate.field_status ?? {},
+          evidence: { scraped: true, searchQuery, sourceUrl: candidate.sourceUrl ?? candidate.source_url ?? null, listingText: candidate.rawListingText ?? null },
         },
       }),
     });
