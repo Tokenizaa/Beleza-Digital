@@ -439,7 +439,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     });
     return "blocked";
   }
-  const baseUrl = env.MAPSCRAPE_API_BASE_URL.trim().replace(/\\/+$/, "");
+  const baseUrl = env.MAPSCRAPE_API_BASE_URL.trim().replace(/\/+$/, "");
   const apiKey = env.MAPSCRAPE_API_KEY.trim();
   let scrapedResults: Array<Record<string, unknown>> = [];
   let lastError: Error | null = null;
