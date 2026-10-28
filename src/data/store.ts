@@ -152,22 +152,34 @@ let allEstablishments: Establishment[] = (() => {
 
 // 2. Active Tenant Selector
 function detectInitialTenant(): string {
-  // Check URL search params (e.g. ?tenant=imperio or ?estabelecimento=yeshua)
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search);
-    const tenantParam = params.get('tenant') || params.get('estabelecimento') || params.get('e');
-    if (tenantParam) {
-      const match = allEstablishments.find(
-        (e) => e.slug.toLowerCase() === tenantParam.toLowerCase() || e.id === tenantParam
-      );
-      if (match) return match.id;
+  // Check saved choice in localStorage FIRST (most reliable, user-explicit choice)
+  // URL params are only used as a fallback when no saved choice exists,
+  // and never for super-admin-primed tenant override (security: URL params
+  // should not bypass authentication/establishment context).
+  if (typeof localStorage !== 'undefined') {
+    const savedId = loadFromStorage<string>(STORAGE_KEYS.CURRENT_TENANT_ID, 'est-yeshua');
+    if (allEstablishments.some((e) => e.id === savedId)) {
+      return savedId;
     }
   }
 
-  // Check saved choice in localStorage
-  const savedId = loadFromStorage<string>(STORAGE_KEYS.CURRENT_TENANT_ID, 'est-yeshua');
-  if (allEstablishments.some((e) => e.id === savedId)) {
-    return savedId;
+  // Check URL search params as last resort (e.g. ?tenant=imperio or ?estabelecimento=yeshua)
+  // But only if there is an active session already — URL params alone must not
+  // override the established tenant context. This prevents untrusted sources from
+  // dictating the active tenant.
+  if (typeof window !== 'undefined') {
+    // Skip URL param check if currentSession exists and has an establishmentId,
+    // indicating the user has already authenticated into a specific establishment.
+    if (!currentSession || !currentSession.establishmentId) {
+      const params = new URLSearchParams(window.location.search);
+      const tenantParam = params.get('tenant') || params.get('estabelecimento') || params.get('e');
+      if (tenantParam) {
+        const match = allEstablishments.find(
+          (e) => e.slug.toLowerCase() === tenantParam.toLowerCase() || e.id === tenantParam
+        );
+        if (match) return match.id;
+      }
+    }
   }
 
   return 'est-yeshua';
@@ -278,6 +290,11 @@ if (platformConfig.platformName === 'Yeshua White Label Network') {
 }
 
 // Session State
+// NOTE: Auth model is hybrid (Supabase when configured, synthetic sessions otherwise).
+// currentSession is initialized from sessionStorage. When Supabase is configured,
+// the caller (admin pages) should override this with a real Supabase session via
+// the login flow. The fallback to synthetic sessions is intentional for demo mode,
+// but gates MUST be consistent across all admin pages.
 let currentSession: AuthSession | null = (() => {
   try {
     const sessionStr = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
@@ -308,7 +325,12 @@ export const store = {
 
   /** Verifica se a sessão atual pode acessar o establishment especificado (isolamento multi-tenant). */
   requireTenantAccess(targetEstablishmentId?: string): { ok: true } | { ok: false; message: string } {
-    const tenantId = targetEstablishmentId || activeTenantId;
+    // Use the explicitly provided target, or fall back to the session's
+    // establishmentId (the authoritative source of which establishment the
+    // user is authenticated into). This avoids the activeTenantId vs
+    // currentSession.establishmentId mismatch that can occur when URL params
+    // or detectInitialTenant() set activeTenantId independently of the session.
+    const tenantId = targetEstablishmentId || currentSession?.establishmentId;
     if (!currentSession) {
       return { ok: false, message: 'Sessão não autenticada.' };
     }
@@ -361,8 +383,22 @@ export const store = {
     );
     if (!target) return false;
 
+    // Update the active tenant ID and persist it
     activeTenantId = target.id;
     saveToStorage(STORAGE_KEYS.CURRENT_TENANT_ID, activeTenantId);
+
+    // IMPORTANT: Also update currentSession.establishmentId so that
+    // requireTenantAccess() and other session-aware checks know which
+    // establishment the user is actually operating in. Without this,
+    // a mismatch between activeTenantId and currentSession.establishmentId
+    // causes false-access-denied or false-access-granted bugs.
+    if (currentSession) {
+      currentSession.establishmentId = target.id;
+      currentSession.establishmentName = target.name;
+      try {
+        sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(currentSession));
+      } catch {}
+    }
 
     // Update URL param without full reload
     if (typeof window !== 'undefined' && window.history?.pushState) {
@@ -1056,7 +1092,15 @@ export const store = {
   },
 
   loginLocalAdmin(_pin: string, requestedEstablishmentId?: string): { success: boolean; session?: AuthSession; message?: string } {
-    const targetId = requestedEstablishmentId || activeTenantId;
+    // Determine the target establishment ID:
+    // - If explicitly requested, use that
+    // - Otherwise, fall back to the current session's establishmentId (if any),
+    //   which reflects the establishment the user previously logged into.
+    // - Never fall back to activeTenantId directly, because activeTenantId can
+    //   be set by URL params (?tenant=) before authentication, which would
+    //   allow URL-driven tenant hijacking.
+    // - If no session either, default to the neutral establishment 'est-yeshua'.
+    const targetId = requestedEstablishmentId || currentSession?.establishmentId || 'est-yeshua';
     const est = allEstablishments.find((e) => e.id === targetId);
 
     if (!est) {

@@ -18,7 +18,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
-  const { establishment } = useStore();
+  const { establishment, isSupabaseConfigured } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems: { label: string; page: PageView; icon?: React.ReactNode }[] = [
@@ -88,49 +88,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
               <LogIn className="h-4 w-4" />
               <span>Entrar</span>
             </button>
-
-            <button
-              onClick={() => setMobileMenuOpen((open) => !open)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-800 text-neutral-300 transition-colors hover:bg-neutral-900 hover:text-white lg:hidden"
-              aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
           </div>
         </div>
       </div>
-
-      {mobileMenuOpen && (
-        <div className="border-t border-neutral-800 bg-neutral-950 px-4 pb-5 pt-3 lg:hidden">
-          <nav aria-label="Navegação móvel" className="mx-auto max-w-7xl space-y-1">
-            {navItems.map((item) => (
-              <button
-                key={item.page}
-                onClick={() => handleNavClick(item.page)}
-                aria-current={currentPage === item.page ? 'page' : undefined}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition-colors ${
-                  currentPage === item.page
-                    ? 'bg-neutral-800 text-white'
-                    : 'text-neutral-300 hover:bg-neutral-900'
-                }`}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-            <div className="mt-3 space-y-1 border-t border-neutral-800 pt-3">
-              <button
-                onClick={() => { setMobileMenuOpen(false); window.location.href = '/plataforma/acesso?mode=login'; }}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900 cursor-pointer"
-              >
-                <LogIn className="h-4 w-4" />
-                Entrar
-              </button>
-            </div>
-          </nav>
-        </div>
-      )}
     </header>
   );
 };

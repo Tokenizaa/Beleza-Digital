@@ -14,7 +14,9 @@ import {
 export const ContactPage: React.FC = () => {
   const { company, store } = useStore();
 
-  const mapsQuery = encodeURIComponent(`${company.address || ''}, ${company.cityState}`);
+  const mapsQuery = company.latitude && company.longitude
+      ? `${company.latitude},${company.longitude}`
+      : encodeURIComponent(`${company.address || ''}, ${company.cityState}`);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
@@ -129,7 +131,7 @@ export const ContactPage: React.FC = () => {
           </div>
 
           <a
-            href={company.googleMapsUrl || ("https://www.google.com/maps/search/?api=1&query=" + mapsQuery)}
+            href={company.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-amber-300 font-semibold text-sm transition-colors"

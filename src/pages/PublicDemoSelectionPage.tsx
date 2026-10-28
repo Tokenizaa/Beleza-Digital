@@ -160,6 +160,12 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
     templateName: activeVersion.template?.site_templates?.name || "Modelo inicial",
     projectVersion: activeVersion.version,
     generatedAt: text(activeContent.generatedAt) || new Date().toISOString(),
+    // Novos campos alinhados com os 18 do provedor
+    status: contentText(activeVersion, ["status", "estado", "status_operacional"]),
+    note: contentText(activeVersion, ["note", "observacao", "avaliacao_geral"]),
+    'quantidade-de-avaliacoes': contentText(activeVersion, ["quantidade_de_avaliacoes", "reviews_count", "qtd_avaliacoes"]),
+    'faixa-de-preco': contentText(activeVersion, ["faixa_de_preco", "price_range", "faixa_preco"]),
+    horario: contentText(activeVersion, ["horario", "horario_funcionamento", "horario_atendimento"]),
   } : null;
 
   const hasSelection = selected !== null || data?.selectedVersionId !== null;

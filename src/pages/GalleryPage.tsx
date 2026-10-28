@@ -190,8 +190,8 @@ export const GalleryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Instagram Embed & Feed Section (Ocultado provisoriamente) */}
-      {/* <InstagramSection /> */}
+      {/* Instagram Embed & Feed Section */}
+      <InstagramSection />
 
       {/* Media Detail Modal */}
       <MediaModal media={activeMedia} onClose={() => setActiveMedia(null)} />

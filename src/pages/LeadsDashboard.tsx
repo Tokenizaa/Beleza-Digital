@@ -235,6 +235,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     qualified: number | null;
     rejected: number | null;
     blocked: number;
+    succeeded: number | null;
     provider: string | null;
   };
 
@@ -321,8 +322,8 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   // Métricas da última operação de busca (dados reais, quando disponíveis)
   const operationMetrics = useMemo(() => {
     if (!searchOperation.result) return null;
-    const { found, inserted, updated, duplicates, qualified, rejected, blocked, provider } = searchOperation.result;
-    return { found, inserted, updated, duplicates, qualified, rejected, blocked, provider };
+    const { found, inserted, updated, duplicates, qualified, rejected, blocked, succeeded, provider } = searchOperation.result;
+    return { found, inserted, updated, duplicates, qualified, rejected, blocked, succeeded, provider };
   }, [searchOperation.result]);
 
   // Handle stage change
@@ -555,7 +556,8 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                 duplicates: Number(taskResult.duplicates ?? 0),
                 qualified: typeof taskResult.qualified === 'number' ? taskResult.qualified : null,
                 rejected: typeof taskResult.rejected === 'number' ? taskResult.rejected : null,
-                blocked: mappedStatus === 'blocked' ? 1 : 0,
+                blocked: typeof taskResult.blocked === 'number' ? taskResult.blocked : (mappedStatus === 'blocked' ? 1 : 0),
+                succeeded: typeof taskResult.succeeded === 'number' ? taskResult.succeeded : null,
                 provider: typeof taskResult.provider === 'string' ? taskResult.provider : null,
               };
               setSearchOperation((prev) => ({
@@ -1042,14 +1044,14 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                     {searchOperation.error && (
                       <p className="text-red-400 text-[11px] mb-2">{searchOperation.error}</p>
                     )}
-                    {searchOperation.result && searchOperation.result.blocked > 0 && (
+                    {searchOperation.result && (
                       <p className="text-[10px] text-red-300 text-[11px] mb-2">
-                        {searchOperation.error || 'Worker reportou tarefas bloqueadas. '
-                        }{searchOperation.result.blocked} tarefa(s) não puderam ser processadas.
+                        {searchOperation.error || 'Worker reportou tarefas bloqueadas. '}
+                        {searchOperation.result.blocked} tarefa(s) não puderam ser processadas.
                       </p>
                     )}
                     {searchOperation.result && (
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[11px]">
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-[11px]">
                         <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
                           <span className="text-neutral-500 block">Encontrados</span>
                           <span className="text-white font-bold">{searchOperation.result.found}</span>
@@ -1066,12 +1068,14 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                           <span className="text-neutral-500 block">Qualificados</span>
                           <span className="text-amber-400 font-bold">{searchOperation.result.qualified ?? '—'}</span>
                         </div>
-                        {searchOperation.result.blocked > 0 && (
-                          <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
-                            <span className="text-neutral-500 block">Bloqueados</span>
-                            <span className="text-red-400 font-bold">{searchOperation.result.blocked}</span>
-                          </div>
-                        )}
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Sucedidos</span>
+                          <span className="text-emerald-400 font-bold">{searchOperation.result.succeeded ?? 0}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Bloqueados</span>
+                          <span className="text-red-400 font-bold">{searchOperation.result.blocked}</span>
+                        </div>
                       </div>
                     )}
                   </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { UnifiedAdminDashboard } from "./UnifiedAdminDashboard";
 
 export function PlatformAdminDashboard() {
@@ -7,38 +7,45 @@ export function PlatformAdminDashboard() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!supabase) {
-      window.location.replace("/plataforma/acesso?mode=login");
-      return;
-    }
+    // CONSISTÊNCIA: Quando Supabase está configurado, exigir sessão real.
+    // Quando não está configurado, permitir sessão sintética (modo demo),
+    // para evitar o redirecionamento quebrado que existia antes.
     let active = true;
-    const client = supabase;
     const verify = async () => {
-      const { data: { session } } = await client.auth.getSession();
-      if (!session) {
-        if (active) window.location.replace("/plataforma/acesso?mode=login");
-        return;
+      if (isSupabaseConfigured) {
+        // Modo Supabase real: verificar sessão + platform_admins
+        let client = supabase;
+        const { data: { session } } = await client.auth.getSession();
+        if (!session) {
+          if (active) window.location.replace("/plataforma/acesso?mode=login");
+          return;
+        }
+        const { data, error } = await client.from("platform_admins")
+          .select("user_id")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+        if (!active) return;
+        if (error || !data) {
+          await client.auth.signOut();
+          window.location.replace("/plataforma/acesso?mode=login");
+          return;
+        }
+        setAuthorized(true);
+      } else {
+        // Modo demo/synthetic: verificar sessão da store
+        const store = useStore.getState();
+        const storeSession = store.getCurrentSession();
+        if (storeSession && storeSession.role) {
+          setAuthorized(true);
+        } else {
+          // Nenhuma sessão válida — redirecionar para login sintético
+          window.location.replace("/plataforma/acesso?mode=login");
+        }
       }
-      const { data, error } = await client.from("platform_admins")
-        .select("user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-      if (!active) return;
-      if (error || !data) {
-        await client.auth.signOut();
-        window.location.replace("/plataforma/acesso?mode=login");
-        return;
-      }
-      setAuthorized(true);
       setChecking(false);
     };
     void verify();
-    const { data: listener } = client.auth.onAuthStateChange(() => void verify());
-    return () => {
-      active = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+  }, [isSupabaseConfigured]);
 
   if (checking || !authorized) {
     return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">Verificando acesso administrativo…</main>;
@@ -48,6 +55,6 @@ export function PlatformAdminDashboard() {
   return <UnifiedAdminDashboard
     initialSection="prospeccao-hoje"
     preAuthenticated
-    onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign("/"); }}
+    onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign("/") }}
   />;
 }

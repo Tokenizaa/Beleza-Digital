@@ -161,4 +161,10 @@ export interface SiteBusinessData {
   services?: ServiceItem[];
   products?: ProductItem[];
   media?: MediaItem[];
+  // Novos campos alinhados com os 18 do provedor (para SEO/copy)
+  status?: string;           // Status operacional (active/inactive/suspended)
+  note?: string;           // Nota / avaliação geral
+  'quantidade-de-avaliacoes'?: string;  // Qtd de avaliações
+  'faixa-de-preco'?: string;            // Faixa de preço
+  horario?: string;        // Horário de funcionamento
 }

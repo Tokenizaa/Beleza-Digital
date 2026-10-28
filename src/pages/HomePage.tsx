@@ -730,14 +730,12 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 6. INSTAGRAM EMBED & FEED INTERATIVO (Ocultado provisoriamente) */}
-      {/* 
+      {/* 6. INSTAGRAM EMBED & FEED INTERATIVO */}
       <InstagramSection
         onSelectServiceForBooking={(serviceName) => {
           if (onBookService) onBookService();
         }}
       />
-      */}
 
       {/* 7. LOCALIZAÇÃO SECTION */}
       {company.address && company.cityState && (

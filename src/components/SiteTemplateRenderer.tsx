@@ -145,6 +145,8 @@ export interface SiteBusinessData {
   instagramHandle?: string;
   instagramUrl?: string;
   googleMapsUrl?: string;
+  latitude?: number;
+  longitude?: number;
   services?: ServiceItem[];
   products?: ProductItem[];
   media?: MediaItem[];
@@ -344,6 +346,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <MessageCircle className="w-4 h-4 text-emerald-400" /> WhatsApp
               </a>
             )}
+            {businessData.status && (
+              <div className="text-xs text-neutral-400 mt-1">
+                <span className="font-medium text-white">Status:</span>
+                <span className="text-amber-400">{businessData.status}</span>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -487,7 +495,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   </div>
 
                   <span className="text-lg font-black text-white shrink-0">
-                    R$ {(service.price ?? 0).toFixed(2)}
+                    R$ {(service.price ?? 0).toFixed(2)}{service.priceRange ? ` (${service.priceRange})` : ''}
                   </span>
                 </div>
 
@@ -648,7 +656,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   <Clock className="w-5 h-5 shrink-0 mt-0.5" style={{ color: theme.primaryColor }} />
                   <div>
                     <span className="font-bold text-white block">Horário de Atendimento</span>
-                    <p className="text-neutral-400">Horários não informados</p>
+                    <p className="text-neutral-400">{businessData.horario || 'Horários não informados'}</p>
                   </div>
                 </div>
               </div>
@@ -665,7 +673,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   </a>
                 )}
                 <a
-                  href={businessData.googleMapsUrl || `https://maps.google.com/?q=${encodeURIComponent(`${businessData.name} ${businessData.address} ${businessData.city}`)}`}
+                  href={businessData.googleMapsUrl || (businessData.latitude && businessData.longitude ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${businessData.latitude},${businessData.longitude}`)}` : `https://maps.google.com/?q=${encodeURIComponent(`${businessData.name} ${businessData.address} ${businessData.city}`)}`)}
                   target="_blank"
                   rel="noreferrer"
                   className={`px-5 py-3 rounded-xl text-xs font-bold flex items-center gap-2 transition ${theme.buttonSecondary}`}
@@ -697,6 +705,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       <footer className="border-t border-neutral-800/80 py-8 px-4 sm:px-8 text-center text-xs text-neutral-500">
         <p>© {new Date().getFullYear()} {businessData.name}. Todos os direitos reservados.</p>
         <p className="text-[11px] text-neutral-400 mt-1">Plataforma White-Label de Alta Performance para Salões e Barbearias</p>
+        {businessData['quantidade-de-avaliacoes'] && (
+          <p className="text-[10px] text-neutral-500 mt-1">
+            {businessData['quantidade-de-avaliacoes']} {businessData['quantidade-de-avaliacoes'] === 1 ? 'avaliação' : 'avaliações'}
+          </p>
+        )}
       </footer>
 
       {/* Modais de Foto e Produto */}

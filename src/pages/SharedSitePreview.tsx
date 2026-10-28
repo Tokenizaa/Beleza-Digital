@@ -1,6 +1,7 @@
 import React from 'react';
 import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
 import { normalizeTemplateId, SiteBusinessData } from '../types/templates';
+import { SiteSEOMetadata } from '../components/SiteSEOMetadata';
 
 export interface ShareableSitePreview {
   version: 1;
@@ -26,6 +27,12 @@ export interface ShareableSitePreview {
   googleMapsUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  // Novos campos alinhados com os 18 do provedor
+  status?: string;           // Status operacional (active/inactive/suspended)
+  note?: string;           // Nota / avaliação geral
+  'quantidade-de-avaliacoes'?: string;  // Qtd de avaliações
+  'faixa-de-preco'?: string;            // Faixa de preço
+  horario?: string;        // Horário de funcionamento
 }
 
 const MAX_PAYLOAD_LENGTH = 16000;
@@ -126,6 +133,12 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
       googleMapsUrl: safeText(value.googleMapsUrl, 500) || null,
       latitude: typeof value.latitude === 'number' && Number.isFinite(value.latitude) ? value.latitude : null,
       longitude: typeof value.longitude === 'number' && Number.isFinite(value.longitude) ? value.longitude : null,
+      // Novos campos alinhados com os 18 do provedor
+      status: value.status,
+      note: value.note,
+      'quantidade-de-avaliacoes': value['quantidade-de-avaliacoes'],
+      'faixa-de-preco': value['faixa-de-preco'],
+      horario: value.horario,
     };
   } catch {
     return null;
@@ -133,6 +146,12 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
 }
 
 export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null }> = ({ preview }) => {
+  // Injeta metadados SEO automaticamente quando há preview
+  const templateName = preview.templateName || 'Modelo Oficial';
+  const logoUrl = preview.logoUrl;
+  
+  SiteSEOMetadata({ preview, templateName, logoUrl });
+  
   if (!preview) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-5 text-neutral-100">
@@ -163,13 +182,15 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
     phone: preview.phone,
     whatsapp: preview.whatsapp ?? preview.phone,
     address: preview.address,
-    city: preview.city ?? '',
+    city: preview.city || undefined,
     state: preview.state ?? undefined,
     logoUrl: preview.logoUrl ?? undefined,
     coverUrl: preview.coverUrl ?? undefined,
     instagramHandle: preview.instagramHandle ?? undefined,
     instagramUrl: preview.instagramUrl ?? undefined,
     googleMapsUrl: preview.googleMapsUrl ?? undefined,
+    latitude: preview.latitude,
+    longitude: preview.longitude,
   };
 
   const initialVar = normalizeTemplateId(preview.templateId);
