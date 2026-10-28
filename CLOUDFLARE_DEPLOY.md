@@ -35,3 +35,17 @@ npm run pages:preview
 - `public/_redirects`: Regra de redirecionamento SPA (`/* /index.html 200`) para que rotas funcionem sem erro 404 ao recarregar a página.
 - `public/_headers`: Políticas de cache (Service Worker / Manifest sem cache agressivo, assets com cache imutável).
 - `package.json`: Scripts prontos (`npm run pages:deploy` e `npm run pages:preview`).
+
+## MapScrape v2 — Worker de prospecção
+
+A descoberta de estabelecimentos é executada exclusivamente pelo serviço central MapScrape v2. O Worker do Beleza Digital não deve instalar nem executar navegador/scraper local.
+
+Configure no Worker `barbearia-yeshua-prospecting-scheduler`:
+
+- Secret `MAPSCRAPE_API_KEY`: chave individual emitida no MapScrape para o consumidor `Beleza Digital` / projeto `beleza-digital`.
+- Variable `MAPSCRAPE_API_BASE_URL`: `https://mapscrape-v2.vercel.app`.
+- Mantenha `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` e `PROSPECTING_WORKER_SECRET` como secrets existentes.
+
+A chave `MAPSCRAPE_API_KEY` é exclusiva do Worker e não pode usar prefixo público nem ser exposta no frontend. Emita a credencial no painel administrativo do MapScrape e armazene-a diretamente nos secrets do Worker; nunca registre a chave em commit, log ou documentação.
+
+O fluxo manual usa `/api/prospecting/run` para enfileirar uma tarefa persistente. O Worker inicia a coleta via MapScrape, salva o identificador do job e consulta o mesmo job nas tentativas subsequentes; ele não pode repetir um POST de criação após timeout sem reconciliação, porque a API v1 não implementa idempotency key.
