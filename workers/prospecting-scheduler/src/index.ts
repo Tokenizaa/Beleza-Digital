@@ -568,13 +568,15 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     lastError = null;
   }
 
-  // Se após todas as tentativas ainda houver erro, marcar como bloqueado
+  // Falha terminal reportada pelo MapScrape: não continuar para a persistência de resultados.
   if (lastError) {
-    const errorMessage = lastError.message ?? "browser_scraping_failed";
+    const errorMessage = lastError.message ?? "mapscrape_job_failed";
     await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "browser_scraping_failed",
-      last_error: `Falha na coleta via Cloudflare Browser Run após ${MAX_RETRIES + 1} tentativas no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${errorMessage}`,
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed", failedStep: step, bindingType, bindingIsString, bindingLength, retryAttempts: MAX_RETRIES + 1 },
+      status: "blocked",
+      last_error_code: "mapscrape_job_failed",
+      last_error: errorMessage.slice(0, 500),
+      completed_at: new Date().toISOString(),
+      result: { ...(task.result ?? {}), outcome: "blocked", reason: "mapscrape_job_failed", failedStep: step },
     });
     return "blocked";
   }
