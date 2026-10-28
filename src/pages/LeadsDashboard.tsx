@@ -450,18 +450,19 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
     const region = `${searchCity.trim()} - ${searchState.trim()}`;
     try {
-      const response = await fetch('/api/prospecting/local-scrape', {
+      const response = await fetch('/api/prospecting/run', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           segment: searchNiche.trim(),
           region,
           limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
           countryCode: 'BR',
-          
-          
+          createCampaign: false,
+          executionId,
         }),
         signal: AbortSignal.timeout(60000),
       });
