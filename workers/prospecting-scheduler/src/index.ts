@@ -535,23 +535,13 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           editorialSummary: detail.description || null,
           fieldStatus,
           rawListingText: listing.cardText || null,
-          city: detail.city || region.split(/\\s+-\\s+/)[0]?.trim() || null,
-          region: detail.state || region.split(/\\s+-\\s+/)[1]?.trim() || region,
+          city: detail.city || region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: detail.state || region.split(/\s+-\s+/)[1]?.trim() || region,
           countryCode,
           provider: "google-maps-native-playwright",
           searchQuery,
         });
 
-          ...listing,
-          ...detail,
-          name: detail.name || listing.name,
-          sourceUrl: detail.sourceUrl || listingUrl,
-          city: region.split(/\s+-\s+/)[0]?.trim() || null,
-          region: region.split(/\s+-\s+/)[1]?.trim() || region,
-          countryCode,
-          provider: "google-maps-cloudflare-playwright",
-          searchQuery,
-        });
       } catch (detailError) {
         // Mantém a listagem como evidência parcial; não inventa dados ausentes.
         scrapedResults.push({
@@ -560,7 +550,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           city: region.split(/\s+-\s+/)[0]?.trim() || null,
           region: region.split(/\s+-\s+/)[1]?.trim() || region,
           countryCode,
-          provider: "google-maps-cloudflare-playwright",
+          provider: "google-maps-native-playwright",
           searchQuery,
           fieldStatus: { detailPage: "failed", error: String(detailError instanceof Error ? detailError.message : detailError).slice(0, 250) },
         });
