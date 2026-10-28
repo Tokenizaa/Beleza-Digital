@@ -416,7 +416,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     const executionId = crypto.randomUUID();
     const startedAt = new Date().toISOString();
     setSearchExecution({
-      
+      executionId,
       status: 'running',
       startedAt,
       result: null,
