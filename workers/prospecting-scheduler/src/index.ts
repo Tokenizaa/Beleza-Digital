@@ -3,7 +3,8 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET: string;
   PROSPECTING_BATCH_SIZE?: string;
-  PROSPECTING_BROWSER: any;
+  MAPSCRAPE_API_BASE_URL: string;
+  MAPSCRAPE_API_KEY: string;
   // WhatsApp — Evolution API (futuro) ou manual por enquanto
   // WHATSAPP_EVOLUTION_URL?: string;
   // WHATSAPP_EVOLUTION_API_KEY?: string;
@@ -172,7 +173,8 @@ function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
-  if (!env.PROSPECTING_BROWSER) return "PROSPECTING_BROWSER ausente";
+  if (!env.MAPSCRAPE_API_BASE_URL?.trim()) return "MAPSCRAPE_API_BASE_URL ausente";
+  if (!env.MAPSCRAPE_API_KEY?.trim()) return "MAPSCRAPE_API_KEY ausente";
   return null;
 }
 
@@ -425,226 +427,145 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   }
 
   // Add retry with exponential backoff and jitter to handle 429 rate limit errors.
-  const MAX_RETRIES = 3;
-  const BASE_DELAY_MS = 2_000; // 2s base delay
-  const MAX_DELAY_MS = 60_000; // 60s max delay
-  let lastError: Error | null = null;
-
-  for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
-  // Build search query for Google Maps / local business directories
-  const segment = String(campaign.segment ?? "barbearia e salão");
-  const region = String(campaign.region ?? "São Paulo - SP");
-  const countryCode = String(campaign.countryCode ?? "BR");
+  const segment = String(campaign.segment ?? "barbearia e salão").trim();
+  const region = String(campaign.region ?? "São Paulo - SP").trim();
+  const countryCode = String(campaign.countryCode ?? "BR").trim().toUpperCase();
   const searchQuery = `${segment} ${region}`.trim();
-
-  // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
-  // No Docker, container, VPS, or external Python service is required.
+  const baseUrl = env.MAPSCRAPE_API_BASE_URL.trim().replace(/\\/+$/, "");
+  const apiKey = env.MAPSCRAPE_API_KEY.trim();
   let scrapedResults: Array<Record<string, unknown>> = [];
-  let browser: any;
-  let step = "init";
-  let bindingType = "unknown";
-  let bindingIsString = false;
-  let bindingLength = 0;
-  try {
-    const browserBindingValue = env.PROSPECTING_BROWSER;
-    bindingType = typeof browserBindingValue;
-    bindingIsString = typeof browserBindingValue === "string";
-    bindingLength = bindingIsString ? browserBindingValue.length : 0;
-    step = "browser_connect";
-    if (!browserBindingValue) throw new Error("prospecting_browser_binding_missing");
+  let lastError: Error | null = null;
+  let step = "mapscrape_create_job";
+  let jobId = typeof task.result?.mapScrapeJobId === "string" ? task.result.mapScrapeJobId : "";
 
-    const { launch } = await import("@cloudflare/playwright");
-    browser = await launch(browserBindingValue);
-    step = "browser_launched";
-    const page = await browser.newPage();
+  const apiFetch = async (path: string, init: RequestInit = {}) => {
+    const headers = new Headers(init.headers);
+    headers.set("authorization", `Bearer ${apiKey}`);
+    headers.set("accept", "application/json");
+    if (init.body) headers.set("content-type", "application/json");
+    return fetch(`${baseUrl}${path}`, { ...init, headers, signal: AbortSignal.timeout(12_000) });
+  };
 
-    step = "nav_google_maps";
-    const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
-    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-    await page.waitForSelector('[role="feed"]', { timeout: 15000 });
-
-    // Coleta links únicos e rola a lista até alcançar o limite ou ficar sem novos resultados.
-    const listingMap = new Map<string, Record<string, unknown>>();
-    let stagnantRounds = 0;
-    let previousCount = 0;
-    for (let round = 0; round < 35 && listingMap.size < Math.min(limit, 100); round++) {
-      const visibleListings = await page.evaluate(() => {
-        const output: Array<Record<string, unknown>> = [];
-        const seen = new Set<string>();
-        document.querySelectorAll('a[href*="/maps/place/"]').forEach((node) => {
-          const anchor = node as HTMLAnchorElement;
-          const href = anchor.href.split("&")[0];
-          if (!href || seen.has(href)) return;
-          seen.add(href);
-          const container = anchor.closest('[role="article"]') || anchor.closest('.Nv2PK') || anchor.parentElement?.parentElement || anchor.parentElement || anchor;
-          const cardText = ((container as HTMLElement | null)?.innerText || anchor.innerText || "").replace(/\s+/g, " ").trim();
-          const name = (anchor.getAttribute("aria-label") || anchor.querySelector('.qBF1Pd, .fontHeadlineSmall')?.textContent || anchor.textContent || "").replace(/\s+/g, " ").trim();
-          if (!name || !href) return;
-          output.push({ name: name.slice(0, 240), url: href, cardText: cardText.slice(0, 2500) });
-        });
-        return output;
+  if (!jobId) {
+    let createdResponse: Response;
+    try {
+      createdResponse = await apiFetch("/api/v1/jobs", {
+        method: "POST",
+        body: JSON.stringify({
+          projectName: String(campaign.name ?? campaign.campaignName ?? `Beleza Digital · ${region}`).slice(0, 200),
+          categoryName: segment.slice(0, 200),
+          segment,
+          location: region,
+          limit: Math.max(1, Math.min(limit, 100)),
+        }),
       });
-      for (const listing of visibleListings) {
-        const href = String(listing.url || "");
-        if (href && !listingMap.has(href)) listingMap.set(href, listing);
-        if (listingMap.size >= Math.min(limit, 100)) break;
-      }
-      if (listingMap.size === previousCount) stagnantRounds++;
-      else stagnantRounds = 0;
-      previousCount = listingMap.size;
-      if (stagnantRounds >= 3) break;
-      await page.locator('[role="feed"]').evaluate((feed) => { feed.scrollTop = feed.scrollHeight; }).catch(() => {});
-      await page.waitForTimeout(900);
+    } catch {
+      // A timeout may happen after the service created the job. Do not retry POST blindly:
+      // the MapScrape v1 contract does not implement an idempotency key.
+      await updateTask(env, task, workerId, {
+        status: "blocked",
+        last_error_code: "mapscrape_job_start_unknown",
+        last_error: "A resposta ao iniciar a coleta foi perdida; verifique os jobs do consumidor no MapScrape antes de tentar novamente.",
+        completed_at: new Date().toISOString(),
+        result: { outcome: "blocked", reason: "job_start_unknown", searchQuery },
+      });
+      return "blocked";
     }
+    if (!createdResponse.ok) {
+      const detail = (await createdResponse.text().catch(() => "")).slice(0, 250);
+      await updateTask(env, task, workerId, {
+        status: "blocked",
+        last_error_code: `mapscrape_create_http_${createdResponse.status}`,
+        last_error: `MapScrape recusou a criação da coleta (HTTP ${createdResponse.status}). ${detail}`.slice(0, 500),
+        completed_at: new Date().toISOString(),
+        result: { outcome: "blocked", reason: "job_create_failed", httpStatus: createdResponse.status, searchQuery },
+      });
+      return "blocked";
+    }
+    const createdBody = await createdResponse.json().catch(() => null) as { data?: { jobId?: string } } | null;
+    jobId = String(createdBody?.data?.jobId ?? "");
+    if (!jobId) {
+      await updateTask(env, task, workerId, {
+        status: "blocked",
+        last_error_code: "mapscrape_job_id_missing",
+        last_error: "MapScrape aceitou a requisição, mas não retornou data.jobId; reconcilie a coleta antes de repetir.",
+        completed_at: new Date().toISOString(),
+        result: { outcome: "blocked", reason: "job_id_missing", searchQuery },
+      });
+      return "blocked";
+    }
+    await checkpointTaskResult(env, task, workerId, {
+      ...(task.result ?? {}),
+      mapScrapeJobId: jobId,
+      mapScrapeStatus: "running",
+      mapScrapeStartedAt: new Date().toISOString(),
+      searchQuery,
+    });
+  }
 
-    const listings = Array.from(listingMap.values()).slice(0, Math.min(limit, 100));
-    scrapedResults = [];
-    for (let index = 0; index < listings.length; index++) {
-      const listing = listings[index];
-      const listingUrl = String(listing.url || "");
-      if (!listingUrl) continue;
-      step = "detail_" + (index + 1);
-      try {
-        await page.goto(listingUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
-        await page.waitForTimeout(700);
-        const detail = await page.evaluate(() => {
-          const textOf = (selector: string): string | null => {
-            const element = document.querySelector(selector);
-            const value = (element as HTMLElement | null)?.innerText || element?.getAttribute("aria-label") || "";
-            return value.replace(/\s+/g, " ").trim() || null;
-          };
-          const hrefOf = (selector: string): string | null => {
-            const element = document.querySelector(selector) as HTMLAnchorElement | null;
-            const value = element?.href || null;
-            return value && /^https?:\/\//i.test(value) ? value : null;
-          };
-          const bodyText = document.body?.innerText || "";
-          const ratingLabel = document.querySelector('div.F7nice, [aria-label*="stars"], [aria-label*="estrelas"]')?.getAttribute("aria-label") || "";
-          const ratingText = textOf("div.F7nice") || "";
-          const reviewLabel = document.querySelector('button[aria-label*="reviews"], button[aria-label*="avaliações"], [aria-label*="reviews"], [aria-label*="avaliações"]')?.getAttribute("aria-label") || "";
-          const ratingSource = [ratingLabel, ratingText, reviewLabel, bodyText.slice(0, 8000)].join(" ");
-          const ratingMatch = ratingSource.match(/(?:^|\s)([0-5](?:[.,]\d+)?)\s*(?:estrelas?|stars?)?/i) || bodyText.match(/([0-5][.,]\d)\s*\(/);
-          const reviewMatch = ratingSource.match(/([\d.,]+)\s*(?:avaliações|avaliação|reviews|review|comentários)/i) || bodyText.match(/\(([0-9][0-9.,]*)\)/);
-          const parseCount = (value: string | null): number | null => {
-            if (!value) return null;
-            const digits = value.replace(/[.,](?=\d{3}\b)/g, "").replace(/\D/g, "");
-            const parsed = Number(digits);
-            return Number.isSafeInteger(parsed) ? parsed : null;
-          };
-          const hours = Array.from(document.querySelectorAll('table.eK4R0e tr, table[aria-label*="hours"] tr'))
-            .map((row) => ((row as HTMLElement).innerText || "").replace(/\s+/g, " ").trim())
-            .filter(Boolean).slice(0, 14);
-          const images = Array.from(document.querySelectorAll("img"))
-            .map((image) => (image as HTMLImageElement).currentSrc || (image as HTMLImageElement).src || "")
-            .filter((url) => /^https?:\/\//i.test(url) && /googleusercontent|gstatic/i.test(url));
-          const category = textOf("button.DkEaL") || textOf('button[jsaction*="category"]');
-          const address = textOf('[data-item-id="address"]');
-          const phoneElement = document.querySelector('[data-item-id^="phone:tel"], a[href^="tel:"]') as HTMLAnchorElement | null;
-          const phone = phoneElement?.getAttribute("href")?.startsWith("tel:")
-            ? phoneElement.getAttribute("href")?.slice(4) || null
-            : (phoneElement as HTMLElement | null)?.innerText?.trim() || null;
-          const website = hrefOf('a[data-item-id="authority"]') || hrefOf('a[aria-label*="Website"]') || hrefOf('a[aria-label*="website"]');
-          const coordinates = location.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-          const feature = location.href.match(/!1s([^!/?]+)/);
-          const placeId = location.href.match(/[?&]place_id=([^&]+)/i);
-          const price = bodyText.match(/(?:Preço|Price)\s*[:·]?\s*(\${1,4}|R\${1,4})/i);
-          return {
-            name: textOf("h1.DUwDvf") || document.querySelector("h1")?.textContent?.trim() || null,
-            category,
-            address,
-            phone,
-            website,
-            rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
-            reviewsCount: reviewMatch ? parseCount(reviewMatch[1]) : null,
-            sourceUrl: location.href,
-            placeId: placeId ? decodeURIComponent(placeId[1]) : null,
-            featureId: feature ? decodeURIComponent(feature[1]) : null,
-            latitude: coordinates ? Number(coordinates[1]) : null,
-            longitude: coordinates ? Number(coordinates[2]) : null,
-            images: Array.from(new Set(images)).slice(0, 20),
-            openingHours: hours,
-            priceLevel: price?.[1] || null,
-            editorialSummary: textOf('[class*="PYvSYb"], [class*="WeS02d"]'),
-            rawListingText: bodyText.slice(0, 8000),
-            fieldStatus: {
-              name: "name",
-              category: category ? "found" : "not_found_in_capture",
-              address: address ? "found" : "not_found_in_capture",
-              phone: phone ? "found" : "not_found_in_capture",
-              website: website ? "found" : "not_found_in_capture",
-              rating: ratingMatch ? "found" : "not_found_in_capture",
-              reviewsCount: reviewMatch ? "found" : "not_found_in_capture",
-              images: images.length ? "found" : "not_found_in_capture",
-              openingHours: hours.length ? "found" : "not_found_in_capture",
-            },
-          };
-        });
-        scrapedResults.push({
-          ...listing,
-          ...detail,
-          name: detail.name || listing.name,
-          sourceUrl: detail.sourceUrl || listingUrl,
-          city: region.split(/\s+-\s+/)[0]?.trim() || null,
-          region: region.split(/\s+-\s+/)[1]?.trim() || region,
-          countryCode,
-          provider: "google-maps-cloudflare-playwright",
-          searchQuery,
-        });
-      } catch (detailError) {
-        // Mantém a listagem como evidência parcial; não inventa dados ausentes.
-        scrapedResults.push({
-          ...listing,
-          sourceUrl: listingUrl,
-          city: region.split(/\s+-\s+/)[0]?.trim() || null,
-          region: region.split(/\s+-\s+/)[1]?.trim() || region,
-          countryCode,
-          provider: "google-maps-cloudflare-playwright",
-          searchQuery,
-          fieldStatus: { detailPage: "failed", error: String(detailError instanceof Error ? detailError.message : detailError).slice(0, 250) },
-        });
-      }
+  // A tarefa pode ser reexecutada com segurança: após o primeiro POST, sempre reutiliza o jobId salvo.
+  // A janela de polling é limitada; se ainda estiver em execução, o mecanismo de retry retoma o mesmo job.
+  let jobStatus = "";
+  let statusMessage = "";
+  for (let poll = 0; poll < 12; poll++) {
+    step = "mapscrape_poll_status";
+    const statusResponse = await apiFetch(`/api/v1/jobs/${encodeURIComponent(jobId)}`);
+    if (!statusResponse.ok) {
+      if (statusResponse.status === 404) throw new Error("mapscrape_job_not_found_or_out_of_scope");
+      throw new Error(`mapscrape_status_http_${statusResponse.status}`);
+    }
+    const statusBody = await statusResponse.json() as { data?: { status?: string; status_message?: string; isRunning?: boolean } };
+    jobStatus = String(statusBody.data?.status ?? "");
+    statusMessage = String(statusBody.data?.status_message ?? "");
+    if (["completed", "partial", "failed", "stopped"].includes(jobStatus)) break;
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+  if (!["completed", "partial", "failed", "stopped"].includes(jobStatus)) {
+    await checkpointTaskResult(env, task, workerId, {
+      ...(task.result ?? {}), mapScrapeJobId: jobId, mapScrapeStatus: jobStatus || "running",
+      mapScrapeLastPolledAt: new Date().toISOString(),
+    });
+    throw new Error("mapscrape_job_still_running_resume_same_job");
+  }
+
+  await checkpointTaskResult(env, task, workerId, {
+    ...(task.result ?? {}), mapScrapeJobId: jobId, mapScrapeStatus: jobStatus,
+    mapScrapeCompletedAt: new Date().toISOString(),
+  });
+  if (jobStatus === "failed" || jobStatus === "stopped") {
+    lastError = new Error(`mapscrape_job_${jobStatus}: ${statusMessage.slice(0, 250)}`);
+  } else {
+    step = "mapscrape_fetch_results";
+    for (let offset = 0; offset < 10000; offset += 100) {
+      const resultsResponse = await apiFetch(`/api/v1/jobs/${encodeURIComponent(jobId)}/results?limit=100&offset=${offset}`);
+      if (!resultsResponse.ok) throw new Error(`mapscrape_results_http_${resultsResponse.status}`);
+      const resultsBody = await resultsResponse.json() as {
+        data?: Array<Record<string, unknown>>;
+        pagination?: { total?: number; hasMore?: boolean; limit?: number; offset?: number };
+      };
+      const rows = Array.isArray(resultsBody.data) ? resultsBody.data : [];
+      scrapedResults.push(...rows.map((lead) => ({
+        ...lead,
+        name: lead.name,
+        website: lead.website,
+        rating: lead.rating !== "" && lead.rating != null ? Number(lead.rating) : null,
+        reviewsCount: lead.review_count,
+        sourceUrl: lead.maps_url || lead.source_url,
+        source_url: lead.maps_url || lead.source_url,
+        placeId: lead.source_place_id || lead.id,
+        providerId: lead.id,
+        city: lead.city || region.split(/\\s+-\\s+/)[0]?.trim() || null,
+        region: lead.state || region.split(/\\s+-\\s+/)[1]?.trim() || region,
+        countryCode,
+        images: Array.isArray(lead.photos) ? lead.photos : [],
+        openingHours: typeof lead.opening_hours === "string" ? [lead.opening_hours] : (Array.isArray(lead.opening_hours) ? lead.opening_hours : []),
+        description: lead.description,
+        fieldStatus: lead.field_status ?? {},
+        mapScrapeJobId: jobId,
+      })));
+      if (!resultsBody.pagination?.hasMore || rows.length === 0) break;
     }
     lastError = null;
-    await browser?.close().catch(() => {});
-  } catch (error) {
-      await browser?.close().catch(() => {});
-      lastError = error instanceof Error ? error : new Error(String(error));
-      const errorMessage = lastError.message ?? "";
-
-      // Verificar se é um erro de taxa limite (429) que merece retry
-      const isRateLimit = errorMessage.includes('429') ||
-                          errorMessage.includes('rate limit') ||
-                          errorMessage.includes('over capacity') ||
-                          errorMessage.includes('PROSPECTING_BROWSER') ||
-                          errorMessage.includes('browser_run') ||
-                          errorMessage.includes('throttl');
-
-      if (!isRateLimit || retryAttempt === MAX_RETRIES) {
-        // Interrompe o retry; o estado será persistido como bloqueado abaixo.
-        break;
-      }
-
-      // Extrair Retry-After do erro se disponível
-      let retryAfterSeconds: number | null = null;
-      const retryAfterMatch = errorMessage.match(/retry after (\d+)/i);
-      if (retryAfterMatch) {
-        retryAfterSeconds = Number(retryAfterMatch[1]);
-      }
-
-      // Calcular delay com backoff exponencial e jitter
-      const baseDelay = Math.min(BASE_DELAY_MS * (2 ** retryAttempt), MAX_DELAY_MS);
-      const delay = retryAfterSeconds
-        ? Math.min(retryAfterSeconds * 1000, BASE_DELAY_MS * (2 ** retryAttempt))
-        : baseDelay;
-      const jitter = Math.random() * 1000; // até 1s de jitter
-      const sleepDelay = delay + jitter;
-
-      // Log e aguardar antes da próxima tentativa
-      console.info(`[discoverCampaignTask] Rate limit detected, retry attempt ${retryAttempt + 1}/${MAX_RETRIES}. Waiting ${sleepDelay}ms before retry. Error: ${errorMessage.slice(0, 200)}`);
-
-      await new Promise(resolve => setTimeout(resolve, sleepDelay));
-    }
-    await browser?.close().catch(() => {});
   }
 
   // Se após todas as tentativas ainda houver erro, marcar como bloqueado
@@ -709,7 +630,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
         campaign_id: campaign.campaignId ?? null,
-        provider: "google-maps-cloudflare-playwright",
+        provider: "mapscrape-v2",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
         business_name: businessName,
@@ -763,7 +684,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, qualified, provider: "google-maps-playwright", searchQuery },
+    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, qualified, provider: "mapscrape-v2", searchQuery },
   });
   return "succeeded";
 }
