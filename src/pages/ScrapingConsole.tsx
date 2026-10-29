@@ -86,6 +86,69 @@ function displayEvidence(value: unknown): string {
   try { return JSON.stringify(value, null, 2); } catch { return String(value); }
 }
 
+const MAPSCRAPE_DETAIL_FIELDS: Array<{ key: string; label: string; aliases?: string[] }> = [
+  { key: "booking_url", label: "URL de agendamento", aliases: ["bookingUrl", "booking_url"] },
+  { key: "category", label: "Categoria" },
+  { key: "address", label: "Endereço completo", aliases: ["formattedAddress", "formatted_address"] },
+  { key: "phone", label: "Telefone comercial", aliases: ["phoneNumber", "phone_number"] },
+  { key: "website", label: "Website oficial", aliases: ["website_url", "websiteUrl"] },
+  { key: "rating", label: "Nota / avaliação", aliases: ["stars"] },
+  { key: "review_count", label: "Total de avaliações", aliases: ["reviewCount", "reviewsCount", "reviews_count"] },
+  { key: "price_range", label: "Faixa de preço", aliases: ["priceLevel", "price_level", "priceRange"] },
+  { key: "business_status", label: "Status de funcionamento", aliases: ["businessStatus", "business_status"] },
+  { key: "opening_hours", label: "Horários de funcionamento", aliases: ["openingHours", "hours"] },
+  { key: "description", label: "Descrição", aliases: ["editorialSummary", "editorial_summary"] },
+  { key: "services_attributes", label: "Serviços e atributos", aliases: ["servicesAttributes", "services"] },
+  { key: "latitude", label: "Latitude", aliases: ["lat"] },
+  { key: "longitude", label: "Longitude", aliases: ["lng", "lon"] },
+  { key: "photos", label: "Fotos (URLs)", aliases: ["images"] },
+  { key: "videos", label: "Vídeos (URLs)" },
+  { key: "logo_url", label: "Logo / imagem de perfil", aliases: ["logoUrl"] },
+  { key: "social_links", label: "Redes sociais", aliases: ["socialLinks"] },
+  { key: "reviews", label: "Avaliações e comentários" },
+  { key: "review_topics", label: "Categorias dos comentários", aliases: ["reviewTopics"] },
+  { key: "additional_attributes", label: "Atributos adicionais da ficha", aliases: ["additionalAttributes"] },
+  { key: "media_items", label: "Galeria de mídia", aliases: ["mediaItems"] },
+  { key: "plus_code", label: "Plus Code", aliases: ["plusCode"] },
+  { key: "attributes", label: "Atributos do estabelecimento" },
+  { key: "accessibility_attributes", label: "Acessibilidade", aliases: ["accessibilityAttributes"] },
+  { key: "next_opening_text", label: "Próxima abertura (texto)", aliases: ["nextOpeningText"] },
+  { key: "next_open_day", label: "Próximo dia de abertura", aliases: ["nextOpenDay"] },
+  { key: "next_open_time", label: "Próximo horário de abertura", aliases: ["nextOpenTime"] },
+  { key: "visible_photos_count", label: "Total de fotos informado", aliases: ["visiblePhotosCount"] },
+  { key: "postal_code", label: "CEP / código postal", aliases: ["postalCode"] },
+  { key: "country", label: "País" },
+  { key: "city", label: "Cidade" },
+  { key: "state", label: "Estado / região" },
+  { key: "source_place_id", label: "ID da ficha na fonte", aliases: ["sourcePlaceId", "placeId", "featureId"] },
+  { key: "source_url", label: "URL original da fonte", aliases: ["sourceUrl", "maps_url", "mapsUrl"] },
+  { key: "popular_times", label: "Horários de movimento", aliases: ["popularTimes"] },
+  { key: "rating_distribution", label: "Distribuição de avaliações", aliases: ["ratingDistribution"] },
+  { key: "review_highlights", label: "Destaques de avaliações", aliases: ["reviewHighlights"] },
+  { key: "field_status", label: "Status de captura por campo", aliases: ["fieldStatus"] },
+  { key: "collected_at", label: "Data e hora da coleta", aliases: ["collectedAt", "observedAt", "capturedAt"] },
+];
+
+function candidateFieldValue(candidate: ScrapeCandidate, key: string, aliases: string[] = []): unknown {
+  const record = candidate as unknown as Record<string, unknown>;
+  const keys = [key, ...aliases];
+  for (const candidateKey of keys) {
+    const direct = record[candidateKey];
+    if (direct !== undefined && direct !== null && direct !== "") return direct;
+  }
+  return evidenceValue(candidate, keys);
+}
+
+function splitMediaValue(value: unknown, type: string): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {}
+  return value.split(/\\s*\\|\\s*|\\n/).map((url) => url.trim()).filter(Boolean).map((url) => ({ url, type }));
+}
+
 function candidateMedia(candidate: ScrapeCandidate): Array<{ url: string; title: string; type: string }> {
   const evidence = candidate.raw_evidence ?? {};
   const mapsFields = evidence.mapsScrapeFields && typeof evidence.mapsScrapeFields === "object"
@@ -93,14 +156,17 @@ function candidateMedia(candidate: ScrapeCandidate): Array<{ url: string; title:
   const values = [
     ...(Array.isArray(evidence.images) ? evidence.images : []),
     ...(Array.isArray(evidence.mediaItems) ? evidence.mediaItems : []),
-    ...(Array.isArray(mapsFields.images) ? mapsFields.images : []),
-    ...(Array.isArray(mapsFields.media_items) ? mapsFields.media_items : []),
+    ...splitMediaValue(mapsFields.logo_url ?? mapsFields.logoUrl, "image"),
+    ...splitMediaValue(mapsFields.photos ?? mapsFields.images, "image"),
+    ...splitMediaValue(mapsFields.videos, "video"),
+    ...splitMediaValue(mapsFields.media_items ?? mapsFields.mediaItems, "image"),
+    ...splitMediaValue(mapsFields.media_items ?? mapsFields.mediaItems, "video"),
   ];
   const seen = new Set<string>();
   return values.flatMap((value) => {
     const item = typeof value === "string" ? { url: value, title: "", type: "image" }
       : value && typeof value === "object" && !Array.isArray(value)
-        ? { url: String((value as Record<string, unknown>).url ?? (value as Record<string, unknown>).src ?? (value as Record<string, unknown>).thumbnail_url ?? ""), title: String((value as Record<string, unknown>).title ?? ""), type: String((value as Record<string, unknown>).type ?? "image") }
+        ? { url: String((value as Record<string, unknown>).url ?? (value as Record<string, unknown>).src ?? (value as Record<string, unknown>).thumbnail_url ?? (value as Record<string, unknown>).thumbnailUrl ?? ""), title: String((value as Record<string, unknown>).title ?? ""), type: String((value as Record<string, unknown>).type ?? "image") }
         : null;
     const url = safeHttpUrl(item?.url);
     if (!item || !url || seen.has(url)) return [];
@@ -414,6 +480,25 @@ export function ScrapingConsole() {
                 {reasons.length > 0 && <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"><h3 className="mb-3 font-semibold text-white">Critérios da qualificação</h3><ul className="space-y-2 text-sm text-neutral-300">{reasons.map((reason, index) => <li key={index} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /><span>{displayEvidence(reason)}</span></li>)}</ul></section>}
                 {missing.length > 0 && <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4"><h3 className="mb-3 font-semibold text-white">Campos não observados</h3><div className="flex flex-wrap gap-2">{missing.map((field, index) => <span key={index} className="rounded-lg border border-amber-500/20 px-2.5 py-1.5 text-xs text-amber-200">{displayEvidence(field)}</span>)}</div><p className="mt-3 text-xs leading-5 text-neutral-500">A ausência indica que o campo não foi observado nesta captura; não comprova que a informação inexista.</p></section>}
               </div>}
+
+              <section className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 sm:p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                  <div><h3 className="font-semibold text-zinc-100">Todos os campos do MapScrape</h3><p className="mt-1 text-xs text-zinc-500">Mesmo contrato de dados da ficha original. Campos sem evidência são marcados como não observados, sem inventar valores.</p></div>
+                  <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400">{MAPSCRAPE_DETAIL_FIELDS.length} campos</span>
+                </div>
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  {MAPSCRAPE_DETAIL_FIELDS.map((field) => {
+                    const value = candidateFieldValue(selected, field.key, field.aliases ?? []);
+                    const url = /url|website|booking|photos|videos|logo/i.test(field.key) ? safeHttpUrl(typeof value === "string" ? value.split(" | ")[0] : value) : null;
+                    return <div key={field.key} className="min-w-0 rounded-xl border border-zinc-800/80 bg-zinc-900/70 p-3">
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{field.label}</dt>
+                      <dd className="mt-1 break-words text-sm leading-5 text-zinc-200">
+                        {url ? <a href={url} target="_blank" rel="noopener noreferrer" className="break-all text-emerald-300 hover:underline">{displayEvidence(value)}</a> : <span className={value == null || value === "" ? "italic text-zinc-600" : ""}>{displayEvidence(value)}</span>}
+                      </dd>
+                    </div>;
+                  })}
+                </dl>
+              </section>
 
               {fieldStatus && <details className="mt-5 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"><summary className="cursor-pointer text-sm font-semibold text-neutral-200">Estado da captura por campo</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-400">{displayEvidence(fieldStatus)}</pre></details>}
               <details className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"><summary className="cursor-pointer text-sm font-semibold text-neutral-200">Evidência bruta completa (JSON)</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-400">{JSON.stringify(evidence, null, 2)}</pre></details>
