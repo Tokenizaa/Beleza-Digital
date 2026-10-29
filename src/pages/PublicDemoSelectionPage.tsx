@@ -96,7 +96,11 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
   }
 
   async function startContract() {
-    const versionId = activePreviewId || selected || data?.versions[0]?.id;
+    // A contratação usa a versão selecionada pelo visitante (estado local) ou a
+    // versão já persistida no link da demonstração. A prévia aberta
+    // (activePreviewId) não substitui a escolha confirmada: abrir a prévia de
+    // um modelo não deve contratar um modelo diferente daquele selecionado.
+    const versionId = selected || data?.selectedVersionId || activePreviewId || data?.versions[0]?.id;
     if (!versionId) {
       setContractError("Selecione uma versão antes de contratar.");
       return;

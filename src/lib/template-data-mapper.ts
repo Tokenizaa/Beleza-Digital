@@ -235,17 +235,14 @@ function getFocusSpecificContent(
     }
 
     case 'experience': {
-      // Rubi Lounge - foco em experiência do cliente
+      // Rubi Lounge - foco em experiência do cliente.
+      // Apenas afirma o que é comprovado pelos dados coletados; não inventa
+      // iluminação, música, aromas, acabamentos nem outras características
+      // sensoriais que não estejam disponíveis na fonte.
       return {
         experience: {
-          atmosphere:
-            'Ambiente acolhedor com detalhes sensoriais e acabamentos de luxo',
-          sensoryDetails: [
-            'Iluminação ambiente 따뜻함',
-            'Música de fundo selecionada',
-            'Aromas característicos do estabelecimento',
-            'Toalhas e acabamentos premium',
-          ],
+          atmosphere: '',
+          sensoryDetails: [],
           recommendedFor:
             data.category.includes('spa') || data.category.includes('SPA')
               ? ['Relaxamento e bem-estar']
@@ -257,7 +254,7 @@ function getFocusSpecificContent(
         photos: data.photos.length > 0 ? data.photos.slice(0, 5) : [],
         description:
           data.description ||
-          'Experiência de beleza sensorial e acolhedora em ambiente VIP.',
+          'Experiência de beleza em ambiente dedicado ao cuidado pessoal.',
       };
     }
 
