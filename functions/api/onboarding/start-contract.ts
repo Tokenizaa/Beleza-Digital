@@ -47,7 +47,7 @@ async function validateDemoToken(env: Env, token: string): Promise<{ ok: true; l
   // Get selected version if any
   let selectedVersion = null;
   if (link.selected_version_id) {
-    const versionResponse = await api(env, `site_project_versions?id=eq.${encodeURIComponent(link.selected_version_id)}&select=id,version,template_version_id,generated_content,design_overrides,selected_by_prospect,selection_source&limit=1`);
+    const versionResponse = await api(env, `site_project_versions?id=eq.${encodeURIComponent(link.selected_version_id)}&site_project_id=eq.${encodeURIComponent(link.site_project_id)}&select=id,version,template_version_id,generated_content,design_overrides,selected_by_prospect,selection_source&limit=1`);
     if (versionResponse.ok) {
       const versions = await versionResponse.json() as Array<any>;
       if (versions.length) selectedVersion = versions[0];

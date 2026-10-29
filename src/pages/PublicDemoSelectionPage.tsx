@@ -96,13 +96,14 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
   }
 
   async function startContract() {
-    // A contratação usa a versão selecionada pelo visitante (estado local) ou a
-    // versão já persistida no link da demonstração. A prévia aberta
-    // (activePreviewId) não substitui a escolha confirmada: abrir a prévia de
-    // um modelo não deve contratar um modelo diferente daquele selecionado.
-    const versionId = selected || data?.selectedVersionId || activePreviewId || data?.versions[0]?.id;
+    // A contratação sempre usa a escolha persistida, nunca apenas a prévia aberta.
+    const versionId = selected || data?.selectedVersionId;
     if (!versionId) {
       setContractError("Selecione uma versão antes de contratar.");
+      return;
+    }
+    if (activePreviewId !== versionId) {
+      setContractError("A prévia aberta não é a versão selecionada. Selecione este modelo antes de continuar.");
       return;
     }
     setContractStarting(true);
@@ -173,7 +174,8 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
   } : null;
 
   const hasSelection = selected !== null || data?.selectedVersionId !== null;
-  const versionToContract = activePreviewId || selected || data?.versions[0]?.id;
+  const versionToContract = selected || data?.selectedVersionId || null;
+  const previewMatchesSelection = Boolean(versionToContract && activeVersion?.id === versionToContract);
 
   return <main className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
     <header className="border-b border-neutral-800 px-5 py-5 sm:px-8">
@@ -226,12 +228,12 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
               </button>
               {/* Contratar button */}
               <button
-                disabled={contractStarting || !versionToContract}
+                disabled={contractStarting || !versionToContract || !previewMatchesSelection || saving !== null}
                 onClick={startContract}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-3 text-sm font-bold text-neutral-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50 shadow-lg shadow-amber-500/20"
               >
                 {contractStarting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                {contractStarting ? "Iniciando contratação..." : "Quero contratar este modelo"}
+                {contractStarting ? "Iniciando contratação..." : !versionToContract ? "Selecione um modelo para continuar" : !previewMatchesSelection ? "Selecione este modelo para contratar" : "Contratar versão selecionada"}
               </button>
             </div>
           </div>}
