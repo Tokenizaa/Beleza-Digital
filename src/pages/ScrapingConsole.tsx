@@ -181,8 +181,14 @@ function evidenceArray(candidate: ScrapeCandidate, key: string): unknown[] {
 }
 
 export function ScrapingConsole() {
+  const [projectName, setProjectName] = useState("Prospecção de beleza");
+  const [categoryName, setCategoryName] = useState("salão de beleza");
   const [segment, setSegment] = useState("salão de beleza");
   const [region, setRegion] = useState("São Paulo - SP");
+  const [locationMode, setLocationMode] = useState<"brazil" | "custom">("brazil");
+  const [selectedUf, setSelectedUf] = useState("SP");
+  const [selectedCity, setSelectedCity] = useState("São Paulo");
+  const [neighborhood, setNeighborhood] = useState("");
   const [countryCode, setCountryCode] = useState("BR");
   const [limit, setLimit] = useState(20);
   const [loading, setLoading] = useState(true);
@@ -243,7 +249,7 @@ export function ScrapingConsole() {
       const response = await fetch("/api/prospecting/run", {
         method: "POST",
         headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ segment: segment.trim(), region: region.trim(), countryCode: countryCode.trim().toUpperCase(), limit, createCampaign: false }),
+        body: JSON.stringify({ projectName: projectName.trim(), categoryName: categoryName.trim(), segment: segment.trim(), region: (locationMode === "custom" ? region.trim() : [neighborhood.trim(), selectedCity.trim(), selectedUf].filter(Boolean).join(", ")), countryCode: countryCode.trim().toUpperCase(), limit, createCampaign: false }),
       });
       const body = await response.json() as { status?: string; message?: string; error?: string; detail?: string; executionId?: string };
       if (!response.ok && response.status !== 202) throw new Error(body.error || body.detail || "Não foi possível iniciar a busca.");
@@ -312,34 +318,74 @@ export function ScrapingConsole() {
           </button>
         </header>
 
-        <form onSubmit={startSearch} className="grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/90 p-5 shadow-xl shadow-black/20 sm:grid-cols-2 lg:grid-cols-5">
-          <label className="space-y-2 text-xs font-semibold text-neutral-300 lg:col-span-2">
-            Segmento / consulta
-            <input value={segment} onChange={(e) => setSegment(e.target.value)} required maxLength={160} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Ex.: barbearias" />
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-neutral-300 lg:col-span-2">
-            Cidade / região
-            <input value={region} onChange={(e) => setRegion(e.target.value)} required maxLength={160} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Ex.: Porto Alegre - RS" />
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-neutral-300">
-            País
-            <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500">
-              <option value="BR">Brasil</option><option value="US">Estados Unidos</option><option value="PT">Portugal</option><option value="AR">Argentina</option><option value="CL">Chile</option>
-            </select>
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-neutral-300">
-            Limite de resultados
-            <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500">
-              {[10,20,30,50,100].map((n) => <option key={n} value={n}>{n} estabelecimentos</option>)}
-            </select>
-          </label>
-          <div className="flex items-end lg:col-span-4">
-            <p className="text-xs leading-5 text-neutral-500">A busca é pontual. O limite restringe os resultados desta execução; não cria uma campanha recorrente.</p>
+        <form onSubmit={startSearch} className="space-y-6 rounded-2xl border border-zinc-800 bg-zinc-900/90 p-5 shadow-xl shadow-black/20 sm:p-7">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="space-y-2 text-sm font-semibold text-zinc-100">
+              1. Projeto
+              <input value={projectName} onChange={(e) => setProjectName(e.target.value)} maxLength={120} placeholder="Nome do projeto de prospecção" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+            </label>
+            <label className="space-y-2 text-sm font-semibold text-zinc-100">
+              2. Categoria
+              <input value={categoryName} onChange={(e) => { setCategoryName(e.target.value); if (!segment.trim()) setSegment(e.target.value); }} maxLength={120} placeholder="Ex.: salão de beleza" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+            </label>
+            <label className="space-y-2 text-sm font-semibold text-zinc-100 sm:col-span-2">
+              3. Segmento / consulta no Google Maps <span className="text-emerald-400">*</span>
+              <input value={segment} onChange={(e) => setSegment(e.target.value)} required maxLength={160} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Ex.: salões de beleza, manicures, clínicas de estética" />
+            </label>
           </div>
-          <button type="submit" disabled={starting || !segment.trim() || !region.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-neutral-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
-            {starting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {starting ? "Enfileirando busca…" : "Iniciar scraping"}
-          </button>
+
+          <div className="space-y-3">
+            <div className="text-sm font-semibold text-zinc-100">4. Localização <span className="text-emerald-400">*</span></div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setLocationMode("brazil")} className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${locationMode === "brazil" ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"}`}>Brasil: estado e cidade</button>
+              <button type="button" onClick={() => setLocationMode("custom")} className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${locationMode === "custom" ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"}`}>Localização personalizada</button>
+            </div>
+            {locationMode === "brazil" ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="space-y-2 text-xs font-semibold text-zinc-300">
+                  Estado (UF)
+                  <select value={selectedUf} onChange={(e) => setSelectedUf(e.target.value)} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500">
+                    {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-zinc-300">
+                  Cidade
+                  <input value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} required={locationMode === "brazil"} maxLength={120} placeholder="Digite a cidade" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-zinc-300">
+                  Bairro (opcional)
+                  <input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} maxLength={120} placeholder="Todos os bairros" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+                </label>
+              </div>
+            ) : (
+              <label className="block space-y-2 text-xs font-semibold text-zinc-300">
+                Cidade, bairro ou região
+                <input value={region} onChange={(e) => setRegion(e.target.value)} required={locationMode === "custom"} maxLength={160} placeholder="Ex.: Lisboa, Portugal ou Palermo, Buenos Aires" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+              </label>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2 text-sm font-semibold text-zinc-100">
+              5. País
+              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500">
+                <option value="BR">Brasil</option><option value="US">Estados Unidos</option><option value="PT">Portugal</option><option value="AR">Argentina</option><option value="CL">Chile</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-semibold text-zinc-100">
+              6. Limite de resultados
+              <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500">
+                {[10,20,50,100].map((n) => <option key={n} value={n}>{n} estabelecimentos</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-col gap-3 border-t border-zinc-800 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-xl text-xs leading-5 text-zinc-500">Busca pontual no Google Maps. A tarefa fica registrada, o progresso é atualizado pelo worker e os dados coletados são armazenados com a evidência original.</p>
+            <button type="submit" disabled={starting || !segment.trim() || !(locationMode === "custom" ? region.trim() : selectedCity.trim())} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
+              {starting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {starting ? "Enfileirando busca…" : "Iniciar scraping"}
+            </button>
+          </div>
         </form>
 
         {error && <div role="alert" className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
