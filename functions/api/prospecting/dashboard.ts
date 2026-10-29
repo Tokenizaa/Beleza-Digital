@@ -61,17 +61,26 @@ export async function onRequestGet({ request, env }: Context) {
     prefer: "count=exact",
   };
   try {
-    const [tasksResponse, candidatesResponse] = await Promise.all([
-      fetch(`${base}/rest/v1/prospecting_tasks?select=id,task_type,status,prospect_id,campaign_id,idempotency_key,attempt_count,max_attempts,created_at,updated_at,completed_at,last_error_code,last_error,result,payload&order=created_at.desc&limit=${limit}`, {
+    const taskSelect = "select=id,task_type,status,prospect_id,campaign_id,idempotency_key,attempt_count,max_attempts,created_at,updated_at,completed_at,last_error_code,last_error,result,payload";
+    const [tasksResponse, activeTasksResponse, candidatesResponse] = await Promise.all([
+      fetch(`${base}/rest/v1/prospecting_tasks?${taskSelect}&order=created_at.desc&limit=${limit}`, {
+        headers, signal: AbortSignal.timeout(10000),
+      }),
+      // Active tasks remain visible even when older than the recent-history window.
+      fetch(`${base}/rest/v1/prospecting_tasks?${taskSelect}&status=in.(pending,processing,retryable)&order=created_at.desc&limit=1000`, {
         headers, signal: AbortSignal.timeout(10000),
       }),
       fetch(`${base}/rest/v1/prospecting_candidates?select=id,campaign_id,provider,provider_record_id,dedupe_key,business_name,category,website_url,normalized_website,phone,normalized_phone,email,address,city,region,country_code,description,source_url,source_captured_at,qualification_score,qualification_reasons,missing_fields,status,raw_evidence,created_at,updated_at&order=created_at.desc&limit=${limit}&offset=${offset}`, {
         headers, signal: AbortSignal.timeout(10000),
       }),
     ]);
-    if (!tasksResponse.ok) return json({ error: "Falha ao consultar execuções.", detail: await tasksResponse.text() }, 502);
+    if (!tasksResponse.ok) return json({ error: "Falha ao consultar execuções recentes.", detail: await tasksResponse.text() }, 502);
+    if (!activeTasksResponse.ok) return json({ error: "Falha ao consultar execuções ativas.", detail: await activeTasksResponse.text() }, 502);
     if (!candidatesResponse.ok) return json({ error: "Falha ao consultar estabelecimentos coletados.", detail: await candidatesResponse.text() }, 502);
-    const tasks = await tasksResponse.json() as Array<Record<string, unknown>>;
+    const recentTasks = await tasksResponse.json() as Array<Record<string, unknown>>;
+    const activeTasks = await activeTasksResponse.json() as Array<Record<string, unknown>>;
+    const tasks = [...new Map([...recentTasks, ...activeTasks].map((task) => [String(task.id), task])).values()]
+      .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")));
     const candidates = await candidatesResponse.json() as Array<Record<string, unknown>>;
     const totalRange = candidatesResponse.headers.get("content-range") ?? "";
     const totalMatch = totalRange.match(/\/(\d+|\*)$/);
@@ -82,7 +91,7 @@ export async function onRequestGet({ request, env }: Context) {
       pagination: { limit, offset, total: candidateTotal, hasMore: offset + candidates.length < candidateTotal },
       stats: {
         executions: tasks.length,
-        active: tasks.filter((task) => ["pending", "processing", "retryable"].includes(String(task.status))).length,
+        active: activeTasks.length,
         failed: tasks.filter((task) => ["blocked", "failed", "dead_letter"].includes(String(task.status))).length,
         collected: candidateTotal,
       },
