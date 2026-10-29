@@ -75,8 +75,6 @@ test.describe('Produção — autenticação e páginas de prospecção', () => 
     await page.getByPlaceholder('Digite a cidade').fill('Porto Alegre');
     await page.getByLabel(/6\. Limite de resultados/).selectOption('10');
 
-    const tasks = page.locator('p').filter({ hasText: /^#\d+ ·/ });
-    const before = await tasks.count();
     const responsePromise = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/prospecting/run', { timeout: 60_000 });
     await page.getByRole('button', { name: 'Iniciar scraping' }).click();
     const response = await responsePromise;
@@ -97,15 +95,17 @@ test.describe('Produção — autenticação e páginas de prospecção', () => 
     expect([200, 202]).toContain(response.status());
     expect(body.error).toBeUndefined();
     await expect(page.getByRole('status')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('button', { name: 'Atualizar' }).click();
-    await expect.poll(() => tasks.count(), { timeout: 30_000 }).toBeGreaterThan(before);
 
-    // A 2xx response only proves enqueueing. Wait for this newest task to finish,
-    // then assert that the worker completed it rather than leaving it queued.
-    const newestTaskRow = tasks.first().locator('..').locator('..');
+    // The API returns the persisted task ID as executionId. Track that exact task,
+    // not a newer capture task the worker may create while processing the search.
+    const taskId = String(body.executionId ?? '');
+    expect(taskId).toMatch(/^\d+$/);
+    const submittedTask = page.locator('p').filter({ hasText: new RegExp('^#' + taskId + ' ·') });
+    await expect.poll(() => submittedTask.count(), { timeout: 30_000 }).toBeGreaterThan(0);
+    const submittedTaskRow = submittedTask.first().locator('..').locator('..').locator('..');
     await expect.poll(async () => {
       await page.getByRole('button', { name: 'Atualizar' }).click();
-      return await newestTaskRow.textContent();
+      return await submittedTaskRow.textContent();
     }, { timeout: 90_000, intervals: [3000, 5000] }).toMatch(/Concluída/);
 
     const collectedValue = await page.getByText('Estabelecimentos coletados', { exact: true })
