@@ -80,7 +80,20 @@ test.describe('Produção — autenticação e páginas de prospecção', () => 
     const responsePromise = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/prospecting/run', { timeout: 60_000 });
     await page.getByRole('button', { name: 'Iniciar scraping' }).click();
     const response = await responsePromise;
-    const body = await response.json().catch(() => ({})) as Record<string, unknown>;
+    const contentType = response.headers()['content-type'] || '';
+    const rawBody = await response.text().catch(() => '');
+    let body: Record<string, unknown> = {};
+    try { body = JSON.parse(rawBody) as Record<string, unknown>; } catch { /* non-JSON edge/runtime response */ }
+    // Safe diagnostics only: never log request headers, tokens, email, or password.
+    console.log('[E2E scraping diagnostics]', JSON.stringify({
+      httpStatus: response.status(),
+      contentType,
+      status: body.status,
+      error: body.error,
+      blocker: body.blocker,
+      detail: typeof body.detail === 'string' ? body.detail.slice(0, 240) : undefined,
+      nonJsonBodyPrefix: !contentType.includes('json') ? rawBody.slice(0, 180) : undefined,
+    }));
     expect([200, 202]).toContain(response.status());
     expect(body.error).toBeUndefined();
     await expect(page.getByRole('status')).toBeVisible({ timeout: 15_000 });
