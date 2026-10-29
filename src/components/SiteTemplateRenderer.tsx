@@ -28,6 +28,8 @@ import { MonthCalendar } from './MonthCalendar';
 import { MediaModal } from './MediaModal';
 import { ProductDetailModal } from './ProductDetailModal';
 import { ServiceItem, ProductItem, MediaItem } from '../types';
+import { SiteTemplateConfig, SITE_TEMPLATES } from '../types/templates';
+import { mapDataForTemplate } from '../lib/template-data-mapper';
 
 export type SiteVariationId =
   | 'ouro-classico'
@@ -154,6 +156,7 @@ export interface SiteBusinessData {
 
 interface SiteTemplateRendererProps {
   businessData: SiteBusinessData;
+  template?: SiteTemplateConfig;
   initialVariation?: SiteVariationId;
   isDemoSelection?: boolean;
   onSelectVariation?: (variationId: SiteVariationId) => void;
@@ -162,13 +165,29 @@ interface SiteTemplateRendererProps {
 
 export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   businessData,
+  template: explicitTemplate,
   initialVariation = 'ouro-classico',
   isDemoSelection = false,
   onSelectVariation,
   onContinueToActivation,
 }) => {
-  const [currentVariation, setCurrentVariation] = useState<SiteVariationId>(initialVariation);
-  const theme = SITE_VARIATIONS[currentVariation] || SITE_VARIATIONS['ouro-classico'];
+  // Use explicit template if provided, otherwise derive from initialVariation
+  const template = explicitTemplate || SITE_TEMPLATES[initialVariation] || SITE_TEMPLATES['ouro-classico'];
+  const theme = SITE_VARIATIONS[initialVariation] || SITE_VARIATIONS['ouro-classico'];
+
+  // Focus-based color palette classes (5 paletas distintas)
+  const focusClassMap: Record<string, string> = {
+    services: 'focus-services',
+    portfolio: 'focus-portfolio',
+    essential: 'focus-essential',
+    corporativo: 'focus-corporativo',
+    experience: 'focus-experience',
+    default: '',
+  };
+  const focusClass = focusClassMap[template.focus] || focusClassMap.default;
+
+  // Section order defined by the template (5 sections, ordem específica por template)
+  const sectionsOrder: string[] = template.sections || ['hero', 'services', 'appointment', 'gallery', 'contact'];
 
   // Modal and Interactive States
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
@@ -196,102 +215,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   const whatsappClean = (businessData.whatsapp || businessData.phone).replace(/\D/g, '');
   const whatsappUrl = `https://wa.me/${whatsappClean}?text=${encodeURIComponent(`Olá! Gostaria de agendar um atendimento na ${businessData.name}.`)}`;
 
-  return (
-    <div className={`min-h-screen bg-neutral-950 text-neutral-100 ${theme.fontClass} transition-colors duration-300 relative`}>
-      {/* ---------------------------------------------------- */}
-      {/* SELETOR STICKY DAS 5 VARIAÇÕES (QUANDO EM DEMO)     */}
-      {/* ---------------------------------------------------- */}
-      {isDemoSelection && (
-        <header className="sticky top-0 z-50 bg-[#12151b]/95 backdrop-blur-md border-b border-[#2d3443] px-4 py-3 shadow-2xl">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-950/60 border border-amber-800/40 px-2 py-0.5 rounded">
-                Escolha seu Modelo
-              </span>
-              <span className="text-xs text-neutral-300 font-medium hidden sm:inline">
-                5 Variações oficiais do site disponíveis para o seu salão:
-              </span>
-            </div>
-
-            {/* Botoes das 5 variações */}
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              {(Object.keys(SITE_VARIATIONS) as SiteVariationId[]).map((vId) => {
-                const v = SITE_VARIATIONS[vId];
-                const active = currentVariation === vId;
-                return (
-                  <button
-                    key={vId}
-                    onClick={() => handleSelectVariation(vId)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                      active
-                        ? `${v.accentBg} text-neutral-950 shadow-lg scale-105`
-                        : 'bg-[#1c212c] text-neutral-300 hover:text-white border border-[#2d3443]'
-                    }`}
-                  >
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: v.primaryColor }} />
-                    {v.name.split('&')[0].trim()}
-                    {active && <Check className="h-3 w-3" />}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* CTA de contratação */}
-            {onContinueToActivation && (
-              <button
-                onClick={onContinueToActivation}
-                className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 text-xs font-black flex items-center gap-1.5 transition shadow-md shadow-amber-500/20"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" /> Quero Este Site
-              </button>
-            )}
-          </div>
-        </header>
-      )}
-
-      {/* ---------------------------------------------------- */}
-      {/* 1. NAVBAR / CABEÇALHO DO SITE DO SALÃO              */}
-      {/* ---------------------------------------------------- */}
-      <nav className="border-b border-neutral-800/60 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl overflow-hidden border ${theme.borderColor} bg-neutral-900 flex items-center justify-center shrink-0`}>
-            {businessData.logoUrl ? (
-              <img src={businessData.logoUrl} alt={businessData.name} className="w-full h-full object-cover" />
-            ) : (
-              <Scissors className="w-5 h-5" style={{ color: theme.primaryColor }} />
-            )}
-          </div>
-          <div>
-            <h1 className="text-base font-extrabold tracking-tight text-white line-clamp-1">{businessData.name}</h1>
-            <p className="text-[11px] text-neutral-400">{businessData.category || 'Categoria não informada'}</p>
-          </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-300">
-          <a hidden={servicesList.length === 0} href="#servicos" className="hover:text-white transition">Serviços</a>
-          <a hidden={servicesList.length === 0} href="#agendamento" className="hover:text-white transition">Agendamento</a>
-          <a hidden={mediaList.length === 0} href="#galeria" className="hover:text-white transition">Galeria</a>
-          <a hidden={productsList.length === 0} href="#produtos" className="hover:text-white transition">Produtos</a>
-          <a href="#localizacao" className="hover:text-white transition">Localização</a>
-        </div>
-
-        <a
-          hidden={servicesList.length === 0}
-          href="#agendamento"
-          className={`px-4 py-2 rounded-xl text-xs font-bold shadow-md transition ${theme.buttonPrimary}`}
-        >
-          Ver demonstração
-        </a>
-      </nav>
-
-      {/* ---------------------------------------------------- */}
-      {/* 2. HERO SECTION COM ATMOSFERA & CALL TO ACTION       */}
-      {/* ---------------------------------------------------- */}
+// Section renderer functions for each of the 6 possible section types
+  const renderHeroSection = (): JSX.Element => {
+    const { coverUrl, name, description, tagline, servicesList: servicesForHero, productsList: productsForHero, mediaList: mediaForHero } = businessData;
+    return (
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden border-b border-neutral-800/60 px-4 sm:px-6 lg:px-8 py-16">
         {/* Cover Background with Luxury Filter */}
         <div className="absolute inset-0 z-0 opacity-30">
           <img
-            src={businessData.coverUrl || 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80'}
+            src={coverUrl || 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80'}
             alt="Imagem ilustrativa de barbearia"
             className="w-full h-full object-cover filter contrast-125 scale-105"
           />
@@ -303,20 +235,20 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           {/* Badge de Categoria */}
-          <div hidden={!businessData.tagline && !businessData.category} className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md mx-auto" style={{ borderColor: theme.primaryColor, color: theme.primaryColor, backgroundColor: `${theme.primaryColor}15` }}>
+          <div hidden={!tagline && !name} className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md mx-auto" style={{ borderColor: theme.primaryColor, color: theme.primaryColor, backgroundColor: `${theme.primaryColor}15` }}>
             <Sparkles className="w-3.5 h-3.5" />
-            <span>{businessData.tagline || businessData.category}</span>
+            <span>{tagline || name}</span>
           </div>
 
           {/* Nome Comercial */}
-          <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
-            {businessData.name}
+          <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight">
+            {name}
           </h1>
 
           {/* Slogan & Descrição */}
-          {businessData.description && (
+          {description && (
             <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto leading-relaxed">
-              {businessData.description}
+              {description}
             </p>
           )}
 
@@ -328,7 +260,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
           {/* Hero CTAs */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-            {servicesList.length > 0 && (
+            {servicesForHero.length > 0 && (
               <a
                 href="#agendamento"
                 className={`w-full sm:w-auto px-8 py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-xl transition transform active:scale-95 ${theme.buttonPrimary}`}
@@ -355,10 +287,77 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </div>
         </div>
       </section>
+    );
+  };
 
-      {/* ---------------------------------------------------- */}
-      {/* 3. AGENDAMENTO RÁPIDO & CALENDÁRIO INTERATIVO        */}
-      {/* ---------------------------------------------------- */}
+  const renderServicesSection = (): JSX.Element => {
+    return (
+      <section id="servicos" hidden={servicesList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
+        <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
+          <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
+            Menu de Atendimentos
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Serviços Especializados</h2>
+          <p className="text-xs sm:text-sm text-neutral-400">
+            Técnicas modernas com produtos de linha profissional para garantir o melhor resultado.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {servicesList.map((service) => (
+            <div
+              key={service.id}
+              className={`p-6 rounded-2xl border ${theme.cardStyle} flex flex-col justify-between transition group`}
+            >
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center shrink-0">
+                      <Scissors className="h-5 w-5" style={{ color: theme.primaryColor }} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition">
+                        {service.name}
+                      </h3>
+                      <span className="text-[11px] text-neutral-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração sob consulta'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-lg font-black text-white shrink-0">
+                    R$ {(service.price ?? 0).toFixed(2)}{service.priceRange ? ` (${service.priceRange})` : ''}
+                  </span>
+                </div>
+
+                <p className="text-xs text-neutral-400 pl-13 leading-relaxed">
+                  {service.description}
+                </p>
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-neutral-800/60 flex items-center justify-between pl-13">
+                <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">
+                  {service.category}
+                </span>
+                <a
+                  href="#agendamento"
+                  onClick={() => {
+                    setBookingService(service.name);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${theme.buttonPrimary}`}
+                >
+                  Agendar <ChevronRight className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  const renderAppointmentSection = (): JSX.Element => {
+    return (
       <section id="agendamento" hidden={servicesList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
         <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
@@ -456,77 +455,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           )}
         </div>
       </section>
+    );
+  };
 
-      {/* ---------------------------------------------------- */}
-
-      {/* 4. GRADE DE SERVIÇOS EM DESTAQUE                    */}
-      {/* ---------------------------------------------------- */}
-      <section id="servicos" hidden={servicesList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
-        <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
-          <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
-            Menu de Atendimentos
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Serviços Especializados</h2>
-          <p className="text-xs sm:text-sm text-neutral-400">
-            Técnicas modernas com produtos de linha profissional para garantir o melhor resultado.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {servicesList.map((service) => (
-            <div
-              key={service.id}
-              className={`p-6 rounded-2xl border ${theme.cardStyle} flex flex-col justify-between transition group`}
-            >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center shrink-0">
-                      <Scissors className="h-5 w-5" style={{ color: theme.primaryColor }} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition">
-                        {service.name}
-                      </h3>
-                      <span className="text-[11px] text-neutral-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração sob consulta'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <span className="text-lg font-black text-white shrink-0">
-                    R$ {(service.price ?? 0).toFixed(2)}{service.priceRange ? ` (${service.priceRange})` : ''}
-                  </span>
-                </div>
-
-                <p className="text-xs text-neutral-400 pl-13 leading-relaxed">
-                  {service.description}
-                </p>
-              </div>
-
-              <div className="mt-5 pt-4 border-t border-neutral-800/60 flex items-center justify-between pl-13">
-                <span className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">
-                  {service.category}
-                </span>
-                <a
-                  href="#agendamento"
-                  onClick={() => {
-                    setBookingService(service.name);
-                  }}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${theme.buttonPrimary}`}
-                >
-                  Agendar <ChevronRight className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------- */}
-
-      {/* 5. GALERIA DE TRABALHOS RECENTES                     */}
-      {/* ---------------------------------------------------- */}
+  const renderGallerySection = (): JSX.Element => {
+    return (
       <section id="galeria" hidden={mediaList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
@@ -560,11 +493,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           ))}
         </div>
       </section>
+    );
+  };
 
-      {/* ---------------------------------------------------- */}
-
-      {/* 6. VITRINE DE PRODUTOS EXCLUSIVOS                    */}
-      {/* ---------------------------------------------------- */}
+  const renderProductsSection = (): JSX.Element => {
+    return (
       <section id="produtos" hidden={productsList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
@@ -621,11 +554,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           ))}
         </div>
       </section>
+    );
+  };
 
-      {/* ---------------------------------------------------- */}
-
-      {/* 7. LOCALIZAÇÃO & CONTATO                             */}
-      {/* ---------------------------------------------------- */}
+  const renderContactSection = (): JSX.Element => {
+    return (
       <section id="localizacao" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className={`p-8 sm:p-12 rounded-3xl border ${theme.cardStyle} relative overflow-hidden`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -698,6 +631,116 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </div>
         </div>
       </section>
+    );
+  };
+
+  return (
+    <div className={`min-h-screen bg-neutral-950 text-neutral-100 ${theme.fontClass} ${focusClass} transition-colors duration-300 relative`}>
+      {/* ---------------------------------------------------- */}
+      {/* SELETOR STICKY DAS 5 VARIAÇÕES (QUANDO EM DEMO)     */}
+      {/* ---------------------------------------------------- */}
+      {isDemoSelection && (
+        <header className="sticky top-0 z-50 bg-[#12151b]/95 backdrop-blur-md border-b border-[#2d3443] px-4 py-3 shadow-2xl">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-950/60 border border-amber-800/40 px-2 py-0.5 rounded">
+                Escolha seu Modelo
+              </span>
+              <span className="text-xs text-neutral-300 font-medium hidden sm:inline">
+                5 Variações oficiais do site disponíveis para o seu salão:
+              </span>
+            </div>
+
+            {/* Botoes das 5 variações */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              {(Object.keys(SITE_VARIATIONS) as SiteVariationId[]).map((vId) => {
+                const v = SITE_VARIATIONS[vId];
+                const active = currentVariation === vId;
+                return (
+                  <button
+                    key={vId}
+                    onClick={() => handleSelectVariation(vId)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      active
+                        ? `${v.accentBg} text-neutral-950 shadow-lg scale-105`
+                        : 'bg-[#1c212c] text-neutral-300 hover:text-white border border-[#2d3443]'
+                    }`}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: v.primaryColor }} />
+                    {v.name.split('&')[0].trim()}
+                    {active && <Check className="h-3 w-3" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* CTA de contratação */}
+            {onContinueToActivation && (
+              <button
+                onClick={onContinueToActivation}
+                className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 text-xs font-black flex items-center gap-1.5 transition shadow-md shadow-amber-500/20"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" /> Quero Este Site
+              </button>
+            )}
+          </div>
+        </header>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* 1. NAVBAR / CABEÇALHO DO SITE DO SALÃO              */}
+      {/* ---------------------------------------------------- */}
+      <nav className="border-b border-neutral-800/60 bg-neutral-950/80 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl overflow-hidden border ${theme.borderColor} bg-neutral-900 flex items-center justify-center shrink-0`}>
+            {businessData.logoUrl ? (
+              <img src={businessData.logoUrl} alt={businessData.name} className="w-full h-full object-cover" />
+            ) : (
+              <Scissors className="w-5 h-5" style={{ color: theme.primaryColor }} />
+            )}
+          </div>
+          <div>
+            <h1 className="text-base font-extrabold tracking-tight text-white line-clamp-1">{businessData.name}</h1>
+            <p className="text-[11px] text-neutral-400">{businessData.category || 'Categoria não informada'}</p>
+          </div>
+        </div>
+
+        <div className="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-300">
+          <a hidden={servicesList.length === 0} href="#servicos" className="hover:text-white transition">Serviços</a>
+          <a hidden={servicesList.length === 0} href="#agendamento" className="hover:text-white transition">Agendamento</a>
+          <a hidden={mediaList.length === 0} href="#galeria" className="hover:text-white transition">Galeria</a>
+          <a hidden={productsList.length === 0} href="#produtos" className="hover:text-white transition">Produtos</a>
+          <a href="#localizacao" className="hover:text-white transition">Localização</a>
+        </div>
+
+        <a
+          hidden={servicesList.length === 0}
+          href="#agendamento"
+          className={`px-4 py-2 rounded-xl text-xs font-bold shadow-md transition ${theme.buttonPrimary}`}
+        >
+          Ver demonstração
+        </a>
+      </nav>
+
+      {/* Dynamic sections rendered based on template.sections order (5 sections per template) */}
+      {sectionsOrder.map((sectionKey, i) => {
+        switch (sectionKey) {
+          case 'hero':
+            return renderHeroSection();
+          case 'services':
+            return renderServicesSection();
+          case 'appointment':
+            return renderAppointmentSection();
+          case 'gallery':
+            return renderGallerySection();
+          case 'products':
+            return renderProductsSection();
+          case 'contact':
+            return renderContactSection();
+          default:
+            return null;
+        }
+      })}
 
       {/* ---------------------------------------------------- */}
       {/* FOOTER                                               */}
