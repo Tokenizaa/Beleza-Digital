@@ -46,10 +46,8 @@ async function run() {
   );
   assert(await createDedupeKey({ name: "Sem localização" }) === null, "worker não inventa chave com dados insuficientes");
   const campaignSchedule = await scheduleDueCampaigns({} as never);
-  assert(
-    campaignSchedule.campaignsQueued === 0 && campaignSchedule.mode === "commercial_campaigns_do_not_trigger_discovery",
-    "campanhas comerciais não disparam raspagem nem consomem Browser Run",
-  );
+  assert(campaignSchedule.campaignsQueued === 0, "sem campanhas configuradas: nenhuma descoberta disparada");
+  assert(campaignSchedule.campaignsScanned === 0, "nenhuma campanha varrida sem endpoint de provedor");
 
   console.log(`RESULTADO WORKER: ${passed} passou / ${failed} falhou`);
   if (failed) process.exit(1);
