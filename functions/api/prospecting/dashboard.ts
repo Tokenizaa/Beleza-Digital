@@ -56,6 +56,7 @@ export async function onRequestGet({ request, env }: Context) {
     apikey: env.SUPABASE_SERVICE_ROLE_KEY,
     authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
     accept: "application/json",
+    prefer: "count=exact",
   };
   try {
     const [tasksResponse, candidatesResponse] = await Promise.all([
@@ -70,6 +71,9 @@ export async function onRequestGet({ request, env }: Context) {
     if (!candidatesResponse.ok) return json({ error: "Falha ao consultar estabelecimentos coletados.", detail: await candidatesResponse.text() }, 502);
     const tasks = await tasksResponse.json() as Array<Record<string, unknown>>;
     const candidates = await candidatesResponse.json() as Array<Record<string, unknown>>;
+    const totalRange = candidatesResponse.headers.get("content-range") ?? "";
+    const totalMatch = totalRange.match(/\/(\d+|\*)$/);
+    const candidateTotal = totalMatch && totalMatch[1] !== "*" ? Number(totalMatch[1]) : candidates.length;
     return json({
       tasks,
       candidates,
@@ -77,7 +81,7 @@ export async function onRequestGet({ request, env }: Context) {
         executions: tasks.length,
         active: tasks.filter((task) => ["pending", "processing", "retryable"].includes(String(task.status))).length,
         failed: tasks.filter((task) => ["blocked", "failed", "dead_letter"].includes(String(task.status))).length,
-        collected: candidates.length,
+        collected: candidateTotal,
       },
       fetchedAt: new Date().toISOString(),
     });
