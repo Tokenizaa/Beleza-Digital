@@ -109,7 +109,7 @@ export async function onRequestPost({ request, env }: Context) {
           region,
           countryCode,
           dailyDiscoveryLimit: limit,
-          minimumScore: 50,
+          minimumScore: typeof body.minimumScore === 'number' ? body.minimumScore : 50,
           manual: true,
         },
       }),
