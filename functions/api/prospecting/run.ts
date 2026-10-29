@@ -7,9 +7,6 @@ interface Env {
   PROSPECTING_WORKER_URL?: string;
   // Segredo compartilhado para autenticar execuções manuais internas do worker.
   PROSPECTING_WORKER_SECRET?: string;
-  // Endpoint e chave da API MapScrape (consumo direto, sem depender do Worker).
-  MAPSCRAPE_API_BASE_URL?: string;
-  MAPSCRAPE_API_KEY?: string;
 }
 type Context = { request: Request; env: Env };
 
@@ -136,59 +133,49 @@ export async function onRequestPost({ request, env }: Context) {
     }
     const taskId = String(taskRows[0].id);
 
-    // Consome diretamente a API MapScrape para a busca de nicho/cidade, sem depender do Worker.
-    let mapScrapeJobId: string | null = null;
-    let mapScrapeError: string | null = null;
-    const mapscrapeBase = env.MAPSCRAPE_API_BASE_URL?.trim() || 'https://mapscrape-v2.vercel.app';
-    const mapscrapeKey = env.MAPSCRAPE_API_KEY?.trim() || '';
+    // Solicita processamento imediato ao Worker. A fila persistida permite retomada pelo agendador caso a chamada falhe.
+    let workerWarning: string | null = null;
     try {
-      const mapRes = await fetch(`${mapscrapeBase}/api/v1/jobs`, {
+      const workerResponse = await fetch(env.PROSPECTING_WORKER_URL!, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${mapscrapeKey}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ segment, location: region, limit }),
-        signal: AbortSignal.timeout(30000),
+        headers: { authorization: `Bearer ${env.PROSPECTING_WORKER_SECRET!}`, 'content-type': 'application/json' },
+        signal: AbortSignal.timeout(60000),
       });
-      const mapBody = await mapRes.json().catch(() => ({})) as { data?: { jobId?: string; status?: string } };
-      if (!mapRes.ok || !mapBody.data?.jobId) {
-        mapScrapeError = String(mapBody.error ?? mapBody.message ?? `MapScrape respondeu HTTP ${mapRes.status}`);
-      } else {
-        mapScrapeJobId = mapBody.data.jobId;
+      const workerBody = await workerResponse.json().catch(() => ({})) as Record<string, unknown>;
+      if (!workerResponse.ok || workerBody.status === 'blocked' || workerBody.status === 'failed') {
+        workerWarning = String(workerBody.error ?? workerBody.detail ?? `Worker respondeu HTTP ${workerResponse.status}`);
+        // Um bloqueio explícito do Worker é persistido na própria tarefa, em vez de simular sucesso.
+        if (workerBody.status === 'blocked' || workerBody.status === 'failed' || workerResponse.status === 503) {
+          await fetch(`${base}/rest/v1/prospecting_tasks?id=eq.${encodeURIComponent(taskId)}&status=eq.pending`, {
+            method: 'PATCH',
+            headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}`, 'content-type': 'application/json', prefer: 'return=minimal' },
+            body: JSON.stringify({
+              status: 'blocked',
+              last_error_code: 'worker_blocked',
+              last_error: workerWarning.slice(0, 500),
+              completed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              result: { outcome: 'blocked', reason: 'worker_blocked' },
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+        }
       }
     } catch (error) {
-      mapScrapeError = error instanceof Error ? error.message : 'Não foi possível iniciar a coleta no MapScrape.';
+      // Falha de transporte não prova que a tarefa falhou; permanece persistida para o Worker/agendador.
+      workerWarning = error instanceof Error ? error.message : 'Não foi possível confirmar o acionamento imediato do Worker.';
     }
 
-    // Persiste o resultado da tentativa no banco para rastreamento.
-    await fetch(`${base}/rest/v1/prospecting_tasks?id=eq.${encodeURIComponent(taskId)}&status=eq.pending`, {
-      method: 'PATCH',
-      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}`, 'content-type': 'application/json', prefer: 'return=minimal' },
-      body: JSON.stringify({
-        status: mapScrapeError ? 'blocked' : 'succeeded',
-        last_error_code: mapScrapeError ? 'mapscrape_direct_error' : null,
-        last_error: mapScrapeError,
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        result: { outcome: mapScrapeError ? 'blocked' : 'mapscrape_direct', jobId: mapScrapeJobId, segment, region },
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-
     return json({
-      status: mapScrapeError ? 'blocked' : 'ok',
+      status: workerWarning ? 'pending' : 'running',
       executionId: taskId,
-      jobId: mapScrapeJobId,
-      message: mapScrapeError
-        ? 'Busca enfileirada no banco, mas a coleta direta no MapScrape falhou. Verifique MAPSCRAPE_API_KEY e MAPSCRAPE_API_BASE_URL.'
-        : 'Busca iniciada diretamente no MapScrape. Os resultados estarão disponíveis em breve.',
-      detail: mapScrapeError,
+      message: workerWarning
+        ? 'Busca enfileirada. O processamento imediato não foi confirmado; a tarefa permanece rastreável.'
+        : 'Busca manual enfileirada e processamento solicitado.',
+      detail: workerWarning,
       campaignId: null,
       limit,
-      source: 'mapscrape_direct',
-    }, mapScrapeError ? 503 : 202);
+    }, 202);
   }
 
   // Com createCampaign = true (padrão): registrar campanha e acionar o Worker.
