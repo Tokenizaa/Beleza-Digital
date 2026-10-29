@@ -51,6 +51,8 @@ export async function onRequestGet({ request, env }: Context) {
   const params = new URL(request.url).searchParams;
   const rawLimit = Number(params.get("limit") ?? 30);
   const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(100, Math.floor(rawLimit))) : 30;
+  const rawOffset = Number(params.get("offset") ?? 0);
+  const offset = Number.isFinite(rawOffset) ? Math.max(0, Math.min(1000000, Math.floor(rawOffset))) : 0;
   const base = env.SUPABASE_URL.replace(/\/$/, "");
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE_KEY,
@@ -63,7 +65,7 @@ export async function onRequestGet({ request, env }: Context) {
       fetch(`${base}/rest/v1/prospecting_tasks?select=id,task_type,status,prospect_id,campaign_id,idempotency_key,attempt_count,max_attempts,created_at,updated_at,completed_at,last_error_code,last_error,result,payload&order=created_at.desc&limit=${limit}`, {
         headers, signal: AbortSignal.timeout(10000),
       }),
-      fetch(`${base}/rest/v1/prospecting_candidates?select=id,campaign_id,provider,provider_record_id,dedupe_key,business_name,category,website_url,normalized_website,phone,normalized_phone,email,address,city,region,country_code,description,source_url,qualification_score,qualification_reasons,missing_fields,status,raw_evidence,created_at,updated_at&order=created_at.desc&limit=${limit}`, {
+      fetch(`${base}/rest/v1/prospecting_candidates?select=id,campaign_id,provider,provider_record_id,dedupe_key,business_name,category,website_url,normalized_website,phone,normalized_phone,email,address,city,region,country_code,description,source_url,qualification_score,qualification_reasons,missing_fields,status,raw_evidence,created_at,updated_at&order=created_at.desc&limit=${limit}&offset=${offset}`, {
         headers, signal: AbortSignal.timeout(10000),
       }),
     ]);
@@ -77,6 +79,7 @@ export async function onRequestGet({ request, env }: Context) {
     return json({
       tasks,
       candidates,
+      pagination: { limit, offset, total: candidateTotal, hasMore: offset + candidates.length < candidateTotal },
       stats: {
         executions: tasks.length,
         active: tasks.filter((task) => ["pending", "processing", "retryable"].includes(String(task.status))).length,
