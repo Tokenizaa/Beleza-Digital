@@ -17,6 +17,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Vite embeds these public values into the browser bundle at build time.
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || secrets.SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_ANON_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,6 +32,22 @@ jobs:
 
       - name: Install dependencies
         run: bun install
+
+      - name: Validate public Supabase build configuration
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ]; then
+            echo "::error::Missing public Supabase URL. Configure VITE_SUPABASE_URL or SUPABASE_URL in GitHub Actions secrets."
+            exit 1
+          fi
+          if [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "::error::Missing public Supabase publishable/anon key. Configure VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_ANON_KEY, SUPABASE_PUBLISHABLE_KEY, or SUPABASE_ANON_KEY in GitHub Actions secrets."
+            exit 1
+          fi
+          case "$VITE_SUPABASE_URL" in
+            https://*) ;;
+            *) echo "::error::VITE_SUPABASE_URL must be an https URL."; exit 1 ;;
+          esac
+          echo "Public Supabase build configuration is present."
 
       - name: Build production bundle
         run: bun run build
