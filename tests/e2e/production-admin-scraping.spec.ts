@@ -38,6 +38,7 @@ test.describe('Produção — autenticação e páginas de prospecção', () => 
       if (message.type() === 'error' && !/favicon|third-party cookie|net::ERR_BLOCKED_BY_CLIENT/i.test(message.text())) consoleErrors.push(message.text());
     });
     await loginAsPlatformAdmin(page);
+    await expect(page.getByRole('heading', { name: /retornos e .* empresas novas\./i })).toBeVisible();
 
     await page.getByRole('button', { name: 'Nova Busca & Raspagem' }).click();
     await expect(page.getByRole('heading', { name: 'Encontre quem precisa do que você vende.' })).toBeVisible();
@@ -51,6 +52,13 @@ test.describe('Produção — autenticação e páginas de prospecção', () => 
     await expect(page.getByRole('heading', { name: 'Central de prospecção' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Histórico de execuções' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Iniciar scraping' })).toBeVisible();
+    await expect(page.getByPlaceholder('Buscar nome, cidade, telefone…')).toBeVisible();
+    await expect(page.getByLabel('Filtrar por categoria')).toBeVisible();
+    await expect(page.getByLabel('Ordenar resultados')).toBeVisible();
+    await page.getByRole('button', { name: 'Tabela' }).click();
+    await expect(page.getByRole('button', { name: 'Tabela' })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Cards' }).click();
+    await expect(page.getByRole('button', { name: 'Cards' })).toHaveAttribute('aria-pressed', 'true');
     expect(pageErrors).toEqual([]);
     expect(consoleErrors).toEqual([]);
   });
