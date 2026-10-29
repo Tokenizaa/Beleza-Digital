@@ -47,7 +47,7 @@ async function validateDemoToken(env: Env, token: string): Promise<{ ok: true; l
   // Get selected version if any
   let selectedVersion = null;
   if (link.selected_version_id) {
-    const versionResponse = await api(env, `site_project_versions?id=eq.${encodeURIComponent(link.selected_version_id)}&select=id,version,template_version_id,generated_content,design_overrides,selected_by_prospect,selection_source&limit=1`);
+    const versionResponse = await api(env, `site_project_versions?id=eq.${encodeURIComponent(link.selected_version_id)}&site_project_id=eq.${encodeURIComponent(link.site_project_id)}&select=id,version,template_version_id,generated_content,design_overrides,selected_by_prospect,selection_source&limit=1`);
     if (versionResponse.ok) {
       const versions = await versionResponse.json() as Array<any>;
       if (versions.length) selectedVersion = versions[0];
@@ -78,6 +78,14 @@ export async function onRequestPost({ request, env }: Context) {
 
   const { prospect, siteProject, selectedVersion, link } = demoValidation;
 
+  // The database-recorded choice is canonical. Never trust a version ID supplied only by the browser.
+  if (!link.selected_version_id || !selectedVersion) {
+    return json({ error: 'Selecione uma versão da demonstração antes de continuar.' }, 409);
+  }
+  if (body.selectedVersionId && body.selectedVersionId !== link.selected_version_id) {
+    return json({ error: 'A versão informada não corresponde à escolha registrada. Atualize a página e confirme a seleção.' }, 409);
+  }
+
   // Check if prospect already converted
   if (prospect.converted_establishment_id) {
     // Check establishment billing status
@@ -101,7 +109,7 @@ export async function onRequestPost({ request, env }: Context) {
   }
 
   // Return info needed for signup
-  const versionId = body.selectedVersionId || selectedVersion?.id || null;
+  const versionId = selectedVersion.id;
 
   return json({
     nextStep: 'signup',
