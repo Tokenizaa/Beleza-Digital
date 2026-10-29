@@ -19,7 +19,7 @@ const storageStore = new Map<string, string>();
   clear: () => storageStore.clear(),
 };
 
-import { mapDataForTemplate, type MapScrapeData, type TemplateGeneratedContent, type SiteTemplateConfig } from '../src/lib/template-data-mapper';
+import { mapDataForTemplate, type MapScrapeData, type SiteTemplateConfig } from '../src/lib/template-data-mapper';
 import { SITE_TEMPLATES } from '../src/types/templates';
 
 let passed = 0;
