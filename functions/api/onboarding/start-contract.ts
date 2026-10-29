@@ -100,8 +100,41 @@ export async function onRequestPost({ request, env }: Context) {
     }, 200);
   }
 
-  // Return info needed for signup
-  const versionId = body.selectedVersionId || selectedVersion?.id || null;
+  // A contratação só prossegue com a versão já selecionada e persistida no
+  // link da demonstração (site_demo_public_links.selected_version_id). Um ID de
+  // versão enviado pelo cliente não pode substituir nem divergir da escolha
+  // persistida; isso evita contratação de versão de outro projeto ou de uma
+  // prévia aberta que não foi confirmada.
+  const persistedVersionId = link.selected_version_id ?? null;
+  if (body.selectedVersionId !== undefined && body.selectedVersionId !== null && body.selectedVersionId !== persistedVersionId) {
+    return json({
+      error: 'A versão informada diverge da escolha registrada no link da demonstração.',
+      status: 'conflict',
+      expectedVersionId: persistedVersionId,
+    }, 409);
+  }
+
+  if (!persistedVersionId) {
+    return json({
+      error: 'Nenhuma versão de modelo foi selecionada para esta demonstração.',
+      status: 'selection_required',
+      siteProjectId: siteProject.id,
+    }, 409);
+  }
+
+  // Confirma que a versão persistida pertence ao projeto da demonstração
+  // (defesa em profundidade: a RPC select_public_demo_version já impõe isso,
+  // mas o endpoint de contratação não deve confiar cegamente no navegador).
+  const versionMembership = await api(env, `site_project_versions?id=eq.${encodeURIComponent(persistedVersionId)}&select=id,site_project_id,template_version_id&limit=1`);
+  if (!versionMembership.ok) {
+    return json({ error: 'Falha ao validar a versão selecionada.' }, 503);
+  }
+  const membershipRows = await versionMembership.json() as Array<{ id: string; site_project_id: string; template_version_id: string }>;
+  if (!membershipRows.length || membershipRows[0].site_project_id !== siteProject.id) {
+    return json({ error: 'A versão selecionada não pertence ao projeto desta demonstração.' }, 409);
+  }
+
+  const versionId = persistedVersionId;
 
   return json({
     nextStep: 'signup',
@@ -111,6 +144,7 @@ export async function onRequestPost({ request, env }: Context) {
     demoTokenHash: Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body.demoToken))), b => b.toString(16).padStart(2, '0')).join(''),
     selectedVersionId: versionId,
     siteProjectId: siteProject.id,
+    templateVersionId: membershipRows.length ? membershipRows[0].template_version_id : null,
     message: 'Prossiga para o cadastro. O contexto da demonstração será preservado.',
   }, 200);
 }
