@@ -196,22 +196,22 @@ export function ScrapingConsole() {
   }, [data?.candidates, filter]);
 
   return (
-    <div className="min-h-screen bg-[#090b0a] text-neutral-100 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-[1440px] space-y-6">
-        <header className="relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 via-neutral-950 to-[#0c1710] p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
+    <div className="min-h-screen bg-zinc-950 px-4 py-5 text-zinc-100 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-8 py-2 sm:py-6">
+        <header className="flex flex-col gap-4 border-b border-zinc-800 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
+            <div className="mb-2 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
               <Database className="h-3.5 w-3.5" /> Motor de coleta próprio
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Central de prospecção</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-400">Pesquise estabelecimentos, acompanhe execuções e explore os registros capturados pelo motor nativo, com origem e evidências preservadas.</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-100 sm:text-4xl">Central de prospecção</h1>
+            <p className="mt-3 max-w-2xl text-base leading-6 text-zinc-400">Pesquise estabelecimentos, acompanhe execuções e explore os registros capturados pelo motor nativo, com origem e evidências preservadas.</p>
           </div>
-          <button type="button" onClick={() => void refresh()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-700 bg-neutral-900/80 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-800 disabled:opacity-50">
+          <button type="button" onClick={() => void refresh()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-zinc-600 hover:bg-zinc-800 disabled:opacity-50">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar
           </button>
         </header>
 
-        <form onSubmit={startSearch} className="grid gap-4 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-5 shadow-[0_18px_60px_-40px_rgba(16,185,129,0.25)] sm:grid-cols-2 lg:grid-cols-5">
+        <form onSubmit={startSearch} className="grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/90 p-5 shadow-xl shadow-black/20 sm:grid-cols-2 lg:grid-cols-5">
           <label className="space-y-2 text-xs font-semibold text-neutral-300 lg:col-span-2">
             Segmento / consulta
             <input value={segment} onChange={(e) => setSegment(e.target.value)} required maxLength={160} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Ex.: barbearias" />
@@ -244,16 +244,16 @@ export function ScrapingConsole() {
         {error && <div role="alert" className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
         {notice && <div role="status" className="flex items-start gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />{notice}</div>}
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { label: "Estabelecimentos coletados", value: data?.stats.collected ?? "—", icon: Database },
             { label: "Execuções recentes", value: data?.stats.executions ?? "—", icon: Activity },
             { label: "Execuções em andamento", value: data?.stats.active ?? "—", icon: Clock3 },
             { label: "Execuções com falha/bloqueio", value: data?.stats.failed ?? "—", icon: AlertCircle },
-          ].map((item) => { const Icon = item.icon; return <div key={item.label} className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4"><div className="flex items-center justify-between text-xs text-neutral-400"><span>{item.label}</span><Icon className="h-4 w-4" /></div><p className="mt-3 text-3xl font-bold text-white">{item.value}</p></div>; })}
+          ].map((item) => { const Icon = item.icon; return <div key={item.label} className="rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 shadow-xl shadow-black/20"><div className="flex items-center justify-between text-xs text-neutral-400"><span>{item.label}</span><Icon className="h-4 w-4" /></div><p className="mt-3 text-3xl font-bold text-white">{item.value}</p></div>; })}
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/50 shadow-xl shadow-black/10">
+        <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/90 shadow-xl shadow-black/20">
           <div className="flex flex-col gap-4 border-b border-neutral-800 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-300"><Database className="h-4 w-4" /></span><h2 className="font-bold text-white">Estabelecimentos encontrados</h2></div>
@@ -270,7 +270,7 @@ export function ScrapingConsole() {
 
           {viewMode === "cards" ? (
             <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
-              {candidates.map((candidate) => <article key={candidate.id} className="group flex min-w-0 flex-col rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 transition hover:border-emerald-500/40 hover:bg-neutral-900/80">
+              {candidates.map((candidate) => <article key={candidate.id} className="group flex min-w-0 flex-col rounded-2xl border border-zinc-800 bg-zinc-900/90 p-4 shadow-lg shadow-black/30 transition hover:border-emerald-500/40 hover:bg-zinc-900">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><p className="truncate font-semibold text-white" title={candidate.business_name}>{candidate.business_name}</p><p className="mt-1 truncate text-xs text-neutral-500">{candidate.category || "Categoria não observada"}</p></div>
                   <span className="shrink-0 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-xs font-bold tabular-nums text-emerald-300">{candidate.qualification_score ?? "—"}<span className="ml-1 font-normal text-emerald-400/70">pts</span></span>
