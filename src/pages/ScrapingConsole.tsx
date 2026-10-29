@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertCircle, CheckCircle2, Clock3, Database, ExternalLink, LoaderCircle, Play, RefreshCw, Search, XCircle } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, Clock3, Database, ExternalLink, LoaderCircle, Play, RefreshCw, Search, XCircle, LayoutGrid, Table2, MapPin, Phone, Globe, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 type ScrapeTask = {
@@ -64,6 +64,7 @@ export function ScrapingConsole() {
   const [selected, setSelected] = useState<ScrapeCandidate | null>(null);
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(0);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   const token = useCallback(async () => {
     const client = supabase;
@@ -132,22 +133,22 @@ export function ScrapingConsole() {
   }, [data?.candidates, filter]);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-h-screen bg-[#090b0a] text-neutral-100 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-[1440px] space-y-6">
+        <header className="relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 via-neutral-950 to-[#0c1710] p-5 sm:flex-row sm:items-end sm:justify-between sm:p-7">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
               <Database className="h-3.5 w-3.5" /> Motor de coleta próprio
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Scraping & Prospecção</h1>
-            <p className="mt-2 max-w-3xl text-sm text-neutral-400">Configure buscas no Google Maps, acompanhe a fila e inspecione os dados coletados com evidência e origem preservadas.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Central de prospecção</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-400">Pesquise estabelecimentos, acompanhe execuções e explore os registros capturados pelo motor nativo, com origem e evidências preservadas.</p>
           </div>
-          <button type="button" onClick={() => void refresh()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-700 px-4 py-2.5 text-sm font-semibold text-neutral-200 hover:bg-neutral-900 disabled:opacity-50">
+          <button type="button" onClick={() => void refresh()} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-700 bg-neutral-900/80 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-neutral-600 hover:bg-neutral-800 disabled:opacity-50">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar
           </button>
         </header>
 
-        <form onSubmit={startSearch} className="grid gap-4 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-5 sm:grid-cols-2 lg:grid-cols-5">
+        <form onSubmit={startSearch} className="grid gap-4 rounded-2xl border border-neutral-800 bg-neutral-900/70 p-5 shadow-[0_18px_60px_-40px_rgba(16,185,129,0.25)] sm:grid-cols-2 lg:grid-cols-5">
           <label className="space-y-2 text-xs font-semibold text-neutral-300 lg:col-span-2">
             Segmento / consulta
             <input value={segment} onChange={(e) => setSegment(e.target.value)} required maxLength={160} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Ex.: barbearias" />
@@ -189,33 +190,64 @@ export function ScrapingConsole() {
           ].map((item) => { const Icon = item.icon; return <div key={item.label} className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4"><div className="flex items-center justify-between text-xs text-neutral-400"><span>{item.label}</span><Icon className="h-4 w-4" /></div><p className="mt-3 text-3xl font-bold text-white">{item.value}</p></div>; })}
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/50">
-          <div className="flex flex-col gap-3 border-b border-neutral-800 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><h2 className="font-bold text-white">Estabelecimentos encontrados</h2><p className="mt-1 text-xs text-neutral-500">Dados reais da coleta; campos ausentes não são preenchidos por inferência.</p></div>
-            <label className="relative block sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><input value={filter} onChange={(e) => { setFilter(e.target.value); setPage(0); }} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 py-2.5 pl-9 pr-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Filtrar nesta página…" /></label>
+        <section className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/50 shadow-xl shadow-black/10">
+          <div className="flex flex-col gap-4 border-b border-neutral-800 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-300"><Database className="h-4 w-4" /></span><h2 className="font-bold text-white">Estabelecimentos encontrados</h2></div>
+              <p className="mt-2 text-xs text-neutral-500">{data?.pagination.total ?? 0} registros persistidos · Campos ausentes permanecem sem preenchimento inferido.</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="relative block sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><input value={filter} onChange={(e) => { setFilter(e.target.value); setPage(0); }} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 py-2.5 pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-emerald-500" placeholder="Buscar nome, cidade, telefone…" /></label>
+              <div className="flex items-center rounded-xl border border-neutral-800 bg-neutral-950 p-1" aria-label="Modo de visualização">
+                <button type="button" onClick={() => setViewMode("cards")} aria-pressed={viewMode === "cards"} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition ${viewMode === "cards" ? "bg-emerald-500 text-neutral-950" : "text-neutral-400 hover:text-white"}`}><LayoutGrid className="h-3.5 w-3.5" />Cards</button>
+                <button type="button" onClick={() => setViewMode("table")} aria-pressed={viewMode === "table"} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition ${viewMode === "table" ? "bg-emerald-500 text-neutral-950" : "text-neutral-400 hover:text-white"}`}><Table2 className="h-3.5 w-3.5" />Tabela</button>
+              </div>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-neutral-950/70 text-[11px] uppercase tracking-wider text-neutral-500"><tr><th className="px-4 py-3">Estabelecimento</th><th className="px-4 py-3">Localização</th><th className="px-4 py-3">Contato</th><th className="px-4 py-3">Qualificação</th><th className="px-4 py-3">Origem</th><th className="px-4 py-3">Detalhes</th></tr></thead>
-              <tbody className="divide-y divide-neutral-800">
-                {candidates.map((candidate) => <tr key={candidate.id} className="hover:bg-neutral-800/30">
-                  <td className="px-4 py-3"><p className="font-semibold text-white">{candidate.business_name}</p><p className="mt-1 text-xs text-neutral-500">{candidate.category || "Categoria não observada"}</p></td>
-                  <td className="px-4 py-3 text-xs text-neutral-300">{[candidate.city, candidate.region].filter(Boolean).join(" · ") || candidate.address || "Não observado"}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-300">{candidate.phone || "Telefone não observado"}<p className="mt-1 text-neutral-500">{candidate.website_url || "Site não observado"}</p></td>
-                  <td className="px-4 py-3"><span className="rounded-lg border border-neutral-700 px-2 py-1 text-xs">{candidate.qualification_score ?? "—"}</span><p className="mt-1 text-[11px] text-neutral-500">{candidate.status || "sem status"}</p></td>
-                  <td className="px-4 py-3">{candidate.source_url ? <a href={candidate.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-300 hover:underline">Abrir fonte <ExternalLink className="h-3 w-3" /></a> : <span className="text-xs text-neutral-500">Não observada</span>}</td>
-                  <td className="px-4 py-3"><button type="button" onClick={() => setSelected(candidate)} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-800">Ver dados</button></td>
-                </tr>)}
-                {!candidates.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-neutral-500">{loading ? "Carregando resultados…" : "Nenhum estabelecimento encontrado para este filtro."}</td></tr>}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-col gap-3 border-t border-neutral-800 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-neutral-500">Exibindo ${data?.pagination.total ? data.pagination.offset + 1 : 0}–${Math.min((data?.pagination.offset ?? 0) + (data?.candidates.length ?? 0), data?.pagination.total ?? 0)} de ${data?.pagination.total ?? 0} registros. O filtro se aplica à página carregada.</p>
+
+          {viewMode === "cards" ? (
+            <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+              {candidates.map((candidate) => <article key={candidate.id} className="group flex min-w-0 flex-col rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 transition hover:border-emerald-500/40 hover:bg-neutral-900/80">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0"><p className="truncate font-semibold text-white" title={candidate.business_name}>{candidate.business_name}</p><p className="mt-1 truncate text-xs text-neutral-500">{candidate.category || "Categoria não observada"}</p></div>
+                  <span className="shrink-0 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-xs font-bold tabular-nums text-emerald-300">{candidate.qualification_score ?? "—"}<span className="ml-1 font-normal text-emerald-400/70">pts</span></span>
+                </div>
+                <div className="mt-4 space-y-2.5 text-xs text-neutral-400">
+                  <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" /><span>{[candidate.city, candidate.region].filter(Boolean).join(" · ") || candidate.address || "Localização não observada"}</span></p>
+                  <p className="flex items-start gap-2"><Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" /><span>{candidate.phone || "Telefone não observado"}</span></p>
+                  <p className="flex items-start gap-2"><Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />{candidate.website_url ? <a href={candidate.website_url} target="_blank" rel="noreferrer" className="truncate text-emerald-300 hover:underline">{candidate.website_url}</a> : <span>Site não observado</span>}</p>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3 border-t border-neutral-800 pt-3">
+                  <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-[11px] text-neutral-400">{candidate.status || "Status não informado"}</span>
+                  <div className="flex items-center gap-3">{candidate.source_url && <a href={candidate.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-300 hover:underline">Fonte <ExternalLink className="h-3 w-3" /></a>}<button type="button" onClick={() => setSelected(candidate)} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800">Inspecionar</button></div>
+                </div>
+              </article>)}
+              {!candidates.length && <div className="col-span-full rounded-xl border border-dashed border-neutral-800 px-4 py-14 text-center"><Filter className="mx-auto h-5 w-5 text-neutral-600" /><p className="mt-3 text-sm font-medium text-neutral-300">{loading ? "Carregando resultados…" : "Nenhum estabelecimento encontrado"}</p><p className="mt-1 text-xs text-neutral-500">{filter ? "Tente ajustar os termos do filtro." : "Os resultados aparecerão aqui quando houver registros persistidos."}</p></div>}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="bg-neutral-950/70 text-[11px] uppercase tracking-wider text-neutral-500"><tr><th className="px-4 py-3">Estabelecimento</th><th className="px-4 py-3">Localização</th><th className="px-4 py-3">Contato</th><th className="px-4 py-3">Qualificação</th><th className="px-4 py-3">Origem</th><th className="px-4 py-3">Detalhes</th></tr></thead>
+                <tbody className="divide-y divide-neutral-800">
+                  {candidates.map((candidate) => <tr key={candidate.id} className="transition hover:bg-neutral-800/30">
+                    <td className="px-4 py-3"><p className="font-semibold text-white">{candidate.business_name}</p><p className="mt-1 text-xs text-neutral-500">{candidate.category || "Categoria não observada"}</p></td>
+                    <td className="px-4 py-3 text-xs text-neutral-300">{[candidate.city, candidate.region].filter(Boolean).join(" · ") || candidate.address || "Não observado"}</td>
+                    <td className="px-4 py-3 text-xs text-neutral-300">{candidate.phone || "Telefone não observado"}<p className="mt-1 text-neutral-500">{candidate.website_url || "Site não observado"}</p></td>
+                    <td className="px-4 py-3"><span className="rounded-lg border border-neutral-700 px-2 py-1 text-xs">{candidate.qualification_score ?? "—"}</span><p className="mt-1 text-[11px] text-neutral-500">{candidate.status || "sem status"}</p></td>
+                    <td className="px-4 py-3">{candidate.source_url ? <a href={candidate.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-300 hover:underline">Abrir fonte <ExternalLink className="h-3 w-3" /></a> : <span className="text-xs text-neutral-500">Não observada</span>}</td>
+                    <td className="px-4 py-3"><button type="button" onClick={() => setSelected(candidate)} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-800">Ver dados</button></td>
+                  </tr>)}
+                  {!candidates.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-neutral-500">{loading ? "Carregando resultados…" : "Nenhum estabelecimento encontrado para este filtro."}</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="flex flex-col gap-3 border-t border-neutral-800 bg-neutral-950/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-neutral-500">Exibindo {(data?.pagination.total ?? 0) > 0 ? (data?.pagination.offset ?? 0) + 1 : 0}–{Math.min((data?.pagination.offset ?? 0) + (data?.candidates.length ?? 0), data?.pagination.total ?? 0)} de {data?.pagination.total ?? 0} registros. O filtro se aplica à página carregada.</p>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={page === 0 || loading} className="rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-300 disabled:opacity-40">Anterior</button>
-              <span className="text-xs text-neutral-500">Página ${page + 1}</span>
-              <button type="button" onClick={() => setPage((value) => value + 1)} disabled={!data?.pagination.hasMore || loading} className="rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-300 disabled:opacity-40">Próxima</button>
+              <button type="button" onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={page === 0 || loading} className="inline-flex items-center gap-1 rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-300 transition hover:bg-neutral-800 disabled:opacity-40"><ChevronLeft className="h-3.5 w-3.5" />Anterior</button>
+              <span className="px-2 text-xs tabular-nums text-neutral-500">Página {page + 1}</span>
+              <button type="button" onClick={() => setPage((value) => value + 1)} disabled={!data?.pagination.hasMore || loading} className="inline-flex items-center gap-1 rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-300 transition hover:bg-neutral-800 disabled:opacity-40">Próxima<ChevronRight className="h-3.5 w-3.5" /></button>
             </div>
           </div>
         </section>
