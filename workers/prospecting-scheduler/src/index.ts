@@ -431,23 +431,29 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const BASE_DELAY_MS = 2_000; // 2s base delay
   const MAX_DELAY_MS = 60_000; // 60s max delay
   let lastError: Error | null = null;
-
-  for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
-  // Build search query for Google Maps / local business directories
   const segment = String(campaign.segment ?? "barbearia e salão");
   const region = String(campaign.region ?? "São Paulo - SP");
   const countryCode = String(campaign.countryCode ?? "BR");
   const searchQuery = `${segment} ${region}`.trim();
-
-  // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
-  // No Docker, container, VPS, or external Python service is required.
   let scrapedResults: Array<Record<string, unknown>> = [];
   let browser: any;
   let step = "init";
   let bindingType = "unknown";
   let bindingIsString = false;
   let bindingLength = 0;
-  try {
+
+  for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
+    // Reset per-attempt state while keeping the diagnostic fields in scope for final failure handling.
+    scrapedResults = [];
+    browser = undefined;
+    step = "init";
+    bindingType = "unknown";
+    bindingIsString = false;
+    bindingLength = 0;
+
+    // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
+    // No Docker, container, VPS, or external Python service is required.
+    try {
     const browserBindingValue = env.BROWSER;
     bindingType = typeof browserBindingValue;
     bindingIsString = typeof browserBindingValue === "string";
@@ -495,7 +501,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       else stagnantRounds = 0;
       previousCount = listingMap.size;
       if (stagnantRounds >= 3) break;
-      await page.locator('[role="feed"]').evaluate((feed) => { feed.scrollTop = feed.scrollHeight; }).catch(() => {});
+      await page.locator('[role="feed"]').evaluate((feed: Element) => { const scrollableFeed = feed as HTMLElement; scrollableFeed.scrollTop = scrollableFeed.scrollHeight; }).catch(() => {});
       await page.waitForTimeout(900);
     }
 
