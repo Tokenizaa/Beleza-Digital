@@ -32,6 +32,7 @@ type ScrapeCandidate = {
   missing_fields?: unknown[] | null;
   status?: string | null;
   raw_evidence?: Record<string, unknown> | null;
+  source_captured_at?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -416,7 +417,7 @@ export function ScrapingConsole() {
               {fieldStatus && <details className="mt-5 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"><summary className="cursor-pointer text-sm font-semibold text-neutral-200">Estado da captura por campo</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-400">{displayEvidence(fieldStatus)}</pre></details>}
               <details className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"><summary className="cursor-pointer text-sm font-semibold text-neutral-200">Evidência bruta completa (JSON)</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-400">{JSON.stringify(evidence, null, 2)}</pre></details>
               <footer className="mt-5 flex flex-col gap-2 border-t border-neutral-800 pt-4 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
-                <div><p>Provedor: {selected.provider || "não informado"}</p><p className="mt-1">Capturado em: {formatDate(String(evidenceValue(selected, ["observedAt", "capturedAt"]) ?? selected.created_at ?? ""))}</p></div>
+                <div><p>Provedor: {selected.provider || "não informado"}</p><p className="mt-1">Capturado em: {formatDate(String(selected.source_captured_at ?? evidenceValue(selected, ["observedAt", "capturedAt"]) ?? selected.created_at ?? ""))}</p></div>
                 <p className="break-all">ID do registro: {selected.id}</p>
               </footer>
             </div>
