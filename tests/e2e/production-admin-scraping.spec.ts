@@ -44,7 +44,6 @@ test.describe('Produção — autenticação e páginas de prospecção', () => 
     await expect(page.getByPlaceholder(/Barbearia, Salão de Beleza, Clínica Estética/i)).toBeVisible();
 
     await page.getByRole('button', { name: 'Pipeline CRM & Empresas' }).click();
-    await page.locator('button[title="CRM / Empresas"]').click();
     await expect(page.getByPlaceholder('Buscar empresa...')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/Supabase não está configurado|Não foi possível carregar empresas persistidas|A tabela de estado do CRM não está acessível/i)).toHaveCount(0);
 
