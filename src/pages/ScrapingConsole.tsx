@@ -18,14 +18,22 @@ type ScrapeCandidate = {
   category?: string | null;
   city?: string | null;
   region?: string | null;
+  country_code?: string | null;
   address?: string | null;
   phone?: string | null;
+  email?: string | null;
   website_url?: string | null;
   source_url?: string | null;
+  description?: string | null;
+  provider?: string | null;
+  provider_record_id?: string | null;
   qualification_score?: number | null;
+  qualification_reasons?: unknown[] | null;
+  missing_fields?: unknown[] | null;
   status?: string | null;
   raw_evidence?: Record<string, unknown> | null;
   created_at?: string;
+  updated_at?: string;
 };
 type DashboardPayload = {
   tasks: ScrapeTask[];
@@ -49,6 +57,60 @@ function formatDate(value?: string | null) {
   if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("pt-BR");
+}
+
+function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch { return null; }
+}
+
+function evidenceValue(candidate: ScrapeCandidate, keys: string[]): unknown {
+  const evidence = candidate.raw_evidence ?? {};
+  const mapsFields = evidence.mapsScrapeFields && typeof evidence.mapsScrapeFields === "object"
+    ? evidence.mapsScrapeFields as Record<string, unknown> : {};
+  for (const key of keys) {
+    if (evidence[key] !== undefined && evidence[key] !== null && evidence[key] !== "") return evidence[key];
+    if (mapsFields[key] !== undefined && mapsFields[key] !== null && mapsFields[key] !== "") return mapsFields[key];
+  }
+  return null;
+}
+
+function displayEvidence(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "Não observado nesta captura";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(displayEvidence).join(" · ");
+  try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+}
+
+function candidateMedia(candidate: ScrapeCandidate): Array<{ url: string; title: string; type: string }> {
+  const evidence = candidate.raw_evidence ?? {};
+  const mapsFields = evidence.mapsScrapeFields && typeof evidence.mapsScrapeFields === "object"
+    ? evidence.mapsScrapeFields as Record<string, unknown> : {};
+  const values = [
+    ...(Array.isArray(evidence.images) ? evidence.images : []),
+    ...(Array.isArray(evidence.mediaItems) ? evidence.mediaItems : []),
+    ...(Array.isArray(mapsFields.images) ? mapsFields.images : []),
+    ...(Array.isArray(mapsFields.media_items) ? mapsFields.media_items : []),
+  ];
+  const seen = new Set<string>();
+  return values.flatMap((value) => {
+    const item = typeof value === "string" ? { url: value, title: "", type: "image" }
+      : value && typeof value === "object" && !Array.isArray(value)
+        ? { url: String((value as Record<string, unknown>).url ?? (value as Record<string, unknown>).src ?? (value as Record<string, unknown>).thumbnail_url ?? ""), title: String((value as Record<string, unknown>).title ?? ""), type: String((value as Record<string, unknown>).type ?? "image") }
+        : null;
+    const url = safeHttpUrl(item?.url);
+    if (!item || !url || seen.has(url)) return [];
+    seen.add(url);
+    return [{ ...item, url }];
+  }).slice(0, 20);
+}
+
+function evidenceArray(candidate: ScrapeCandidate, key: string): unknown[] {
+  const value = evidenceValue(candidate, [key]);
+  return Array.isArray(value) ? value : [];
 }
 
 export function ScrapingConsole() {
@@ -268,12 +330,99 @@ export function ScrapingConsole() {
         </section>
       </div>
 
-      {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Dados coletados de ${selected.business_name}`} onClick={() => setSelected(null)}>
-        <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-950 shadow-2xl" onClick={(event) => event.stopPropagation()}>
-          <div className="flex items-center justify-between border-b border-neutral-800 p-4"><div><h2 className="font-bold text-white">{selected.business_name}</h2><p className="mt-1 text-xs text-neutral-500">Registro bruto e evidências preservados</p></div><button type="button" onClick={() => setSelected(null)} className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800" aria-label="Fechar detalhes"><XCircle className="h-5 w-5" /></button></div>
-          <div className="max-h-[calc(90vh-72px)] overflow-auto p-4"><pre className="whitespace-pre-wrap break-words rounded-xl bg-neutral-900 p-4 text-xs leading-5 text-neutral-200">{JSON.stringify(selected, null, 2)}</pre></div>
-        </div>
-      </div>}
+      {selected && (() => {
+        const evidence = selected.raw_evidence ?? {};
+        const media = candidateMedia(selected);
+        const rating = evidenceValue(selected, ["rating", "stars"]);
+        const reviews = evidenceValue(selected, ["reviewsCount", "reviewCount", "review_count", "reviews_count"]);
+        const completeness = evidenceValue(selected, ["completenessScore"]);
+        const fieldStatus = evidenceValue(selected, ["fieldStatus", "field_status"]);
+        const reasons = selected.qualification_reasons ?? evidenceArray(selected, "opportunityReasons");
+        const missing = selected.missing_fields ?? [];
+        const website = safeHttpUrl(selected.website_url);
+        const source = safeHttpUrl(selected.source_url ?? evidenceValue(selected, ["sourceUrl", "mapsUrl", "maps_url"]));
+        const booking = safeHttpUrl(evidenceValue(selected, ["bookingUrl", "booking_url"]));
+        const hours = evidenceValue(selected, ["openingHours", "opening_hours", "hours"]);
+        const socials = evidenceValue(selected, ["socialLinks", "social_links"]);
+        const attrs = evidenceValue(selected, ["additionalAttributes", "additional_attributes", "attributes"]);
+        const latitude = evidenceValue(selected, ["latitude", "lat"]);
+        const longitude = evidenceValue(selected, ["longitude", "lng", "lon"]);
+        const coordinates = latitude != null && longitude != null ? `${String(latitude)}, ${String(longitude)}` : null;
+        return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Ficha individual de ${selected.business_name}`} onClick={() => setSelected(null)}>
+          <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-neutral-700 bg-[#0b0e0c] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <header className="flex items-start justify-between gap-4 border-b border-neutral-800 bg-gradient-to-r from-neutral-950 to-[#102016] p-5 sm:p-6">
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-300">Ficha individual</span>
+                  <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-[10px] text-neutral-300">{selected.status || "Status não informado"}</span>
+                  {selected.category && <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-[10px] text-neutral-400">{selected.category}</span>}
+                </div>
+                <h2 className="break-words text-xl font-bold text-white sm:text-2xl">{selected.business_name}</h2>
+                <p className="mt-1 text-xs text-neutral-400">{[selected.city, selected.region, selected.country_code].filter(Boolean).join(" · ") || "Localização não observada"}</p>
+              </div>
+              <button type="button" onClick={() => setSelected(null)} className="shrink-0 rounded-lg border border-neutral-700 p-2 text-neutral-300 hover:bg-neutral-800" aria-label="Fechar ficha individual"><XCircle className="h-5 w-5" /></button>
+            </header>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Qualificação</p><p className="mt-2 text-2xl font-bold text-emerald-300">{selected.qualification_score ?? "—"}<span className="ml-1 text-xs font-medium text-neutral-500">pts</span></p></div>
+                <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Avaliação pública</p><p className="mt-2 text-2xl font-bold text-white">{typeof rating === "number" ? rating.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) : displayEvidence(rating)}<span className="ml-2 text-xs font-normal text-neutral-500">/ 5</span></p></div>
+                <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Quantidade de avaliações</p><p className="mt-2 text-2xl font-bold text-white">{displayEvidence(reviews)}</p></div>
+                <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Completude observada</p><p className="mt-2 text-2xl font-bold text-white">{typeof completeness === "number" ? `${completeness}%` : displayEvidence(completeness)}</p></div>
+              </div>
+
+              {media.length > 0 && <section className="mt-5">
+                <div className="mb-3 flex items-center justify-between"><h3 className="font-semibold text-white">Fotos e mídia capturadas</h3><span className="text-xs text-neutral-500">{media.length} itens observados</span></div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                  {media.slice(0, 10).map((item) => <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
+                    {item.type.toLowerCase().includes("video") ? <div className="flex aspect-[4/3] items-center justify-center px-3 text-center text-xs text-neutral-300">Prévia de vídeo indisponível</div> : <img src={item.url} alt={item.title || `Mídia de ${selected.business_name}`} loading="lazy" className="aspect-[4/3] w-full object-cover transition group-hover:scale-[1.03]" />}
+                    <p className="truncate px-2 py-2 text-[10px] text-neutral-500">{item.title || (item.type.toLowerCase().includes("video") ? "Vídeo" : "Foto")}</p>
+                  </a>)}
+                </div>
+              </section>}
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+                  <h3 className="mb-3 font-semibold text-white">Contato e localização</h3>
+                  <dl className="space-y-3 text-sm">
+                    <div><dt className="text-[11px] uppercase tracking-wider text-neutral-500">Endereço</dt><dd className="mt-1 break-words text-neutral-200">{selected.address || "Não observado nesta captura"}</dd></div>
+                    <div><dt className="text-[11px] uppercase tracking-wider text-neutral-500">Telefone</dt><dd className="mt-1 text-neutral-200">{selected.phone || "Não observado nesta captura"}</dd></div>
+                    <div><dt className="text-[11px] uppercase tracking-wider text-neutral-500">E-mail</dt><dd className="mt-1 break-words text-neutral-200">{selected.email || "Não observado nesta captura"}</dd></div>
+                    <div><dt className="text-[11px] uppercase tracking-wider text-neutral-500">Site</dt><dd className="mt-1 break-all">{website ? <a className="text-emerald-300 hover:underline" href={website} target="_blank" rel="noopener noreferrer">{website}</a> : <span className="text-neutral-500">Não observado nesta captura</span>}</dd></div>
+                    <div><dt className="text-[11px] uppercase tracking-wider text-neutral-500">Coordenadas</dt><dd className="mt-1 text-neutral-200">{coordinates || "Não observadas"}</dd></div>
+                    <div><dt className="text-[11px] uppercase tracking-wider text-neutral-500">Faixa de preço</dt><dd className="mt-1 text-neutral-200">{displayEvidence(evidenceValue(selected, ["priceLevel", "price_level", "priceRange", "price_range"]))}</dd></div>
+                  </dl>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {source && <a href={source} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10">Abrir fonte <ExternalLink className="h-3.5 w-3.5" /></a>}
+                    {booking && <a href={booking} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-200 hover:bg-neutral-800">Agendamento <ExternalLink className="h-3.5 w-3.5" /></a>}
+                  </div>
+                </section>
+
+                <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+                  <h3 className="mb-3 font-semibold text-white">Descrição e funcionamento</h3>
+                  <p className="whitespace-pre-wrap break-words text-sm leading-6 text-neutral-300">{selected.description || String(evidenceValue(selected, ["editorialSummary", "editorial_summary"]) ?? "Descrição não observada nesta captura")}</p>
+                  <div className="mt-4"><h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">Horários observados</h4>
+                    {hours ? <pre className="whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-300">{displayEvidence(hours)}</pre> : <p className="text-sm text-neutral-500">Horários não observados nesta captura.</p>}
+                  </div>
+                  {socials && <div className="mt-4"><h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">Redes sociais</h4><pre className="whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-300">{displayEvidence(socials)}</pre></div>}
+                  {attrs && <div className="mt-4"><h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">Atributos adicionais</h4><pre className="whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-300">{displayEvidence(attrs)}</pre></div>}
+                </section>
+              </div>
+
+              {(reasons.length > 0 || missing.length > 0) && <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                {reasons.length > 0 && <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"><h3 className="mb-3 font-semibold text-white">Critérios da qualificação</h3><ul className="space-y-2 text-sm text-neutral-300">{reasons.map((reason, index) => <li key={index} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /><span>{displayEvidence(reason)}</span></li>)}</ul></section>}
+                {missing.length > 0 && <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4"><h3 className="mb-3 font-semibold text-white">Campos não observados</h3><div className="flex flex-wrap gap-2">{missing.map((field, index) => <span key={index} className="rounded-lg border border-amber-500/20 px-2.5 py-1.5 text-xs text-amber-200">{displayEvidence(field)}</span>)}</div><p className="mt-3 text-xs leading-5 text-neutral-500">A ausência indica que o campo não foi observado nesta captura; não comprova que a informação inexista.</p></section>}
+              </div>}
+
+              {fieldStatus && <details className="mt-5 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"><summary className="cursor-pointer text-sm font-semibold text-neutral-200">Estado da captura por campo</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-400">{displayEvidence(fieldStatus)}</pre></details>}
+              <details className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4"><summary className="cursor-pointer text-sm font-semibold text-neutral-200">Evidência bruta completa (JSON)</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-neutral-950 p-3 text-xs leading-5 text-neutral-400">{JSON.stringify(evidence, null, 2)}</pre></details>
+              <footer className="mt-5 flex flex-col gap-2 border-t border-neutral-800 pt-4 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+                <div><p>Provedor: {selected.provider || "não informado"}</p><p className="mt-1">Capturado em: {formatDate(String(evidenceValue(selected, ["observedAt", "capturedAt"]) ?? selected.created_at ?? ""))}</p></div>
+                <p className="break-all">ID do registro: {selected.id}</p>
+              </footer>
+            </div>
+          </div>
+        </div>;
+      })()}
     </div>
   );
 }
