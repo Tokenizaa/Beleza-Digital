@@ -181,8 +181,14 @@ function evidenceArray(candidate: ScrapeCandidate, key: string): unknown[] {
 }
 
 export function ScrapingConsole() {
+  const [projectName, setProjectName] = useState("Prospecção de beleza");
+  const [categoryName, setCategoryName] = useState("salão de beleza");
   const [segment, setSegment] = useState("salão de beleza");
   const [region, setRegion] = useState("São Paulo - SP");
+  const [locationMode, setLocationMode] = useState<"brazil" | "custom">("brazil");
+  const [selectedUf, setSelectedUf] = useState("SP");
+  const [selectedCity, setSelectedCity] = useState("São Paulo");
+  const [neighborhood, setNeighborhood] = useState("");
   const [countryCode, setCountryCode] = useState("BR");
   const [limit, setLimit] = useState(20);
   const [loading, setLoading] = useState(true);
@@ -243,7 +249,7 @@ export function ScrapingConsole() {
       const response = await fetch("/api/prospecting/run", {
         method: "POST",
         headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ segment: segment.trim(), region: region.trim(), countryCode: countryCode.trim().toUpperCase(), limit, createCampaign: false }),
+        body: JSON.stringify({ projectName: projectName.trim(), categoryName: categoryName.trim(), segment: segment.trim(), region: (locationMode === "custom" ? region.trim() : [neighborhood.trim(), selectedCity.trim(), selectedUf].filter(Boolean).join(", ")), countryCode: countryCode.trim().toUpperCase(), limit, createCampaign: false }),
       });
       const body = await response.json() as { status?: string; message?: string; error?: string; detail?: string; executionId?: string };
       if (!response.ok && response.status !== 202) throw new Error(body.error || body.detail || "Não foi possível iniciar a busca.");
@@ -312,34 +318,74 @@ export function ScrapingConsole() {
           </button>
         </header>
 
-        <form onSubmit={startSearch} className="grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/90 p-5 shadow-xl shadow-black/20 sm:grid-cols-2 lg:grid-cols-5">
-          <label className="space-y-2 text-xs font-semibold text-neutral-300 lg:col-span-2">
-            Segmento / consulta
-            <input value={segment} onChange={(e) => setSegment(e.target.value)} required maxLength={160} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Ex.: barbearias" />
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-neutral-300 lg:col-span-2">
-            Cidade / região
-            <input value={region} onChange={(e) => setRegion(e.target.value)} required maxLength={160} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Ex.: Porto Alegre - RS" />
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-neutral-300">
-            País
-            <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500">
-              <option value="BR">Brasil</option><option value="US">Estados Unidos</option><option value="PT">Portugal</option><option value="AR">Argentina</option><option value="CL">Chile</option>
-            </select>
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-neutral-300">
-            Limite de resultados
-            <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500">
-              {[10,20,30,50,100].map((n) => <option key={n} value={n}>{n} estabelecimentos</option>)}
-            </select>
-          </label>
-          <div className="flex items-end lg:col-span-4">
-            <p className="text-xs leading-5 text-neutral-500">A busca é pontual. O limite restringe os resultados desta execução; não cria uma campanha recorrente.</p>
+        <form onSubmit={startSearch} className="space-y-6 rounded-2xl border border-zinc-800 bg-zinc-900/90 p-5 shadow-xl shadow-black/20 sm:p-7">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="space-y-2 text-sm font-semibold text-zinc-100">
+              1. Projeto
+              <input value={projectName} onChange={(e) => setProjectName(e.target.value)} maxLength={120} placeholder="Nome do projeto de prospecção" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+            </label>
+            <label className="space-y-2 text-sm font-semibold text-zinc-100">
+              2. Categoria
+              <input value={categoryName} onChange={(e) => { setCategoryName(e.target.value); if (!segment.trim()) setSegment(e.target.value); }} maxLength={120} placeholder="Ex.: salão de beleza" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+            </label>
+            <label className="space-y-2 text-sm font-semibold text-zinc-100 sm:col-span-2">
+              3. Segmento / consulta no Google Maps <span className="text-emerald-400">*</span>
+              <input value={segment} onChange={(e) => setSegment(e.target.value)} required maxLength={160} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Ex.: salões de beleza, manicures, clínicas de estética" />
+            </label>
           </div>
-          <button type="submit" disabled={starting || !segment.trim() || !region.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-neutral-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
-            {starting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-            {starting ? "Enfileirando busca…" : "Iniciar scraping"}
-          </button>
+
+          <div className="space-y-3">
+            <div className="text-sm font-semibold text-zinc-100">4. Localização <span className="text-emerald-400">*</span></div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setLocationMode("brazil")} className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${locationMode === "brazil" ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"}`}>Brasil: estado e cidade</button>
+              <button type="button" onClick={() => setLocationMode("custom")} className={`rounded-lg border px-3 py-2 text-sm font-semibold transition ${locationMode === "custom" ? "border-emerald-500 bg-emerald-500/10 text-emerald-300" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"}`}>Localização personalizada</button>
+            </div>
+            {locationMode === "brazil" ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="space-y-2 text-xs font-semibold text-zinc-300">
+                  Estado (UF)
+                  <select value={selectedUf} onChange={(e) => setSelectedUf(e.target.value)} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500">
+                    {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+                  </select>
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-zinc-300">
+                  Cidade
+                  <input value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)} required={locationMode === "brazil"} maxLength={120} placeholder="Digite a cidade" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-zinc-300">
+                  Bairro (opcional)
+                  <input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} maxLength={120} placeholder="Todos os bairros" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+                </label>
+              </div>
+            ) : (
+              <label className="block space-y-2 text-xs font-semibold text-zinc-300">
+                Cidade, bairro ou região
+                <input value={region} onChange={(e) => setRegion(e.target.value)} required={locationMode === "custom"} maxLength={160} placeholder="Ex.: Lisboa, Portugal ou Palermo, Buenos Aires" className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500" />
+              </label>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="space-y-2 text-sm font-semibold text-zinc-100">
+              5. País
+              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500">
+                <option value="BR">Brasil</option><option value="US">Estados Unidos</option><option value="PT">Portugal</option><option value="AR">Argentina</option><option value="CL">Chile</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-semibold text-zinc-100">
+              6. Limite de resultados
+              <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-emerald-500">
+                {[10,20,50,100].map((n) => <option key={n} value={n}>{n} estabelecimentos</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-col gap-3 border-t border-zinc-800 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-xl text-xs leading-5 text-zinc-500">Busca pontual no Google Maps. A tarefa fica registrada, o progresso é atualizado pelo worker e os dados coletados são armazenados com a evidência original.</p>
+            <button type="submit" disabled={starting || !segment.trim() || !(locationMode === "custom" ? region.trim() : selectedCity.trim())} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
+              {starting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {starting ? "Enfileirando busca…" : "Iniciar scraping"}
+            </button>
+          </div>
         </form>
 
         {error && <div role="alert" className="flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
@@ -382,14 +428,23 @@ export function ScrapingConsole() {
                   <div className="min-w-0"><p className="truncate font-semibold text-white" title={candidate.business_name}>{candidate.business_name}</p><p className="mt-1 truncate text-xs text-neutral-500">{candidate.category || "Categoria não observada"}</p></div>
                   <span className="shrink-0 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-1 text-xs font-bold tabular-nums text-emerald-300">{candidate.qualification_score ?? "—"}<span className="ml-1 font-normal text-emerald-400/70">pts</span></span>
                 </div>
-                <div className="mt-4 space-y-2.5 text-xs text-neutral-400">
-                  <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" /><span>{[candidate.city, candidate.region].filter(Boolean).join(" · ") || candidate.address || "Localização não observada"}</span></p>
-                  <p className="flex items-start gap-2"><Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" /><span>{candidate.phone || "Telefone não observado"}</span></p>
-                  <p className="flex items-start gap-2"><Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />{candidate.website_url ? <a href={candidate.website_url} target="_blank" rel="noreferrer" className="truncate text-emerald-300 hover:underline">{candidate.website_url}</a> : <span>Site não observado</span>}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-neutral-300" aria-label="Avaliação pública">
+                  <span className="inline-flex items-center gap-1.5"><span className="text-amber-400">★</span><strong className="font-bold text-white">{displayEvidence(candidateFieldValue(candidate, "rating", ["stars"]))}</strong><span className="text-neutral-500">nota</span></span>
+                  <span className="text-neutral-600">·</span>
+                  <span>{displayEvidence(candidateFieldValue(candidate, "review_count", ["reviewCount", "reviewsCount", "reviews_count"]))} avaliações</span>
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-3 border-t border-neutral-800 pt-3">
-                  <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-[11px] text-neutral-400">{candidate.status || "Status não informado"}</span>
-                  <div className="flex items-center gap-3">{candidate.source_url && <a href={candidate.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-300 hover:underline">Fonte <ExternalLink className="h-3 w-3" /></a>}<button type="button" onClick={() => setSelected(candidate)} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800">Inspecionar</button></div>
+                <div className="mt-4 space-y-2.5 text-xs text-neutral-400">
+                  <p className="flex items-start gap-2"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" /><span>{[candidate.address, candidate.city, candidate.region].filter(Boolean).join(", ") || "Localização não observada"}</span></p>
+                  <p className="flex items-start gap-2"><Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" /><span>{candidate.phone || "Telefone não observado"}</span></p>
+                  <p className="flex items-start gap-2"><Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />{safeHttpUrl(candidate.website_url) ? <a href={safeHttpUrl(candidate.website_url)!} target="_blank" rel="noopener noreferrer" className="truncate text-emerald-300 hover:underline">{candidate.website_url}</a> : <span>Site não observado</span>}</p>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-800 pt-3">
+                  <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-[11px] text-neutral-400">{displayEvidence(candidateFieldValue(candidate, "business_status", ["businessStatus"])) || candidate.status || "Status não informado"}</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {safeHttpUrl(candidate.source_url ?? candidateFieldValue(candidate, "source_url", ["maps_url", "mapsUrl"])) && <a href={safeHttpUrl(candidate.source_url ?? candidateFieldValue(candidate, "source_url", ["maps_url", "mapsUrl"]))!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-300 hover:underline">Ficha Maps <ExternalLink className="h-3 w-3" /></a>}
+                    {safeHttpUrl(candidateFieldValue(candidate, "booking_url", ["bookingUrl"])) && <a href={safeHttpUrl(candidateFieldValue(candidate, "booking_url", ["bookingUrl"]))!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-neutral-300 hover:underline">Agendar <ExternalLink className="h-3 w-3" /></a>}
+                    <button type="button" onClick={() => setSelected(candidate)} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-neutral-500 hover:bg-neutral-800">Ficha completa</button>
+                  </div>
                 </div>
                 </div>
               </article>)}
@@ -401,11 +456,11 @@ export function ScrapingConsole() {
                 <thead className="bg-neutral-950/70 text-[11px] uppercase tracking-wider text-neutral-500"><tr><th className="px-4 py-3">Estabelecimento</th><th className="px-4 py-3">Localização</th><th className="px-4 py-3">Contato</th><th className="px-4 py-3">Qualificação</th><th className="px-4 py-3">Origem</th><th className="px-4 py-3">Detalhes</th></tr></thead>
                 <tbody className="divide-y divide-neutral-800">
                   {candidates.map((candidate) => <tr key={candidate.id} className="transition hover:bg-neutral-800/30">
-                    <td className="px-4 py-3"><p className="font-semibold text-white">{candidate.business_name}</p><p className="mt-1 text-xs text-neutral-500">{candidate.category || "Categoria não observada"}</p></td>
-                    <td className="px-4 py-3 text-xs text-neutral-300">{[candidate.city, candidate.region].filter(Boolean).join(" · ") || candidate.address || "Não observado"}</td>
-                    <td className="px-4 py-3 text-xs text-neutral-300">{candidate.phone || "Telefone não observado"}<p className="mt-1 text-neutral-500">{candidate.website_url || "Site não observado"}</p></td>
-                    <td className="px-4 py-3"><span className="rounded-lg border border-neutral-700 px-2 py-1 text-xs">{candidate.qualification_score ?? "—"}</span><p className="mt-1 text-[11px] text-neutral-500">{candidate.status || "sem status"}</p></td>
-                    <td className="px-4 py-3">{candidate.source_url ? <a href={candidate.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-300 hover:underline">Abrir fonte <ExternalLink className="h-3 w-3" /></a> : <span className="text-xs text-neutral-500">Não observada</span>}</td>
+                    <td className="px-4 py-3"><p className="font-semibold text-white">{candidate.business_name}</p><p className="mt-1 text-xs text-neutral-500">{candidate.category || "Categoria não observada"}</p><p className="mt-1 text-xs text-neutral-400"><span className="text-amber-400">★</span> {displayEvidence(candidateFieldValue(candidate, "rating", ["stars"]))} · {displayEvidence(candidateFieldValue(candidate, "review_count", ["reviewCount", "reviewsCount", "reviews_count"]))} avaliações</p></td>
+                    <td className="px-4 py-3 text-xs text-neutral-300">{[candidate.address, candidate.city, candidate.region].filter(Boolean).join(", ") || "Não observado"}</td>
+                    <td className="px-4 py-3 text-xs text-neutral-300">{candidate.phone || "Telefone não observado"}<p className="mt-1 text-neutral-500">{safeHttpUrl(candidate.website_url) ? <a href={safeHttpUrl(candidate.website_url)!} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300">{candidate.website_url}</a> : "Site não observado"}</p></td>
+                    <td className="px-4 py-3"><span className="rounded-lg border border-neutral-700 px-2 py-1 text-xs">{candidate.qualification_score ?? "—"}</span><p className="mt-1 text-[11px] text-neutral-500">{displayEvidence(candidateFieldValue(candidate, "business_status", ["businessStatus"])) || candidate.status || "sem status"}</p></td>
+                    <td className="px-4 py-3">{safeHttpUrl(candidate.source_url ?? candidateFieldValue(candidate, "source_url", ["maps_url", "mapsUrl"])) ? <a href={safeHttpUrl(candidate.source_url ?? candidateFieldValue(candidate, "source_url", ["maps_url", "mapsUrl"]))!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-300 hover:underline">Ficha Maps <ExternalLink className="h-3 w-3" /></a> : <span className="text-xs text-neutral-500">Não observada</span>}</td>
                     <td className="px-4 py-3"><button type="button" onClick={() => setSelected(candidate)} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-semibold hover:bg-neutral-800">Ver dados</button></td>
                   </tr>)}
                   {!candidates.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-neutral-500">{loading ? "Carregando resultados…" : "Nenhum estabelecimento encontrado para este filtro."}</td></tr>}
