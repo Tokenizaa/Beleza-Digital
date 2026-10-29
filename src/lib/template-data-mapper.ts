@@ -131,7 +131,7 @@ export function mapDataForTemplate(
     website: data.website,
     sourceUrl: data.sourceUrl,
 
-    photos: data.photos.length > 0 ? data.photos : ['/placeholder-image.png'],
+    photos: data.photos.length > 0 ? data.photos : [],
     videos: data.videos.length > 0 ? data.videos : [],
     rating: data.rating,
     reviewCount: data.review_count,
@@ -154,36 +154,32 @@ function getFocusSpecificContent(
   switch (focus) {
     case 'services': {
       // Ouro Clássico - foco em serviços oferecidos
-      const services = data.services_attributes || [];
+      const services = (data.services_attributes || []).filter((svc: any) => Boolean(svc?.service_name || svc?.name));
 
       return {
         services: services.map((svc: any) => ({
-          name: svc.service_name || svc.name || 'Serviço',
+          name: svc.service_name || svc.name,
           description: svc.description || svc.desc || '',
           price: svc.price ?? null,
           durationMinutes: svc.duration ?? null,
         })),
-        description:
-          data.description ||
-          'Barbearia/estabelecimento de beleza com serviços profissionais de qualidade.',
+        description: data.description || '',
       };
     }
 
     case 'portfolio': {
       // Preto Esmeralda - foco em portfólio/galeria de trabalhos
-      const portfolioItems = data.media_items || [];
+      const portfolioItems = (data.media_items || []).filter((item: any) => Boolean(item?.image_url || item?.imageUrl || item?.url));
 
       return {
         portfolio: portfolioItems.map((item: any) => ({
-          name: item.service_name || item.name || 'Trabalho',
+          name: item.service_name || item.name || 'Mídia',
           description: item.description || '',
-          imageUrl: item.image_url || item.imageUrl || item.url || '/placeholder-image.png',
+          imageUrl: item.image_url || item.imageUrl || item.url,
         })),
         // Galeria destaca as melhores fotos/works
         photos: data.photos.length > 0 ? data.photos.slice(0, 6) : [],
-        description:
-          data.description ||
-          'Portfólio de trabalhos e serviços prestados pelo estabelecimento.',
+        description: data.description || '',
       };
     }
 
@@ -191,46 +187,33 @@ function getFocusSpecificContent(
       // Minimal Studio - foco em informações essenciais
       return {
         essential: {
-          highlights: data.opening_hours
-            ? [data.opening_hours]
-            : ['Atendimento por agendamento'],
+          highlights: data.opening_hours ? [data.opening_hours] : [],
           standoutFeatures: [
-            data.category || 'Serviços de beleza',
-            data.rating !== null ? `${data.rating}/5` : 'Avaliações disponíveis',
+            data.category || '',
+            data.rating !== null ? `${data.rating}/5` : '',
           ].filter(Boolean),
         },
         // Dados mínimos mas completos
         photos: data.photos.length > 0 ? data.photos.slice(0, 3) : [],
-        description:
-          data.description ||
-          'Estabelecimento de beleza com foco na qualidade dos serviços e atendimento personalizado.',
+        description: data.description || '',
       };
     }
 
     case 'corporativo': {
       // Safira Executivo - foco corporativo
-      const categoryLower = data.category.toLowerCase();
-
       return {
         corporativo: {
-          establishmentType:
-            categoryLower.includes('barbearia') || categoryLower.includes('barbear')
-              ? 'Barbearia Executiva'
-              : categoryLower.includes('salon') || categoryLower.includes('salão')
-                ? 'Salão de Beleza'
-                : 'Estabelecimento de Beleza',
-          specialty: data.category || 'Serviços de beleza e bem-estar',
+          establishmentType: data.category || '',
+          specialty: data.category || '',
           trustSignals: [
             data.rating !== null ? `Avaliação ${data.rating}/5` : null,
             data.review_count !== null && data.review_count > 50 ? `${data.review_count} avaliações` : null,
-            data.website ? 'Site próprio' : null,
+            data.website ? 'Site informado na fonte' : null,
           ].filter(Boolean) as string[],
         },
         // Manter fotos profissionais para demonstrar seriedade
         photos: data.photos.length > 0 ? data.photos.slice(0, 4) : [],
-        description:
-          data.description ||
-          'Estabelecimento de beleza corporativo com padrão de excelência e atendimento VIP.',
+        description: data.description || '',
       };
     }
 
@@ -243,18 +226,11 @@ function getFocusSpecificContent(
         experience: {
           atmosphere: '',
           sensoryDetails: [],
-          recommendedFor:
-            data.category.includes('spa') || data.category.includes('SPA')
-              ? ['Relaxamento e bem-estar']
-              : data.category.includes('lounge') || data.category.includes('LOUNGE')
-                ? ['Experiência social e convivência']
-                : ['Cuidado pessoal e imagem'],
+          recommendedFor: [],
         },
         // Experience template valoriza fotos de ambiente
         photos: data.photos.length > 0 ? data.photos.slice(0, 5) : [],
-        description:
-          data.description ||
-          'Experiência de beleza em ambiente dedicado ao cuidado pessoal.',
+        description: data.description || '',
       };
     }
 
@@ -262,7 +238,7 @@ function getFocusSpecificContent(
       // Fallback caso o focus não seja reconhecido
       return {
         services: [],
-        description: data.description || 'Estabelecimento de beleza.',
+        description: data.description || '',
       };
   }
 }

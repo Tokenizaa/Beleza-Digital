@@ -19,7 +19,7 @@ const storageStore = new Map<string, string>();
   clear: () => storageStore.clear(),
 };
 
-import { mapDataForTemplate, type MapScrapeData, type TemplateGeneratedContent } from '../src/lib/template-data-mapper';
+import { mapDataForTemplate, type MapScrapeData, type SiteTemplateConfig } from '../src/lib/template-data-mapper';
 import { SITE_TEMPLATES } from '../src/types/templates';
 
 let passed = 0;
@@ -60,7 +60,7 @@ const baseServiceData: MapScrapeData = {
   media_items: []
 };
 
-// Apenas description vazia (para testar fallback de description)
+// Apenas description vazia (garante que não haja copy inventada)
 const dataEmptyDesc: MapScrapeData = {
   ...baseServiceData,
   description: ''
@@ -113,11 +113,11 @@ const experienceLoungeData: MapScrapeData = {
   });
 }
 
-// Placeholder quando photos vazias - focus services (ouro-classico) nao inclui photos no return
+// Fotos ausentes não devem ser substituídas por mídia fictícia - focus services
 {
   const template = SITE_TEMPLATES['ouro-classico'];
   const result = mapDataForTemplate(dataNoPhotos, template);
-  assert(result.photos.length === 1 && result.photos[0] === '/placeholder-image.png', 'Placeholder services', `Obtido: ${JSON.stringify(result.photos)}`);
+  assert(result.photos.length === 0, 'Sem fotos observadas, lista permanece vazia');
 }
 
 // === Testes: Focus services ===
@@ -142,7 +142,7 @@ const experienceLoungeData: MapScrapeData = {
   // O fallback de description acontece quando data.description é falsy (string vazia)
   // Mas services array tem 2 itens pq vem de services_attributes
   assert(result.services.length === 2, 'Services: ainda tem 2 itens mesmo com description vazia');
-  assert(result.description.includes('Barbearia/estabelecimento de beleza'), 'Fallback description acionado', `Obtido: ${result.description}`);
+  assert(result.description === '', 'Descrição ausente permanece vazia, sem texto comercial inventado');
 }
 
 // Service parciais
@@ -241,7 +241,7 @@ const experienceLoungeData: MapScrapeData = {
   const dataNoHours: MapScrapeData = { ...baseServiceData, opening_hours: null };
   const template = SITE_TEMPLATES['minimal-studio'];
   const result = mapDataForTemplate(dataNoHours, template);
-  assert(result.essential.highlights[0] === 'Atendimento por agendamento', 'Fallback highlights');
+  assert(result.essential.highlights.length === 0, 'Sem horário observado, não inventa atendimento por agendamento');
 }
 
 // Essential photos - baseServiceData tem 2 photos, essential faz slice(0,3) = 2
@@ -258,7 +258,7 @@ const experienceLoungeData: MapScrapeData = {
   const template = SITE_TEMPLATES['safira-executivo'];
   const result = mapDataForTemplate(corporateData, template);
   assert(result.corporativo !== undefined, 'corporativo object');
-  assert(result.corporativo.establishmentType === 'Barbearia Executiva', 'establishmentType');
+  assert(result.corporativo.establishmentType === 'Barbearia', 'establishmentType preserva a categoria observada');
   assert(result.corporativo.specialty === 'Barbearia', 'specialty: usa category');
   assert(Array.isArray(result.corporativo.trustSignals) && result.corporativo.trustSignals.length > 0, 'trustSignals preenchido');
 }
@@ -268,7 +268,7 @@ const experienceLoungeData: MapScrapeData = {
   const dataNoRating: MapScrapeData = { ...corporateData, rating: null, review_count: null };
   const template = SITE_TEMPLATES['safira-executivo'];
   const result = mapDataForTemplate(dataNoRating, template);
-  assert(result.corporativo.establishmentType === 'Barbearia Executiva', 'establishmentType sem rating');
+  assert(result.corporativo.establishmentType === 'Barbearia', 'establishmentType sem rating');
   assert(result.corporativo.specialty === 'Barbearia', 'specialty sem rating');
 }
 
@@ -277,7 +277,7 @@ const experienceLoungeData: MapScrapeData = {
   const dataNoWebsite: MapScrapeData = { ...corporateData, website: null };
   const template = SITE_TEMPLATES['safira-executivo'];
   const result = mapDataForTemplate(dataNoWebsite, template);
-  const hasSite = result.corporativo.trustSignals?.includes('Site próprio');
+  const hasSite = result.corporativo.trustSignals?.includes('Site informado na fonte');
   assert(!hasSite, 'Site próprio removido quando website null');
 }
 
@@ -288,28 +288,28 @@ const experienceLoungeData: MapScrapeData = {
   const template = SITE_TEMPLATES['rubi-lounge'];
   const result = mapDataForTemplate(experienceSpaData, template);
   assert(result.experience !== undefined, 'experience object');
-  assert(Array.isArray(result.experience.recommendedFor) && result.experience.recommendedFor.length > 0, 'recommendedFor preenchido');
+  assert(Array.isArray(result.experience.recommendedFor) && result.experience.recommendedFor.length === 0, 'recommendedFor vazio sem evidência explícita de público-alvo');
 }
 
 // Experience spa => bem-estar (lowercase 'spa' matcher inclui('spa'))
 {
   const template = SITE_TEMPLATES['rubi-lounge'];
   const result = mapDataForTemplate(experienceSpaData, template);
-  assert(Array.isArray(result.experience.recommendedFor) && result.experience.recommendedFor.includes('Relaxamento e bem-estar'), 'spa => bem-estar');
+  assert(result.experience.recommendedFor.length === 0, 'categoria spa não gera promessa de benefício');
 }
 
 // Experience lounge => social (lowercase 'lounge' matcher inclui('lounge'))
 {
   const template = SITE_TEMPLATES['rubi-lounge'];
   const result = mapDataForTemplate(experienceLoungeData, template);
-  assert(Array.isArray(result.experience.recommendedFor) && result.experience.recommendedFor.includes('Experiência social e convivência'), 'lounge => social');
+  assert(result.experience.recommendedFor.length === 0, 'categoria lounge não inventa perfil de experiência');
 }
 
 // Experience categoria default (barbearia) - else do mapper
 {
   const template = SITE_TEMPLATES['rubi-lounge'];
   const result = mapDataForTemplate(baseServiceData, template);
-  assert(Array.isArray(result.experience.recommendedFor) && result.experience.recommendedFor.includes('Cuidado pessoal e imagem'), 'barbearia => cuidado pessoal');
+  assert(result.experience.recommendedFor.length === 0, 'categoria não gera público-alvo inferido');
 }
 
 // === Testes: Fallback ===

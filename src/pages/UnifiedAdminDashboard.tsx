@@ -3,6 +3,7 @@ import { useStore } from '../data/store';
 import { AdminPage } from './AdminPage';
 import { SuperAdminPage } from './SuperAdminPage';
 import { LeadsDashboard } from './LeadsDashboard';
+import { ScrapingConsole } from './ScrapingConsole';
 import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
 import { SITE_TEMPLATES_LIST, SiteVariationId } from '../types/templates';
 import { AdminTab, SuperAdminTab } from '../types';
@@ -34,7 +35,8 @@ import {
   Building,
   KeyRound,
   Eye,
-  Store
+  Store,
+  Database
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
 
@@ -52,6 +54,7 @@ export type UnifiedAdminSection =
   | 'prospeccao-buscar'
   | 'prospeccao-crm'
   | 'prospeccao-automacao'
+  | 'prospeccao-scraping'
   // Módulo 3: Rede White-Label & Super Admin
   | 'rede-saloes'
   | 'rede-novo'
@@ -262,6 +265,11 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           onBackToApp={onBackToApp}
         />
       );
+    }
+
+    // Console próprio de scraping: execução, histórico e dados brutos da coleta.
+    if (activeSection === 'prospeccao-scraping') {
+      return <ScrapingConsole />;
     }
 
     // Módulo 2: Prospecção & Raspagem de Leads (CRM & Prospecção Aprovado)
@@ -617,6 +625,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                     { id: 'prospeccao-hoje', label: 'Painel do Dia (Hoje)', icon: Compass },
                     { id: 'prospeccao-buscar', label: 'Nova Busca & Raspagem', icon: Search },
                     { id: 'prospeccao-crm', label: 'Pipeline CRM & Empresas', icon: Users },
+                    { id: 'prospeccao-scraping', label: 'Console de Scraping', icon: Database },
                   ].map((sub) => {
                     const Icon = sub.icon;
                     const isActive = activeSection === sub.id;

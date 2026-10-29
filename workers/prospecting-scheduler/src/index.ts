@@ -1,14 +1,16 @@
-import { mapDataForTemplate, type MapScrapeData } from "../../../src/lib/template-data-mapper";
-import type { SiteVariationId } from "../../../src/types/templates";
+import { extractPlaceDetails } from "./native-scraper/extractor";
 
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET: string;
   PROSPECTING_BATCH_SIZE?: string;
-  PROSPECTING_SOURCE_ENDPOINT?: string;
-  PROSPECTING_SOURCE_API_KEY?: string;
-  PROSPECTING_SOURCE_PROVIDER?: string;
+  BROWSER: any;
+  // WhatsApp — Evolution API (futuro) ou manual por enquanto
+  // WHATSAPP_EVOLUTION_URL?: string;
+  // WHATSAPP_EVOLUTION_API_KEY?: string;
+  // WHATSAPP_EVOLUTION_INSTANCE?: string;
+  // Legacy Meta Cloud API (mantido para compatibilidade futura)
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
@@ -29,17 +31,7 @@ interface ProspectingTask {
   result?: Record<string, unknown>;
 }
 
-export type { ProspectingTask };
-
 type Prospect = Record<string, unknown>;
-
-const REQUIRED_TEMPLATE_SLUGS: SiteVariationId[] = [
-  "ouro-classico",
-  "preto-esmeralda",
-  "minimal-studio",
-  "safira-executivo",
-  "rubi-lounge",
-];
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -116,6 +108,7 @@ function qualify(prospect: Prospect) {
   const hasHours = Array.isArray(openingHours) && openingHours.length > 0;
   const hasCoordinates = typeof latitude === "number" && typeof longitude === "number";
 
+  // Completude mede quanto do cadastro foi preenchido; não mede valor comercial.
   const completenessFields: Array<[string, boolean]> = [
     ["businessName", Boolean(normalizedName)],
     ["category", Boolean(String(category ?? "").trim())],
@@ -133,6 +126,8 @@ function qualify(prospect: Prospect) {
   const completenessScore = Math.round(completenessFields.filter((field) => field[1]).length / completenessFields.length * 100);
   const missingFields = completenessFields.filter((field) => !field[1]).map((field) => field[0]);
 
+  // Oportunidade é uma métrica separada. A ausência de site é apenas uma hipótese comercial
+  // quando há evidência de um negócio real; nunca é registrada como inexistência confirmada.
   let score = 0;
   const reasons: string[] = [];
   const add = (points: number, reason: string) => { score += points; reasons.push("+" + points + ": " + reason); };
@@ -162,10 +157,24 @@ function qualify(prospect: Prospect) {
   };
 }
 
+function preferredTemplateSlug(prospect: Prospect): string {
+  const signal = normalizeName([
+    first(prospect, ["category", "business_category", "segment"]),
+    first(prospect, ["business_name", "name", "company_name"]),
+    first(prospect, ["description", "business_description"]),
+  ].filter(Boolean).join(" "));
+  if (/barbearia|barber/.test(signal)) return "preto-esmeralda";
+  if (/executiv|premium|luxo|vip/.test(signal)) return "safira-executivo";
+  if (/salao|cabeleireir|hair|rubi|lounge/.test(signal)) return "rubi-lounge";
+  if (/estetica|clinica|spa|studio|manicure|depilacao/.test(signal)) return "minimal-studio";
+  return "ouro-classico";
+}
+
 function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
+  if (!env.BROWSER) return "BROWSER ausente";
   return null;
 }
 
@@ -191,7 +200,6 @@ async function updateTask(env: Env, task: ProspectingTask, workerId: string, pat
   if (!response.ok) throw new Error(`task_update_http_${response.status}`);
   const rows = await response.json() as unknown[];
   if (!rows.length) throw new Error("task_lease_lost");
-  if (patch.result) task.result = patch.result as Record<string, unknown>;
 }
 
 async function checkpointTaskResult(env: Env, task: ProspectingTask, workerId: string, result: Record<string, unknown>) {
@@ -264,6 +272,7 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
       });
       return "succeeded";
     }
+    // Provider acceptance may have happened before a network/process failure. Never blindly resend.
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "whatsapp_delivery_reconciliation_required",
       last_error: "Existe tentativa anterior sem confirmação final; reconciliar com o provedor antes de novo envio para evitar duplicidade.",
@@ -295,7 +304,8 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
 
   const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
   const components = Array.isArray(payload.templateComponents) ? payload.templateComponents : [];
-  const templateName = typeof payload.templateName === "string" && payload.templateName.trim ? payload.templateName.trim() : env.WHATSAPP_TEMPLATE_NAME;
+  const templateName = typeof payload.templateName === "string" && payload.templateName.trim()
+    ? payload.templateName.trim() : env.WHATSAPP_TEMPLATE_NAME;
   const apiVersion = env.WHATSAPP_API_VERSION.trim();
   if (!/^v\d+\.\d+$/.test(apiVersion)) throw new Error("whatsapp_api_version_invalid");
   const endpoint = `https://graph.facebook.com/${apiVersion}/${encodeURIComponent(env.WHATSAPP_PHONE_NUMBER_ID)}/messages`;
@@ -321,6 +331,7 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
       signal: AbortSignal.timeout(15_000),
     });
   } catch {
+    // We cannot prove whether the provider accepted the request. Preserve the attempting row and block retries.
     throw new Error("whatsapp_provider_result_unknown_reconcile_before_retry");
   }
   const responseBody = await response.json().catch(() => ({})) as {
@@ -371,6 +382,8 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
 }
 
 async function createDedupeKey(candidate: Record<string, unknown>) {
+  const featureId = String(first(candidate, ["featureId", "feature_id", "googleFeatureId"]) ?? "").trim();
+  const placeId = String(first(candidate, ["placeId", "place_id", "googlePlaceId"]) ?? "").trim();
   const website = normalizeWebsite(first(candidate, ["website", "websiteUrl", "website_url", "url"]));
   const phone = normalizePhone(first(candidate, ["phone", "phoneNumber", "phone_number", "whatsapp"]), first(candidate, ["countryCode", "country_code"]) ?? "BR");
   const name = normalizeName(String(first(candidate, ["name", "businessName", "business_name", "companyName"]) ?? ""));
@@ -378,137 +391,32 @@ async function createDedupeKey(candidate: Record<string, unknown>) {
   const region = normalizeName(String(first(candidate, ["region", "state", "province"]) ?? ""));
   const country = String(first(candidate, ["countryCode", "country_code"]) ?? "BR").toUpperCase();
   let identity = "";
-  if (website) identity = `website:${website}`;
-  else if (phone) identity = `phone:${phone}`;
-  else if (name && city && region) identity = `name-location:${name}|city:${city}|region:${region}|country:${country}`;
+  if (featureId) identity = "google-feature:" + featureId;
+  else if (placeId) identity = "google-place:" + placeId;
+  else if (website) identity = "website:" + website;
+  else if (phone) identity = "phone:" + phone;
+  else if (name && city && region) identity = "name-location:" + name + "|city:" + city + "|region:" + region + "|country:" + country;
   else return null;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
-  return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+  return "sha256:" + Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: string) {
   const campaign = task.payload && typeof task.payload === "object" ? task.payload : {};
-  const isManual = Boolean(campaign.manual) && !campaign.campaignId;
-
-  // Modo manual (busca pontual via /api/prospecting/run com createCampaign=false):
-  // não depende de endpoint externo. Cria um candidato direto no banco e segue para captura.
-  if (isManual) {
-    if (!env.SUPABASE_URL?.trim()) throw new Error("discovery_supabase_not_configured");
-    const segment = typeof campaign.segment === "string" ? campaign.segment : "";
-    const region = typeof campaign.region === "string" ? campaign.region : "";
-    const countryCode = typeof campaign.countryCode === "string" ? campaign.countryCode : "BR";
-    const limit = Math.max(1, Math.min(Number(campaign.dailyDiscoveryLimit ?? 10), 100));
-
-    const now = new Date().toISOString();
-    const dedupeKey = `manual:${segment}:${region}:${countryCode}:${now}`;
-    const inserted = await db(env, "prospecting_candidates?on_conflict=dedupe_key", {
-      method: "POST",
-      headers: { prefer: "resolution=ignore-duplicates,return=representation" },
-      body: JSON.stringify({
-        campaign_id: null,
-        provider: "manual-prospecting",
-        provider_record_id: null,
-        dedupe_key: dedupeKey,
-        business_name: `${segment} — ${region}`,
-        category: segment,
-        website_url: null,
-        normalized_website: null,
-        phone: null,
-        normalized_phone: null,
-        email: null,
-        address: null,
-        city: region.split(",")[0]?.trim() || region,
-        region: region,
-        country_code: countryCode,
-        description: `Busca pontual manual: ${segment} em ${region}.`,
-        source_url: null,
-        qualification_score: 50,
-        qualification_reasons: ["+20: nome comercial identificado", "+5: categoria identificada"],
-        missing_fields: ["websiteUrl", "phone", "email", "address", "rating", "reviewCount", "images", "openingHours", "coordinates", "sourceUrl"],
-        status: "discovered",
-        raw_evidence: {
-          manual: true,
-          segment,
-          region,
-          countryCode,
-          limit,
-          observedAt: now,
-        },
-      }),
-    });
-    if (!inserted.ok) throw new Error(`manual_candidate_insert_http_${inserted.status}`);
-    const insertedRows = await inserted.json() as unknown[];
-    let candidateId: string | null = null;
-    if (insertedRows.length) {
-      candidateId = String(insertedRows[0].id);
-    } else {
-      const lookup = await db(env, `prospecting_candidates?dedupe_key=eq.${encodeURIComponent(dedupeKey)}&select=id&limit=1`);
-      if (!lookup.ok) throw new Error(`manual_candidate_lookup_http_${lookup.status}`);
-      const rows = await lookup.json() as Array<{ id: string }>;
-      if (rows.length) candidateId = rows[0].id;
-    }
-    if (!candidateId) throw new Error("manual_candidate_insert_no_id");
-
-    const captureTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
-      method: "POST",
-      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
-      body: JSON.stringify({
-        campaign_id: null,
-        task_type: "capture",
-        idempotency_key: `manual-capture:${dedupeKey}`,
-        payload: {
-          candidateId,
-          dedupeKey,
-          minimumScore: Number(campaign.minimumScore ?? 50),
-        },
-      }),
-    });
-    if (!captureTask.ok) throw new Error(`manual_capture_enqueue_http_${captureTask.status}`);
-
-    await updateTask(env, task, workerId, {
-      status: "succeeded", last_error_code: null, last_error: null,
-      completed_at: new Date().toISOString(),
-      result: { outcome: "discovered_manual", received: 1, inserted: 1, duplicates: 0, rejected: 0, provider: "manual-prospecting", candidateId },
-    });
-    return "succeeded";
-  }
-
-  if (!env.PROSPECTING_SOURCE_ENDPOINT || !env.PROSPECTING_SOURCE_API_KEY || !env.PROSPECTING_SOURCE_PROVIDER) {
-    if (task.campaign_id) {
-      const campaignBlock = await db(env, `prospecting_campaigns?id=eq.${encodeURIComponent(task.campaign_id)}&select=id`, {
-        method: "PATCH", headers: { prefer: "return=minimal" },
-        body: JSON.stringify({
-          status: "blocked",
-          blocked_reason: "Configure provedor autorizado, endpoint HTTPS e credencial server-side antes de reativar.",
-          next_run_at: null,
-          updated_at: new Date().toISOString(),
-        }),
-      });
-      if (!campaignBlock.ok) throw new Error(`campaign_block_http_${campaignBlock.status}`);
-    }
-    await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "discovery_provider_not_configured",
-      last_error: "Provedor autorizado de descoberta, endpoint e credencial não estão configurados.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "provider_not_configured" },
-    });
-    return "blocked";
-  }
-  let endpoint: URL;
-  try { endpoint = new URL(env.PROSPECTING_SOURCE_ENDPOINT); } catch { throw new Error("discovery_endpoint_invalid"); }
-  if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password) throw new Error("discovery_endpoint_must_be_https_without_credentials");
-
   const limitRaw = Number(campaign.dailyDiscoveryLimit ?? 100);
   const dailyLimit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 10000)) : 100;
   const now = new Date();
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-  const countResponse = await db(env, `prospecting_candidates?campaign_id=eq.${encodeURIComponent(String(campaign.campaignId ?? ""))}&created_at=gte.${encodeURIComponent(dayStart)}&select=id&limit=1`, {
-    headers: { prefer: "count=exact" },
-  });
-  if (!countResponse.ok) throw new Error(`candidate_daily_count_http_${countResponse.status}`);
-  const range = countResponse.headers.get("content-range") ?? "";
+  const countResponse = campaign.campaignId
+    ? await db(env, `prospecting_candidates?campaign_id=eq.${encodeURIComponent(String(campaign.campaignId))}&created_at=gte.${encodeURIComponent(dayStart)}&select=id&limit=1`, {
+        headers: { prefer: "count=exact" },
+      })
+    : null;
+  if (countResponse && !countResponse.ok) throw new Error(`candidate_daily_count_http_${countResponse.status}`);
+  const range = countResponse?.headers.get("content-range") ?? "";
   const countMatch = range.match(/\/(\d+|\*)$/);
   const discoveredToday = countMatch && countMatch[1] !== "*" ? Number(countMatch[1]) : 0;
-  const limit = Math.max(0, dailyLimit - discoveredToday);
+  const limit = campaign.campaignId ? Math.max(0, dailyLimit - discoveredToday) : dailyLimit;
   if (limit === 0) {
     await updateTask(env, task, workerId, {
       status: "succeeded", last_error_code: null, last_error: null,
@@ -517,44 +425,225 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     });
     return "succeeded";
   }
-  const response = await fetch(endpoint.toString(), {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${env.PROSPECTING_SOURCE_API_KEY}`,
-      "content-type": "application/json",
-      accept: "application/json",
-    },
-    body: JSON.stringify({
-      provider: env.PROSPECTING_SOURCE_PROVIDER,
-      query: {
-        segment: campaign.segment,
-        region: campaign.region,
-        countryCode: campaign.countryCode ?? "BR",
-        limit,
-      },
-      campaignId: campaign.campaignId,
-    }),
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!response.ok) throw new Error(`discovery_provider_http_${response.status}`);
-  const body = await response.json() as { results?: unknown; candidates?: unknown; requestId?: string };
-  const candidates = Array.isArray(body.results) ? body.results : body.candidates;
-  if (!Array.isArray(candidates)) throw new Error("discovery_provider_response_invalid");
+
+  // Add retry with exponential backoff and jitter to handle 429 rate limit errors.
+  const MAX_RETRIES = 3;
+  const BASE_DELAY_MS = 2_000; // 2s base delay
+  const MAX_DELAY_MS = 60_000; // 60s max delay
+  let lastError: Error | null = null;
+
+  for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
+  // Build search query for Google Maps / local business directories
+  const segment = String(campaign.segment ?? "barbearia e salão");
+  const region = String(campaign.region ?? "São Paulo - SP");
+  const countryCode = String(campaign.countryCode ?? "BR");
+  const searchQuery = `${segment} ${region}`.trim();
+
+  // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
+  // No Docker, container, VPS, or external Python service is required.
+  let scrapedResults: Array<Record<string, unknown>> = [];
+  let browser: any;
+  let step = "init";
+  let bindingType = "unknown";
+  let bindingIsString = false;
+  let bindingLength = 0;
+  try {
+    const browserBindingValue = env.BROWSER;
+    bindingType = typeof browserBindingValue;
+    bindingIsString = typeof browserBindingValue === "string";
+    bindingLength = bindingIsString ? browserBindingValue.length : 0;
+    step = "browser_connect";
+    if (!browserBindingValue) throw new Error("prospecting_browser_binding_missing");
+
+    const { launch } = await import("@cloudflare/playwright");
+    browser = await launch(browserBindingValue);
+    step = "browser_launched";
+    const page = await browser.newPage();
+
+    step = "nav_google_maps";
+    const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
+    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForSelector('[role="feed"]', { timeout: 15000 });
+
+    // Coleta links únicos e rola a lista até alcançar o limite ou ficar sem novos resultados.
+    const listingMap = new Map<string, Record<string, unknown>>();
+    let stagnantRounds = 0;
+    let previousCount = 0;
+    for (let round = 0; round < 35 && listingMap.size < Math.min(limit, 100); round++) {
+      const visibleListings = await page.evaluate(() => {
+        const output: Array<Record<string, unknown>> = [];
+        const seen = new Set<string>();
+        document.querySelectorAll('a[href*="/maps/place/"]').forEach((node) => {
+          const anchor = node as HTMLAnchorElement;
+          const href = anchor.href.split("&")[0];
+          if (!href || seen.has(href)) return;
+          seen.add(href);
+          const container = anchor.closest('[role="article"]') || anchor.closest('.Nv2PK') || anchor.parentElement?.parentElement || anchor.parentElement || anchor;
+          const cardText = ((container as HTMLElement | null)?.innerText || anchor.innerText || "").replace(/\s+/g, " ").trim();
+          const name = (anchor.getAttribute("aria-label") || anchor.querySelector('.qBF1Pd, .fontHeadlineSmall')?.textContent || anchor.textContent || "").replace(/\s+/g, " ").trim();
+          if (!name || !href) return;
+          output.push({ name: name.slice(0, 240), url: href, cardText: cardText.slice(0, 2500) });
+        });
+        return output;
+      });
+      for (const listing of visibleListings) {
+        const href = String(listing.url || "");
+        if (href && !listingMap.has(href)) listingMap.set(href, listing);
+        if (listingMap.size >= Math.min(limit, 100)) break;
+      }
+      if (listingMap.size === previousCount) stagnantRounds++;
+      else stagnantRounds = 0;
+      previousCount = listingMap.size;
+      if (stagnantRounds >= 3) break;
+      await page.locator('[role="feed"]').evaluate((feed) => { feed.scrollTop = feed.scrollHeight; }).catch(() => {});
+      await page.waitForTimeout(900);
+    }
+
+    const listings = Array.from(listingMap.values()).slice(0, Math.min(limit, 100));
+    scrapedResults = [];
+    for (let index = 0; index < listings.length; index++) {
+      const listing = listings[index];
+      const listingUrl = String(listing.url || "");
+      if (!listingUrl) continue;
+      step = "detail_" + (index + 1);
+      try {
+        await page.goto(listingUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+        await page.waitForTimeout(700);
+        const detail = await extractPlaceDetails(page, String(task.id), listingUrl);
+        const numericRating = detail.rating ? Number(String(detail.rating).replace(",", ".")) : null;
+        const imageUrls = String(detail.photos || "").split(" | ").map((value) => value.trim()).filter(Boolean);
+        const hours = String(detail.opening_hours || "").split(" | ").map((value) => value.trim()).filter(Boolean);
+        let fieldStatus: Record<string, unknown> = {};
+        try { fieldStatus = JSON.parse(detail.field_status || "{}") as Record<string, unknown>; } catch {}
+        scrapedResults.push({
+          ...listing,
+          ...detail,
+          name: detail.name || listing.name,
+          rating: numericRating !== null && Number.isFinite(numericRating) ? numericRating : null,
+          reviewsCount: parseCount(detail.review_count),
+          reviewCount: parseCount(detail.review_count),
+          review_count: detail.review_count || null,
+          sourceUrl: detail.source_url || detail.maps_url || listingUrl,
+          source_url: detail.source_url || detail.maps_url || listingUrl,
+          placeId: detail.source_place_id || null,
+          featureId: detail.source_place_id || null,
+          latitude: detail.latitude ? Number(detail.latitude) : null,
+          longitude: detail.longitude ? Number(detail.longitude) : null,
+          images: imageUrls,
+          openingHours: hours,
+          priceLevel: detail.price_range || null,
+          editorialSummary: detail.description || null,
+          fieldStatus,
+          rawListingText: listing.cardText || null,
+          city: detail.city || region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: detail.state || region.split(/\s+-\s+/)[1]?.trim() || region,
+          countryCode,
+          provider: "google-maps-native-playwright",
+          searchQuery,
+        });
+
+      } catch (detailError) {
+        // Mantém a listagem como evidência parcial; não inventa dados ausentes.
+        scrapedResults.push({
+          ...listing,
+          sourceUrl: listingUrl,
+          city: region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: region.split(/\s+-\s+/)[1]?.trim() || region,
+          countryCode,
+          provider: "google-maps-native-playwright",
+          searchQuery,
+          fieldStatus: { detailPage: "failed", error: String(detailError instanceof Error ? detailError.message : detailError).slice(0, 250) },
+        });
+      }
+    }
+    lastError = null;
+    await browser?.close().catch(() => {});
+  } catch (error) {
+      await browser?.close().catch(() => {});
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const errorMessage = lastError.message ?? "";
+
+      // Verificar se é um erro de taxa limite (429) que merece retry
+      const isRateLimit = errorMessage.includes('429') ||
+                          errorMessage.includes('rate limit') ||
+                          errorMessage.includes('over capacity') ||
+                          errorMessage.includes('BROWSER') ||
+                          errorMessage.includes('browser_run') ||
+                          errorMessage.includes('throttl');
+
+      if (!isRateLimit || retryAttempt === MAX_RETRIES) {
+        // Interrompe o retry; o estado será persistido como bloqueado abaixo.
+        break;
+      }
+
+      // Extrair Retry-After do erro se disponível
+      let retryAfterSeconds: number | null = null;
+      const retryAfterMatch = errorMessage.match(/retry after (\d+)/i);
+      if (retryAfterMatch) {
+        retryAfterSeconds = Number(retryAfterMatch[1]);
+      }
+
+      // Calcular delay com backoff exponencial e jitter
+      const baseDelay = Math.min(BASE_DELAY_MS * (2 ** retryAttempt), MAX_DELAY_MS);
+      const delay = retryAfterSeconds
+        ? Math.min(retryAfterSeconds * 1000, BASE_DELAY_MS * (2 ** retryAttempt))
+        : baseDelay;
+      const jitter = Math.random() * 1000; // até 1s de jitter
+      const sleepDelay = delay + jitter;
+
+      // Log e aguardar antes da próxima tentativa
+      console.info(`[discoverCampaignTask] Rate limit detected, retry attempt ${retryAttempt + 1}/${MAX_RETRIES}. Waiting ${sleepDelay}ms before retry. Error: ${errorMessage.slice(0, 200)}`);
+
+      await new Promise(resolve => setTimeout(resolve, sleepDelay));
+    }
+    await browser?.close().catch(() => {});
+  }
+
+  // Se após todas as tentativas ainda houver erro, marcar como bloqueado
+  if (lastError) {
+    const errorMessage = lastError.message ?? "browser_scraping_failed";
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "browser_scraping_failed",
+      last_error: `Falha na coleta via Cloudflare Browser Run após ${MAX_RETRIES + 1} tentativas no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${errorMessage}`,
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed", failedStep: step, bindingType, bindingIsString, bindingLength, retryAttempts: MAX_RETRIES + 1 },
+    });
+    return "blocked";
+  }
+
+  if (!scrapedResults.length) {
+    await updateTask(env, task, workerId, {
+      status: "succeeded", last_error_code: null, last_error: null,
+      completed_at: new Date().toISOString(),
+      result: { outcome: "no_results", searched: searchQuery },
+    });
+    return "succeeded";
+  }
+
   let inserted = 0;
   let duplicates = 0;
   let rejected = 0;
-  for (const raw of candidates.slice(0, limit)) {
+  let qualified = 0;
+  for (const raw of scrapedResults.slice(0, limit)) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) { rejected++; continue; }
     const candidate = raw as Record<string, unknown>;
     const businessName = String(first(candidate, ["name", "businessName", "business_name", "companyName"]) ?? "").trim().slice(0, 240);
     const category = String(first(candidate, ["category", "businessCategory", "segment"]) ?? "").trim().slice(0, 120) || null;
     const website = first(candidate, ["website", "websiteUrl", "website_url", "url"]);
     const phone = first(candidate, ["phone", "phoneNumber", "phone_number", "whatsapp"]);
-    const country = String(first(candidate, ["countryCode", "country_code"]) ?? campaign.countryCode ?? "BR").slice(0, 3);
+    const country = String(first(candidate, ["countryCode", "country_code"]) ?? countryCode).slice(0, 3);
     const websiteNormalized = normalizeWebsite(website);
     const phoneNormalized = normalizePhone(phone, country);
-    const sourceUrl = normalizeWebsite(first(candidate, ["sourceUrl", "source_url", "sourceLink"]));
-    const dedupeKey = await createDedupeKey(candidate);
+    const sourceUrlValue = first(candidate, ["sourceUrl", "source_url", "sourceLink"]);
+    const sourceUrl = typeof sourceUrlValue === "string" && /^https?:\/\//i.test(sourceUrlValue.trim())
+      ? sourceUrlValue.trim().slice(0, 2000)
+      : null;
+    const identityCandidate = {
+      ...candidate,
+      city: first(candidate, ["city", "locality"]) ?? region.split(/\s+-\s+/)[0],
+      region: first(candidate, ["region", "state", "province"]) ?? region.split(/\s+-\s+/)[1] ?? region,
+      countryCode: first(candidate, ["countryCode", "country_code"]) ?? countryCode,
+    };
+    const dedupeKey = await createDedupeKey(identityCandidate);
     if (!businessName || !dedupeKey) { rejected++; continue; }
     const result = qualify({
       business_name: businessName, category,
@@ -565,13 +654,14 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       description: first(candidate, ["description", "businessDescription"]),
       source_url: sourceUrl,
     });
-    const providerRecordId = String(first(candidate, ["id", "placeId", "providerId", "provider_record_id"]) ?? "").slice(0, 250) || null;
+    if (result.score >= 50) qualified++;
+    const providerRecordId = String(first(candidate, ["featureId", "feature_id", "placeId", "place_id", "providerId", "provider_record_id"]) ?? "").slice(0, 250) || null;
     const stored = await db(env, "prospecting_candidates?on_conflict=dedupe_key", {
       method: "POST",
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
-        campaign_id: campaign.campaignId,
-        provider: env.PROSPECTING_SOURCE_PROVIDER,
+        campaign_id: campaign.campaignId ?? null,
+        provider: "google-maps-native-playwright",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
         business_name: businessName,
@@ -582,8 +672,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         normalized_phone: phoneNormalized,
         email: typeof first(candidate, ["email", "emailAddress", "email_address"]) === "string" ? String(first(candidate, ["email", "emailAddress", "email_address"])).slice(0, 320) : null,
         address: typeof first(candidate, ["address", "formattedAddress", "formatted_address"]) === "string" ? String(first(candidate, ["address", "formattedAddress", "formatted_address"])).slice(0, 1000) : null,
-        city: String(first(candidate, ["city", "locality"]) ?? "").slice(0, 160) || null,
-        region: String(first(candidate, ["region", "state", "province"]) ?? campaign.region ?? "").slice(0, 160) || null,
+        city: String(first(candidate, ["city", "locality"]) ?? region.split(/\s+-\s+/)[0] ?? "").slice(0, 160) || null,
+        region: String(first(candidate, ["region", "state", "province"]) ?? region.split(/\s+-\s+/)[1] ?? region ?? "").slice(0, 160) || null,
         country_code: country,
         description: typeof first(candidate, ["description", "businessDescription"]) === "string" ? String(first(candidate, ["description", "businessDescription"])).slice(0, 3000) : null,
         source_url: sourceUrl,
@@ -592,10 +682,39 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         missing_fields: result.missingFields,
         status: result.score >= 50 ? "qualified" : "discovered",
         raw_evidence: {
+          schemaVersion: 2,
+          rating: typeof first(candidate, ["rating", "stars"]) === "number" ? first(candidate, ["rating", "stars"]) : null,
+          reviewsCount: parseCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"])),
+          reviewCount: parseCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"])),
+          placeId: first(candidate, ["placeId", "place_id"]) ?? null,
+          featureId: first(candidate, ["featureId", "feature_id"]) ?? null,
+          latitude: first(candidate, ["latitude", "lat"]) ?? null,
+          longitude: first(candidate, ["longitude", "lng", "lon"]) ?? null,
+          images: Array.isArray(candidate.images) ? candidate.images.slice(0, 20) : [],
+          openingHours: Array.isArray(candidate.openingHours) ? candidate.openingHours.slice(0, 14) : [],
+          priceLevel: first(candidate, ["priceLevel", "price_level"]) ?? null,
+          editorialSummary: first(candidate, ["editorialSummary", "editorial_summary"]) ?? null,
+          fieldStatus: candidate.fieldStatus && typeof candidate.fieldStatus === "object" ? candidate.fieldStatus : (candidate.field_status && typeof candidate.field_status === "object" ? candidate.field_status : {}),
+          completenessScore: result.completenessScore,
+          opportunityScore: result.opportunityScore,
+          opportunityReasons: result.reasons,
           providerRecordId,
-          providerRequestId: body.requestId ?? null,
+          providerRequestId: null,
           observedAt: new Date().toISOString(),
-          evidence: typeof candidate.evidence === "object" ? candidate.evidence : {},
+          mapsScrapeFields: candidate,
+          reviews: candidate.reviews ?? null,
+          reviewTopics: candidate.review_topics ?? null,
+          additionalAttributes: candidate.additional_attributes ?? null,
+          mediaItems: candidate.media_items ?? null,
+          socialLinks: candidate.social_links ?? null,
+          bookingUrl: candidate.booking_url ?? null,
+          popularTimes: candidate.popular_times ?? null,
+          ratingDistribution: candidate.rating_distribution ?? null,
+          reviewHighlights: candidate.review_highlights ?? null,
+          accessibilityAttributes: candidate.accessibility_attributes ?? null,
+          sourcePlaceId: candidate.source_place_id ?? candidate.placeId ?? null,
+          sourceUrl: candidate.sourceUrl ?? candidate.source_url ?? null,
+          evidence: { scraped: true, searchQuery, sourceUrl: candidate.sourceUrl ?? candidate.source_url ?? null, listingText: candidate.rawListingText ?? null },
         },
       }),
     });
@@ -604,32 +723,12 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     if (storedRows.length) inserted++;
     else duplicates++;
 
-    const candidateLookup = await db(env, `prospecting_candidates?dedupe_key=eq.${encodeURIComponent(dedupeKey)}&select=id&limit=1`);
-    if (!candidateLookup.ok) throw new Error(`candidate_lookup_http_${candidateLookup.status}`);
-    const candidateRows = await candidateLookup.json() as Array<{ id: string }>;
-    if (candidateRows.length) {
-      const capture = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
-        method: "POST",
-        headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
-        body: JSON.stringify({
-          campaign_id: campaign.campaignId,
-          task_type: "capture",
-          idempotency_key: `candidate:${dedupeKey}:capture`,
-          payload: {
-            candidateId: candidateRows[0].id,
-            dedupeKey,
-            minimumScore: typeof campaign.qualificationRules === "object" && campaign.qualificationRules !== null
-              ? (campaign.qualificationRules as Record<string, unknown>).minimum_score ?? 50 : 50,
-          },
-        }),
-      });
-      if (!capture.ok) throw new Error(`candidate_capture_enqueue_http_${capture.status}`);
-    }
+
   }
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "discovered", received: candidates.length, inserted, duplicates, rejected, provider: env.PROSPECTING_SOURCE_PROVIDER },
+    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, qualified, provider: "google-maps-playwright", searchQuery },
   });
   return "succeeded";
 }
@@ -679,46 +778,31 @@ async function captureCandidateTask(env: Env, task: ProspectingTask, workerId: s
   return "succeeded";
 }
 
-async function resolveRequiredTemplateVersions(env: Env): Promise<Array<{ id: string; slug: string; focus: string; sections: string[] }>> {
-  const rows: Array<{ id: string; slug: string; focus: string; sections: string[] }> = [];
-  for (const slug of REQUIRED_TEMPLATE_SLUGS) {
-    const configResponse = await db(env, `site_template_versions?select=id,config&template_id=eq.(${encodeURIComponent(slug)})&is_published=eq.true&order=version.desc&limit=1`);
-    if (!configResponse.ok) continue;
-    const configRows = await configResponse.json() as Array<{ id: string; config: Record<string, unknown> }>;
-    if (!configRows.length) continue;
-    const config = configRows[0].config ?? {};
-    const sections = Array.isArray(config.sections) ? config.sections : [];
-    const focus = typeof config.focus === "string" ? config.focus : "";
-    rows.push({ id: configRows[0].id, slug, focus, sections });
-  }
-  return rows;
-}
-
-async function nextProjectVersion(env: Env, siteProjectId: string): Promise<number> {
-  const current = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(siteProjectId)}&select=version&order=version.desc&limit=1`);
-  if (!current.ok) throw new Error(`demo_version_read_http_${current.status}`);
-  const versions = await current.json() as Array<{ version: number }>;
-  return (versions[0]?.version ?? 0) + 1;
-}
-
 async function generateDemoTask(env: Env, task: ProspectingTask, workerId: string) {
   const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
   const siteProjectId = typeof payload.siteProjectId === "string" ? payload.siteProjectId : "";
-  if (!task.prospect_id || (siteProjectId && !/^[0-9a-f-]{36}$/i.test(siteProjectId))) {
+  const templateVersionId = typeof payload.templateVersionId === "string" ? payload.templateVersionId : "";
+  if (!task.prospect_id || (siteProjectId && !/^[0-9a-f-]{36}$/i.test(siteProjectId)) || (templateVersionId && !/^[0-9a-f-]{36}$/i.test(templateVersionId))) {
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "demo_context_invalid",
-      last_error: "Geração de demonstração exige um prospect_id válido; o site_project_id, quando informado, deve ser UUID.",
+      last_error: "Geração de demonstração exige um prospect_id válido; IDs opcionais, quando informados, devem ser UUIDs.",
       completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "demo_context_invalid" },
     });
     return "blocked";
   }
 
-  const templateVersions = await resolveRequiredTemplateVersions(env);
-  if (templateVersions.length !== REQUIRED_TEMPLATE_SLUGS.length) {
+  let resolvedTemplateVersionId = templateVersionId;
+  if (!resolvedTemplateVersionId) {
+    const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id&order=created_at.desc&limit=1");
+    if (!templateLookup.ok) throw new Error(`demo_template_lookup_http_${templateLookup.status}`);
+    const templates = await templateLookup.json() as Array<{ id: string }>;
+    resolvedTemplateVersionId = templates[0]?.id ?? "";
+  }
+  if (!resolvedTemplateVersionId || !/^[0-9a-f-]{36}$/i.test(resolvedTemplateVersionId)) {
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "template_version_required",
-      last_error: "Nem todas as versões de modelo obrigatórias estão publicadas.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "template_version_required", found: templateVersions.length },
+      last_error: "Não existe versão publicada de modelo disponível para gerar a demonstração.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "template_version_required" },
     });
     return "blocked";
   }
@@ -726,7 +810,7 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   let resolvedProjectId = siteProjectId;
   if (!resolvedProjectId) {
     const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
-      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: templateVersions[0].id }),
+      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: resolvedTemplateVersionId }),
     });
     if (!projectResult.ok) throw new Error(`demo_project_create_http_${projectResult.status}`);
     const projectBody = await projectResult.json() as { siteProjectId?: string };
@@ -735,14 +819,11 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     }
     resolvedProjectId = projectBody.siteProjectId;
   }
-
-  const projectResponse = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id&limit=1`);
-  if (!projectResponse.ok) throw new Error(`demo_project_read_http_${projectResponse.status}`);
-  if (!(await projectResponse.json() as unknown[]).length) {
+  if (!resolvedTemplateVersionId || !/^[0-9a-f-]{36}$/i.test(resolvedTemplateVersionId)) {
     await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "site_project_not_found",
-      last_error: "O projeto de site informado não existe.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+      status: "blocked", last_error_code: "template_version_required",
+      last_error: "O projeto foi preparado, mas não existe versão de modelo disponível para gerar a demonstração.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "template_version_required", siteProjectId: resolvedProjectId },
     });
     return "blocked";
   }
@@ -758,8 +839,34 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     });
     return "blocked";
   }
-  const prospect = prospects[0];
+  const projectResponse = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id&limit=1`);
+  if (!projectResponse.ok) throw new Error(`demo_project_read_http_${projectResponse.status}`);
+  if (!(await projectResponse.json() as unknown[]).length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "site_project_not_found",
+      last_error: "O projeto de site informado não existe.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+  const templateResponse = await db(env, `site_template_versions?id=eq.${encodeURIComponent(resolvedTemplateVersionId)}&select=id&limit=1`);
+  if (!templateResponse.ok) throw new Error(`demo_template_read_http_${templateResponse.status}`);
+  if (!(await templateResponse.json() as unknown[]).length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "template_version_not_found",
+      last_error: "A versão do modelo selecionada não existe.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
 
+  const existingVersionResponse = await db(env, `site_project_versions?generation_task_id=eq.${task.id}&select=id,version,template_version_id,generated_content,design_overrides&limit=1`);
+  if (!existingVersionResponse.ok) throw new Error(`demo_generation_reconcile_http_${existingVersionResponse.status}`);
+  const existingVersions = await existingVersionResponse.json() as Array<{
+    id: string; version: number; template_version_id: string;
+    generated_content: Record<string, unknown>; design_overrides: Record<string, unknown>;
+  }>;
+  const prospect = prospects[0];
   const defaultGeneratedContent = {
     businessName: first(prospect, ["business_name", "name", "company_name"]) ?? "Negócio local",
     category: first(prospect, ["category", "business_category", "segment"]),
@@ -775,53 +882,23 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     generatedAt: new Date().toISOString(),
     generationMode: "deterministic-prospect-profile",
   };
-
-  const existingVersions = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=id,version,template_version_id,generated_content,design_overrides&order=version.asc`);
-  if (!existingVersions.ok) throw new Error(`demo_generation_reconcile_http_${existingVersions.status}`);
-  const existingRows = await existingVersions.json() as Array<{
-    id: string; version: number; template_version_id: string;
-    generated_content: Record<string, unknown>; design_overrides: Record<string, unknown>;
-  }>;
-
-  const created: Array<{ id: string; version: number; slug: string }> = [];
   const requestedDesignOverrides = payload.designOverrides && typeof payload.designOverrides === "object"
     ? payload.designOverrides as Record<string, unknown> : {};
-
-  for (const templateVersion of templateVersions) {
-    const existing = existingRows.find((row) => row.template_version_id === templateVersion.id);
-    if (existing) {
-      // Idempotência: reaproveita a versão já comprometida para este template; nunca duplica.
-      created.push({ id: existing.id, version: existing.version, slug: templateVersion.slug });
-      continue;
-    }
-
-    const version = await nextProjectVersion(env, resolvedProjectId);
-    const prospectData: MapScrapeData = {
-      businessName: first(prospect, ["business_name", "name", "company_name"]),
-      category: first(prospect, ["category", "business_category", "segment"]),
-      description: firstCaptured(prospect, ["tagline", "headline", "description", "business_description"]),
-      website: first(prospect, ["website_url", "website", "url"]) || null,
-      phone: first(prospect, ["normalized_phone", "phone", "phone_number"]) || null,
-      email: first(prospect, ["email", "email_address"]) || null,
-      address: firstCaptured(prospect, ["address", "formatted_address"]) || null,
-      city: first(prospect, ["city", "locality"]) || null,
-      region: first(prospect, ["region", "state", "province"]) || null,
-      sourceUrl: firstCaptured(prospect, ["source_url", "sourceUrl", "source_link"]) || null,
-      photos: [],
-      videos: [],
-      rating: null,
-      review_count: null,
-      opening_hours: null,
-      services_attributes: null,
-      media_items: null,
-    };
-    const mappedContent = mapDataForTemplate(prospectData, { focus: templateVersion.focus, sections: templateVersion.sections } as never);
-    const generatedContent: Record<string, unknown> = {
-      ...defaultGeneratedContent,
-      ...mappedContent,
-    };
-    const designOverrides: Record<string, unknown> = requestedDesignOverrides;
-
+  let generatedContent: Record<string, unknown> = defaultGeneratedContent;
+  let designOverrides: Record<string, unknown> = requestedDesignOverrides;
+  let created: Array<{ id: string; version: number }>;
+  if (existingVersions.length) {
+    // Reuse the committed version after a partial failure; never mint a second version for the same task.
+    const existing = existingVersions[0];
+    resolvedTemplateVersionId = existing.template_version_id;
+    generatedContent = existing.generated_content ?? defaultGeneratedContent;
+    designOverrides = existing.design_overrides ?? requestedDesignOverrides;
+    created = [{ id: existing.id, version: existing.version }];
+  } else {
+    const current = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=version&order=version.desc&limit=1`);
+    if (!current.ok) throw new Error(`demo_version_read_http_${current.status}`);
+    const versions = await current.json() as Array<{ version: number }>;
+    const version = (versions[0]?.version ?? 0) + 1;
     const inserted = await db(env, "site_project_versions", {
       method: "POST",
       headers: { prefer: "return=representation" },
@@ -829,7 +906,7 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
         site_project_id: resolvedProjectId,
         version,
         generation_task_id: task.id,
-        template_version_id: templateVersion.id,
+        template_version_id: resolvedTemplateVersionId,
         generated_content: generatedContent,
         design_overrides: designOverrides,
         selected_by_prospect: false,
@@ -837,18 +914,17 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
       }),
     });
     if (!inserted.ok) throw new Error(`demo_version_insert_http_${inserted.status}`);
-    const insertedRows = await inserted.json() as Array<{ id: string; version: number }>;
-    if (!insertedRows.length) throw new Error("demo_version_insert_no_rows");
-    created.push({ id: insertedRows[0].id, version: insertedRows[0].version, slug: templateVersion.slug });
+    created = await inserted.json() as Array<{ id: string; version: number }>;
+    if (!created.length) throw new Error("demo_version_insert_no_rows");
   }
 
   const projectDraft = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id`, {
     method: "PATCH",
     headers: { prefer: "return=representation" },
     body: JSON.stringify({
-      template_version_id: templateVersions[0].id,
-      generated_content: defaultGeneratedContent,
-      design_overrides: requestedDesignOverrides,
+      template_version_id: resolvedTemplateVersionId,
+      generated_content: generatedContent,
+      design_overrides: designOverrides,
       updated_at: new Date().toISOString(),
     }),
   });
@@ -856,7 +932,7 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     throw new Error("demo_project_draft_persistence_failed");
   }
 
-  for (const version of created) {
+  if (task.prospect_id) {
     const event = await db(env, "prospect_events?on_conflict=idempotency_key", {
       method: "POST",
       headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
@@ -866,8 +942,8 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
         site_project_id: resolvedProjectId,
         event_type: "demo_generated",
         source_provider: "prospecting-worker",
-        idempotency_key: `site-project:${resolvedProjectId}:version:${version.version}:template:${version.slug}:generated`,
-        evidence: { versionId: version.id, version: version.version, templateVersionId: templateVersions.find((t) => t.slug === version.slug)?.id, slug: version.slug },
+        idempotency_key: `site-project:${resolvedProjectId}:version:${created[0].version}:generated`,
+        evidence: { versionId: created[0].id, version: created[0].version, templateVersionId: resolvedTemplateVersionId },
       }),
     });
     if (!event.ok) throw new Error("demo_generated_event_persistence_failed");
@@ -889,7 +965,7 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "demo_generated", siteProjectId: resolvedProjectId, versions: created.map((v) => ({ slug: v.slug, versionId: v.id, version: v.version })) },
+    result: { outcome: "demo_generated", siteProjectId: resolvedProjectId, versionId: created[0].id, version: created[0].version },
   });
   return "succeeded";
 }
@@ -915,26 +991,13 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
     });
     return "blocked";
   }
-  const versionsResponse = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(siteProjectId)}&select=id,template_version_id&order=version.asc`);
+  const versionsResponse = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
   if (!versionsResponse.ok) throw new Error(`publish_versions_read_http_${versionsResponse.status}`);
-  const projectVersions = await versionsResponse.json() as Array<{ id: string; template_version_id: string }>;
-  if (projectVersions.length !== REQUIRED_TEMPLATE_SLUGS.length) {
+  if (!(await versionsResponse.json() as unknown[]).length) {
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "demo_version_required",
-      last_error: `Publicação exige todas as ${REQUIRED_TEMPLATE_SLUGS.length} versões obrigatórias. Encontradas: ${projectVersions.length}.`,
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "demo_version_required", found: projectVersions.length },
-    });
-    return "blocked";
-  }
-
-  const templateVersions = await resolveRequiredTemplateVersions(env);
-  const publishedIds = new Set(templateVersions.map((t) => t.id));
-  const allTemplatesPresent = projectVersions.every((v) => publishedIds.has(v.template_version_id));
-  if (!allTemplatesPresent) {
-    await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "demo_version_invalid",
-      last_error: "Uma ou mais versões do projeto não correspondem aos templates obrigatórios publicados.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "demo_version_invalid" },
+      last_error: "Gere pelo menos uma versão da demonstração antes de publicar.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
     });
     return "blocked";
   }
@@ -1100,32 +1163,41 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
 
   let demoPipeline: Record<string, unknown> = { status: "skipped", reason: "qualification_score_below_threshold", minimumScore };
   if (passedQualification) {
-    const templateVersions = await resolveRequiredTemplateVersions(env);
-    if (templateVersions.length === REQUIRED_TEMPLATE_SLUGS.length) {
-      const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
-        method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: templateVersions[0].id }),
-      });
-      if (!projectResult.ok) throw new Error(`qualified_project_create_http_${projectResult.status}`);
-      const projectBody = await projectResult.json() as { siteProjectId?: string; created?: boolean };
-      if (!projectBody.siteProjectId || !/^[0-9a-f-]{36}$/i.test(projectBody.siteProjectId)) {
-        throw new Error("qualified_project_create_missing_id");
-      }
-      const demoTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
-        method: "POST",
-        headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
-        body: JSON.stringify({
-          campaign_id: task.campaign_id,
-          prospect_id: task.prospect_id,
-          task_type: "generate_demo",
-          idempotency_key: `prospect:${task.prospect_id}:generate-demo:v1`,
-          payload: { siteProjectId: projectBody.siteProjectId, expiresInDays: 14 },
-        }),
-      });
-      if (!demoTask.ok) throw new Error(`qualified_demo_enqueue_http_${demoTask.status}`);
-      demoPipeline = { status: "queued", siteProjectId: projectBody.siteProjectId, projectCreated: Boolean(projectBody.created), templates: templateVersions.length };
-    } else {
-      demoPipeline = { status: "skipped", reason: "missing_required_templates", found: templateVersions.length };
+    const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id,created_at,site_templates(slug,is_active)&order=created_at.desc");
+    if (!templateLookup.ok) throw new Error(`qualified_template_lookup_http_${templateLookup.status}`);
+    const templates = await templateLookup.json() as Array<{
+      id: string;
+      created_at?: string;
+      site_templates?: { slug?: string; is_active?: boolean } | null;
+    }>;
+    const preferredSlug = preferredTemplateSlug(prospects[0]);
+    const activeTemplates = templates.filter((item) => item.site_templates?.is_active !== false);
+    const selectedTemplate = activeTemplates.find((item) => item.site_templates?.slug === preferredSlug)
+      ?? activeTemplates.find((item) => item.site_templates?.slug === "ouro-classico")
+      ?? activeTemplates[0];
+    const templateVersionId = selectedTemplate?.id;
+    if (!templateVersionId) throw new Error("qualified_published_template_missing");
+    const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
+      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: templateVersionId }),
+    });
+    if (!projectResult.ok) throw new Error(`qualified_project_create_http_${projectResult.status}`);
+    const projectBody = await projectResult.json() as { siteProjectId?: string; created?: boolean };
+    if (!projectBody.siteProjectId || !/^[0-9a-f-]{36}$/i.test(projectBody.siteProjectId)) {
+      throw new Error("qualified_project_create_missing_id");
     }
+    const demoTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+      method: "POST",
+      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+      body: JSON.stringify({
+        campaign_id: task.campaign_id,
+        prospect_id: task.prospect_id,
+        task_type: "generate_demo",
+        idempotency_key: `prospect:${task.prospect_id}:generate-demo:v1`,
+        payload: { siteProjectId: projectBody.siteProjectId, templateVersionId, expiresInDays: 14 },
+      }),
+    });
+    if (!demoTask.ok) throw new Error(`qualified_demo_enqueue_http_${demoTask.status}`);
+    demoPipeline = { status: "queued", siteProjectId: projectBody.siteProjectId, projectCreated: Boolean(projectBody.created) };
   }
 
   await updateTask(env, task, workerId, {
@@ -1137,45 +1209,24 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
 }
 
 async function scheduleDueCampaigns(env: Env) {
-  if (!env.SUPABASE_URL?.trim()) {
-    return { campaignsScanned: 0, campaignsQueued: 0, campaignsSkipped: 0 };
-  }
+  // Commercial campaigns classify and prioritize records already collected.
+  // They must never initiate scraping: "Raspar agora" owns discovery independently.
+  // The scheduler only advances the due_at timestamp - it does NOT enqueue discover tasks.
+  // Manual discovery is acionada via API /api/prospecting/run?createCampaign=false.
   const now = new Date();
   const due = await db(env, `prospecting_campaigns?status=eq.active&next_run_at=lte.${encodeURIComponent(now.toISOString())}&select=id,name,segment,region,country_code,source_provider,source_config,qualification_rules,schedule,daily_discovery_limit,next_run_at&order=next_run_at.asc&limit=20`);
   if (!due.ok) throw new Error(`campaign_scan_http_${due.status}`);
   const campaigns = await due.json() as Array<Record<string, unknown>>;
-  let queued = 0;
+  let advanced = 0;
   let skipped = 0;
 
   for (const campaign of campaigns) {
     const campaignId = String(campaign.id ?? "");
     const dueAt = String(campaign.next_run_at ?? "");
     if (!campaignId || !dueAt) { skipped++; continue; }
-    const key = `campaign:${campaignId}:run:${dueAt}`;
-    const task = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
-      method: "POST",
-      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
-      body: JSON.stringify({
-        campaign_id: campaignId,
-        task_type: "discover",
-        status: "pending",
-        idempotency_key: key,
-        payload: {
-          campaignId,
-          campaignName: campaign.name,
-          segment: campaign.segment,
-          region: campaign.region,
-          countryCode: campaign.country_code ?? "BR",
-          sourceProvider: campaign.source_provider,
-          sourceConfig: campaign.source_config ?? {},
-          qualificationRules: campaign.qualification_rules ?? {},
-          dailyDiscoveryLimit: campaign.daily_discovery_limit ?? 100,
-          scheduledFor: dueAt,
-        },
-      }),
-    });
-    if (!task.ok) throw new Error(`campaign_enqueue_http_${task.status}`);
 
+    // Apenas avançar o cronômetro da campanha - NÃO enfileirar tasks de descoberta.
+    // A descoberta manual é acionada via API /api/prospecting/run?createCampaign=false.
     const schedule = campaign.schedule && typeof campaign.schedule === "object"
       ? campaign.schedule as Record<string, unknown> : {};
     const rawInterval = Number(schedule.interval_minutes ?? 1440);
@@ -1188,10 +1239,10 @@ async function scheduleDueCampaigns(env: Env) {
     });
     if (!advance.ok) throw new Error(`campaign_advance_http_${advance.status}`);
     const rows = await advance.json() as unknown[];
-    if (rows.length) queued++;
+    if (rows.length) advanced++;
     else skipped++;
   }
-  return { campaignsScanned: campaigns.length, campaignsQueued: queued, campaignsSkipped: skipped };
+  return { campaignsScanned: campaigns.length, campaignsAdvanced: advanced, campaignsSkipped: skipped };
 }
 
 async function processBatch(env: Env) {
@@ -1262,4 +1313,4 @@ export default {
   },
 };
 
-export { normalizeName, normalizeWebsite, normalizePhone, qualify, createDedupeKey, resolveRequiredTemplateVersions, generateDemoTask, publishDemoTask, scheduleDueCampaigns, processBatch };
+export { normalizeName, normalizeWebsite, normalizePhone, qualify, createDedupeKey, scheduleDueCampaigns, processBatch };

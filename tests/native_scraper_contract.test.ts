@@ -53,3 +53,30 @@ test("contrato do extrator cobre campos ricos do MapScrape sem serviço remoto",
   }
   assert.ok(!source.includes("mapscrape-v2.vercel.app"), "scraper must not call the MapScrape service");
 });
+
+test("worker usa o binding Browser configurado e não cria leads sintéticos", () => {
+  const worker = readFileSync(new URL("../workers/prospecting-scheduler/src/index.ts", import.meta.url), "utf8");
+  const wrangler = readFileSync(new URL("../workers/prospecting-scheduler/wrangler.toml", import.meta.url), "utf8");
+  assert.match(worker, /BROWSER:\s*any/);
+  assert.match(worker, /env\.BROWSER/);
+  assert.match(wrangler, /binding\s*=\s*"BROWSER"/);
+  assert.ok(!worker.includes("manual-prospecting"), "busca manual não pode gerar estabelecimento fictício");
+  assert.ok(!worker.includes("Busca pontual manual:"), "não deve persistir segmento/região como se fosse empresa");
+});
+
+test("persistência mantém payload completo e rastreabilidade da fonte", () => {
+  const worker = readFileSync(new URL("../workers/prospecting-scheduler/src/index.ts", import.meta.url), "utf8");
+  assert.ok(worker.includes("mapsScrapeFields: candidate"), "payload original deve ser preservado");
+  assert.ok(worker.includes("sourcePlaceId: candidate.source_place_id"), "identificador de origem deve ser preservado");
+  assert.ok(worker.includes("fieldStatus: candidate.fieldStatus"), "estado de captura por campo deve ser preservado");
+});
+
+test("console de scraping usa endpoints protegidos e permite inspecionar evidência", () => {
+  const ui = readFileSync(new URL("../src/pages/ScrapingConsole.tsx", import.meta.url), "utf8");
+  const endpoint = readFileSync(new URL("../functions/api/prospecting/dashboard.ts", import.meta.url), "utf8");
+  assert.ok(ui.includes("/api/prospecting/run"), "console deve iniciar busca pelo endpoint de prospecção");
+  assert.ok(ui.includes("/api/prospecting/dashboard"), "console deve consultar execuções e resultados");
+  assert.ok(ui.includes("JSON.stringify(selected, null, 2)"), "detalhes brutos devem estar inspecionáveis");
+  assert.ok(endpoint.includes("platform_admins"), "API deve validar permissão de Admin Geral");
+  assert.ok(endpoint.includes("raw_evidence"), "API deve retornar evidências de coleta");
+});
