@@ -32,6 +32,7 @@ type DashboardPayload = {
   candidates: ScrapeCandidate[];
   stats: { executions: number; active: number; failed: number; collected: number };
   fetchedAt: string;
+  pagination: { limit: number; offset: number; total: number; hasMore: boolean };
 };
 
 const statusLabel: Record<string, string> = {
@@ -62,6 +63,7 @@ export function ScrapingConsole() {
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [selected, setSelected] = useState<ScrapeCandidate | null>(null);
   const [filter, setFilter] = useState("");
+  const [page, setPage] = useState(0);
 
   const token = useCallback(async () => {
     const client = supabase;
@@ -75,7 +77,7 @@ export function ScrapingConsole() {
     if (!silent) setLoading(true);
     try {
       const accessToken = await token();
-      const response = await fetch("/api/prospecting/dashboard?limit=50", {
+      const response = await fetch(`/api/prospecting/dashboard?limit=50&offset=${page * 50}`, {
         headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" },
         cache: "no-store",
       });
@@ -88,7 +90,7 @@ export function ScrapingConsole() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [token]);
+  }, [token, page]);
 
   useEffect(() => { void refresh(); }, [refresh]);
   const hasActiveTasks = Boolean(data?.tasks.some((task) => ["pending", "processing", "retryable"].includes(task.status)));
@@ -190,7 +192,7 @@ export function ScrapingConsole() {
         <section className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/50">
           <div className="flex flex-col gap-3 border-b border-neutral-800 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div><h2 className="font-bold text-white">Estabelecimentos encontrados</h2><p className="mt-1 text-xs text-neutral-500">Dados reais da coleta; campos ausentes não são preenchidos por inferência.</p></div>
-            <label className="relative block sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><input value={filter} onChange={(e) => setFilter(e.target.value)} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 py-2.5 pl-9 pr-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Filtrar resultados…" /></label>
+            <label className="relative block sm:w-72"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><input value={filter} onChange={(e) => { setFilter(e.target.value); setPage(0); }} className="w-full rounded-xl border border-neutral-700 bg-neutral-950 py-2.5 pl-9 pr-3 text-sm text-white outline-none focus:border-emerald-500" placeholder="Filtrar nesta página…" /></label>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
@@ -207,6 +209,14 @@ export function ScrapingConsole() {
                 {!candidates.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-neutral-500">{loading ? "Carregando resultados…" : "Nenhum estabelecimento encontrado para este filtro."}</td></tr>}
               </tbody>
             </table>
+          </div>
+          <div className="flex flex-col gap-3 border-t border-neutral-800 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-neutral-500">Exibindo ${data?.pagination.total ? data.pagination.offset + 1 : 0}–${Math.min((data?.pagination.offset ?? 0) + (data?.candidates.length ?? 0), data?.pagination.total ?? 0)} de ${data?.pagination.total ?? 0} registros. O filtro se aplica à página carregada.</p>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setPage((value) => Math.max(0, value - 1))} disabled={page === 0 || loading} className="rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-300 disabled:opacity-40">Anterior</button>
+              <span className="text-xs text-neutral-500">Página ${page + 1}</span>
+              <button type="button" onClick={() => setPage((value) => value + 1)} disabled={!data?.pagination.hasMore || loading} className="rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-neutral-300 disabled:opacity-40">Próxima</button>
+            </div>
           </div>
         </section>
 
