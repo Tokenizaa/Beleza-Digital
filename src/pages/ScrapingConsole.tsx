@@ -349,23 +349,24 @@ export function ScrapingConsole() {
         const latitude = evidenceValue(selected, ["latitude", "lat"]);
         const longitude = evidenceValue(selected, ["longitude", "lng", "lon"]);
         const coordinates = latitude != null && longitude != null ? `${String(latitude)}, ${String(longitude)}` : null;
-        return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Ficha individual de ${selected.business_name}`} onClick={() => setSelected(null)}>
-          <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-neutral-700 bg-[#0b0e0c] shadow-2xl" onClick={(event) => event.stopPropagation()}>
-            <header className="flex items-start justify-between gap-4 border-b border-neutral-800 bg-gradient-to-r from-neutral-950 to-[#102016] p-5 sm:p-6">
+        return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
+          <section role="dialog" aria-modal="true" aria-label={`Ficha completa do estabelecimento ${selected.business_name}`} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-zinc-800 bg-zinc-900 text-zinc-100 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            {media[0] && !media[0].type.toLowerCase().includes("video") && <div className="relative h-56 w-full overflow-hidden border-b border-zinc-800 bg-zinc-950"><img src={media[0].url} alt={media[0].title || selected.business_name} referrerPolicy="no-referrer" className="h-full w-full object-cover" /><button type="button" onClick={() => setSelected(null)} aria-label="Fechar detalhes" className="absolute right-4 top-4 rounded-full border border-zinc-700 bg-zinc-950/80 p-2 text-white transition-colors hover:bg-zinc-900"><XCircle className="h-5 w-5" /></button></div>}
+            <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-900/95 px-6 py-5 backdrop-blur-md">
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-300">Ficha individual</span>
+                  <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-400">Ficha completa do estabelecimento</span>
                   <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-[10px] text-neutral-300">{selected.status || "Status não informado"}</span>
                   {selected.category && <span className="rounded-full border border-neutral-700 px-2.5 py-1 text-[10px] text-neutral-400">{selected.category}</span>}
                 </div>
-                <h2 className="break-words text-xl font-bold text-white sm:text-2xl">{selected.business_name}</h2>
-                <p className="mt-1 text-xs text-neutral-400">{[selected.city, selected.region, selected.country_code].filter(Boolean).join(" · ") || "Localização não observada"}</p>
+                <h2 className="mt-2 break-words text-2xl font-bold tracking-tight text-zinc-100">{selected.business_name}</h2>
+                <p className="mt-1 text-sm font-medium text-zinc-400">{[selected.category, selected.city, selected.region, selected.country_code].filter(Boolean).join(" · ") || "Localização não observada"}</p>
               </div>
-              <button type="button" onClick={() => setSelected(null)} className="shrink-0 rounded-lg border border-neutral-700 p-2 text-neutral-300 hover:bg-neutral-800" aria-label="Fechar ficha individual"><XCircle className="h-5 w-5" /></button>
+              <button type="button" onClick={() => setSelected(null)} className="shrink-0 rounded-xl p-2.5 text-zinc-400 hover:bg-zinc-800 hover:text-white" aria-label="Fechar ficha individual"><XCircle className="h-5 w-5" /></button>
             </header>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Qualificação</p><p className="mt-2 text-2xl font-bold text-emerald-300">{selected.qualification_score ?? "—"}<span className="ml-1 text-xs font-medium text-neutral-500">pts</span></p></div>
+            <div className="space-y-6 px-6 py-6">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"><p className="text-xs text-neutral-500">Qualificação</p><p className="mt-2 text-2xl font-bold text-emerald-300">{selected.qualification_score ?? "—"}<span className="ml-1 text-xs font-medium text-neutral-500">pts</span></p></div>
                 <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Avaliação pública</p><p className="mt-2 text-2xl font-bold text-white">{typeof rating === "number" ? rating.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) : displayEvidence(rating)}<span className="ml-2 text-xs font-normal text-neutral-500">/ 5</span></p></div>
                 <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Quantidade de avaliações</p><p className="mt-2 text-2xl font-bold text-white">{displayEvidence(reviews)}</p></div>
                 <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Completude observada</p><p className="mt-2 text-2xl font-bold text-white">{typeof completeness === "number" ? `${completeness}%` : displayEvidence(completeness)}</p></div>
@@ -374,7 +375,7 @@ export function ScrapingConsole() {
               {media.length > 0 && <section className="mt-5">
                 <div className="mb-3 flex items-center justify-between"><h3 className="font-semibold text-white">Fotos e mídia capturadas</h3><span className="text-xs text-neutral-500">{media.length} itens observados</span></div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  {media.slice(0, 10).map((item) => <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
+                  {media.slice(media[0] && !media[0].type.toLowerCase().includes("video") ? 1 : 0, 10).map((item) => <a key={item.url} href={item.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
                     {item.type.toLowerCase().includes("video") ? <div className="flex aspect-[4/3] items-center justify-center px-3 text-center text-xs text-neutral-300">Prévia de vídeo indisponível</div> : <img src={item.url} alt={item.title || `Mídia de ${selected.business_name}`} loading="lazy" className="aspect-[4/3] w-full object-cover transition group-hover:scale-[1.03]" />}
                     <p className="truncate px-2 py-2 text-[10px] text-neutral-500">{item.title || (item.type.toLowerCase().includes("video") ? "Vídeo" : "Foto")}</p>
                   </a>)}
