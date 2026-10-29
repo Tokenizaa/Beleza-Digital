@@ -76,7 +76,8 @@ test("console de scraping usa endpoints protegidos e permite inspecionar evidên
   const endpoint = readFileSync(new URL("../functions/api/prospecting/dashboard.ts", import.meta.url), "utf8");
   assert.ok(ui.includes("/api/prospecting/run"), "console deve iniciar busca pelo endpoint de prospecção");
   assert.ok(ui.includes("/api/prospecting/dashboard"), "console deve consultar execuções e resultados");
-  assert.ok(ui.includes("JSON.stringify(selected, null, 2)"), "detalhes brutos devem estar inspecionáveis");
+  assert.ok(ui.includes("Evidência bruta completa (JSON)"), "console deve expor uma seção de inspeção da evidência");
+  assert.ok(ui.includes("JSON.stringify(evidence, null, 2)"), "evidência bruta deve ser exibida em JSON legível");
   assert.ok(endpoint.includes("platform_admins"), "API deve validar permissão de Admin Geral");
   assert.ok(endpoint.includes("raw_evidence"), "API deve retornar evidências de coleta");
 });
