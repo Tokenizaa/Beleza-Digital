@@ -146,7 +146,7 @@ function splitMediaValue(value: unknown, type: string): unknown[] {
     const parsed: unknown = JSON.parse(value);
     if (Array.isArray(parsed)) return parsed;
   } catch {}
-  return value.split(/\\s*\\|\\s*|\\n/).map((url) => url.trim()).filter(Boolean).map((url) => ({ url, type }));
+  return value.split(/\s*\|\s*|\n/).map((url) => url.trim()).filter(Boolean).map((url) => ({ url, type }));
 }
 
 function candidateMedia(candidate: ScrapeCandidate): Array<{ url: string; title: string; type: string }> {
