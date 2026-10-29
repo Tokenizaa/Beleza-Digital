@@ -6,10 +6,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
-}
-
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Token simples para validar chamadas (apenas administrador)
@@ -72,7 +68,11 @@ function updateState(executionId: string, partial: Partial<ScrapeState>) {
 /**
  * Rota POST /api/prospecting/local-scrape
  */
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(503).json({ error: 'Configuração do servidor incompleta.' });
+  }
+
   // Apenas métodos POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido.' });

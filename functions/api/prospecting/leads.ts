@@ -75,8 +75,8 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
         data: leadsData,
         pagination: {
           total: pagination.total ?? leadsData.length,
-          limit: pagination.limit ?? params.limit || 50,
-          offset: pagination.offset ?? params.offset || 0,
+          limit: (pagination.limit ?? params.limit) || 50,
+          offset: (pagination.offset ?? params.offset) || 0,
           hasMore: pagination.hasMore ?? false,
         },
       });
