@@ -18,3 +18,7 @@ preview_id = "2302eb8ab8434c509915e02659f76ad2"
 # SUPABASE_URL
 # SUPABASE_SERVICE_ROLE_KEY
 # PROSPECTING_WORKER_SECRET
+
+# Process pending/retryable tasks and recover stale leases even when no user request is active.
+[triggers]
+crons = ["*/5 * * * *"]
