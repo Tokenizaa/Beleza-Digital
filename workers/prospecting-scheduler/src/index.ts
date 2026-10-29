@@ -387,6 +387,92 @@ async function createDedupeKey(candidate: Record<string, unknown>) {
 }
 
 async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: string) {
+  const campaign = task.payload && typeof task.payload === "object" ? task.payload : {};
+  const isManual = Boolean(campaign.manual) && !campaign.campaignId;
+
+  // Modo manual (busca pontual via /api/prospecting/run com createCampaign=false):
+  // não depende de endpoint externo. Cria um candidato direto no banco e segue para captura.
+  if (isManual) {
+    if (!env.SUPABASE_URL?.trim()) throw new Error("discovery_supabase_not_configured");
+    const segment = typeof campaign.segment === "string" ? campaign.segment : "";
+    const region = typeof campaign.region === "string" ? campaign.region : "";
+    const countryCode = typeof campaign.countryCode === "string" ? campaign.countryCode : "BR";
+    const limit = Math.max(1, Math.min(Number(campaign.dailyDiscoveryLimit ?? 10), 100));
+
+    const now = new Date().toISOString();
+    const dedupeKey = `manual:${segment}:${region}:${countryCode}:${now}`;
+    const inserted = await db(env, "prospecting_candidates?on_conflict=dedupe_key", {
+      method: "POST",
+      headers: { prefer: "resolution=ignore-duplicates,return=representation" },
+      body: JSON.stringify({
+        campaign_id: null,
+        provider: "manual-prospecting",
+        provider_record_id: null,
+        dedupe_key: dedupeKey,
+        business_name: `${segment} — ${region}`,
+        category: segment,
+        website_url: null,
+        normalized_website: null,
+        phone: null,
+        normalized_phone: null,
+        email: null,
+        address: null,
+        city: region.split(",")[0]?.trim() || region,
+        region: region,
+        country_code: countryCode,
+        description: `Busca pontual manual: ${segment} em ${region}.`,
+        source_url: null,
+        qualification_score: 50,
+        qualification_reasons: ["+20: nome comercial identificado", "+5: categoria identificada"],
+        missing_fields: ["websiteUrl", "phone", "email", "address", "rating", "reviewCount", "images", "openingHours", "coordinates", "sourceUrl"],
+        status: "discovered",
+        raw_evidence: {
+          manual: true,
+          segment,
+          region,
+          countryCode,
+          limit,
+          observedAt: now,
+        },
+      }),
+    });
+    if (!inserted.ok) throw new Error(`manual_candidate_insert_http_${inserted.status}`);
+    const insertedRows = await inserted.json() as unknown[];
+    let candidateId: string | null = null;
+    if (insertedRows.length) {
+      candidateId = String(insertedRows[0].id);
+    } else {
+      const lookup = await db(env, `prospecting_candidates?dedupe_key=eq.${encodeURIComponent(dedupeKey)}&select=id&limit=1`);
+      if (!lookup.ok) throw new Error(`manual_candidate_lookup_http_${lookup.status}`);
+      const rows = await lookup.json() as Array<{ id: string }>;
+      if (rows.length) candidateId = rows[0].id;
+    }
+    if (!candidateId) throw new Error("manual_candidate_insert_no_id");
+
+    const captureTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+      method: "POST",
+      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+      body: JSON.stringify({
+        campaign_id: null,
+        task_type: "capture",
+        idempotency_key: `manual-capture:${dedupeKey}`,
+        payload: {
+          candidateId,
+          dedupeKey,
+          minimumScore: Number(campaign.minimumScore ?? 50),
+        },
+      }),
+    });
+    if (!captureTask.ok) throw new Error(`manual_capture_enqueue_http_${captureTask.status}`);
+
+    await updateTask(env, task, workerId, {
+      status: "succeeded", last_error_code: null, last_error: null,
+      completed_at: new Date().toISOString(),
+      result: { outcome: "discovered_manual", received: 1, inserted: 1, duplicates: 0, rejected: 0, provider: "manual-prospecting", candidateId },
+    });
+    return "succeeded";
+  }
+
   if (!env.PROSPECTING_SOURCE_ENDPOINT || !env.PROSPECTING_SOURCE_API_KEY || !env.PROSPECTING_SOURCE_PROVIDER) {
     if (task.campaign_id) {
       const campaignBlock = await db(env, `prospecting_campaigns?id=eq.${encodeURIComponent(task.campaign_id)}&select=id`, {
@@ -411,7 +497,6 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   try { endpoint = new URL(env.PROSPECTING_SOURCE_ENDPOINT); } catch { throw new Error("discovery_endpoint_invalid"); }
   if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password) throw new Error("discovery_endpoint_must_be_https_without_credentials");
 
-  const campaign = task.payload && typeof task.payload === "object" ? task.payload : {};
   const limitRaw = Number(campaign.dailyDiscoveryLimit ?? 100);
   const dailyLimit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 10000)) : 100;
   const now = new Date();
