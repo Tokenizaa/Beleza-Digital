@@ -78,14 +78,6 @@ export async function onRequestPost({ request, env }: Context) {
 
   const { prospect, siteProject, selectedVersion, link } = demoValidation;
 
-  // The database-recorded choice is canonical. Never trust a version ID supplied only by the browser.
-  if (!link.selected_version_id || !selectedVersion) {
-    return json({ error: 'Selecione uma versão da demonstração antes de continuar.' }, 409);
-  }
-  if (body.selectedVersionId && body.selectedVersionId !== link.selected_version_id) {
-    return json({ error: 'A versão informada não corresponde à escolha registrada. Atualize a página e confirme a seleção.' }, 409);
-  }
-
   // Check if prospect already converted
   if (prospect.converted_establishment_id) {
     // Check establishment billing status
@@ -106,6 +98,15 @@ export async function onRequestPost({ request, env }: Context) {
         ? 'Este lead já foi convertido. O estabelecimento está ativo.'
         : 'Este lead já foi convertido. O pagamento está pendente.',
     }, 200);
+  }
+
+  // A nova contratação só continua com a escolha persistida e pertencente a este projeto.
+  // Nunca confiar em um ID de versão enviado apenas pelo navegador.
+  if (!link.selected_version_id || !selectedVersion) {
+    return json({ error: 'Selecione uma versão da demonstração antes de continuar.' }, 409);
+  }
+  if (body.selectedVersionId && body.selectedVersionId !== link.selected_version_id) {
+    return json({ error: 'A versão informada não corresponde à escolha registrada. Atualize a página e confirme a seleção.' }, 409);
   }
 
   // Return info needed for signup
