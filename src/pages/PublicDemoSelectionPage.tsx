@@ -62,7 +62,8 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
         if (!active) return;
         setData(body);
         setSelected(body.selectedVersionId);
-        setActivePreviewId(body.selectedVersionId ?? body.versions[0]?.id ?? null);
+        const sortedByVersion = (body.versions ?? []).slice().sort((a, b) => b.version - a.version);
+        setActivePreviewId(body.selectedVersionId ?? sortedByVersion[0]?.id ?? body.versions[0]?.id ?? null);
       })
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : "Falha ao carregar a página.");
@@ -145,7 +146,8 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
   if (error && !data) return <main className="min-h-screen bg-neutral-950 text-neutral-100 grid place-items-center p-6"><section className="max-w-lg text-center space-y-4"><ShieldAlert className="mx-auto h-10 w-10 text-amber-400" /><h1 className="text-2xl font-semibold">Demonstração indisponível</h1><p className="text-neutral-400">{error}</p></section></main>;
 
   const expires = data?.expiresAt ? new Date(data.expiresAt).toLocaleDateString("pt-BR") : "";
-  const activeVersion = data?.versions.find((version) => version.id === activePreviewId) ?? data?.versions[0] ?? null;
+  const sortedVersions = (data?.versions ?? []).slice().sort((a, b) => b.version - a.version);
+  const activeVersion = data?.versions.find((version) => version.id === activePreviewId) ?? sortedVersions[0] ?? null;
   const activeContent = activeVersion?.generated_content ?? {};
   const templateSlug = activeVersion?.template?.site_templates?.slug ?? "ouro-classico";
   const businessName = contentText(activeVersion, ["businessName", "business_name", "title", "name", "brandName"]) || "Negócio local";

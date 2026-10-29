@@ -1695,17 +1695,17 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                   <div className="space-y-3">
                     <p className="font-bold text-neutral-300 text-xs">Período de cobrança</p>
                     <div className="flex gap-2">
-                      <label className="flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
-                        selectedBillingPeriod === 'monthly' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
-                      }>
+                      <label
+                        className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${selectedBillingPeriod === 'monthly' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'}`}
+                      >
                         <span>Mensal</span>
-                        <span className="text-[10px]">R$ 97,00/mês</span>
+                        <span className="text-xs">R$ 97,00/mês</span>
                       </label>
-                      <label className="flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${
-                        selectedBillingPeriod === 'yearly' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'
-                      }>
+                      <label
+                        className={`flex-1 flex flex-col items-center gap-1 px-2 py-2 rounded-xl border border-[#2d3443] hover:border-purple-500 cursor-pointer ${selectedBillingPeriod === 'yearly' ? 'border-purple-500 bg-purple-950/40 text-white' : 'text-neutral-400 bg-[#12151b]'}`}
+                      >
                         <span>Anual</span>
-                        <span className="text-[10px]">R$ 997,00/ano (2ms grátis)</span>
+                        <span className="text-xs">R$ 997,00/ano (2ms grátis)</span>
                       </label>
                     </div>
                     <p className="text-neutral-400 text-xs text-center">Plano C inclui publicação no domínio da plataforma</p>
