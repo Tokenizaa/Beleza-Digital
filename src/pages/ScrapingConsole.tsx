@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertCircle, CheckCircle2, Clock3, Database, ExternalLink, LoaderCircle, MapPin, Play, RefreshCw, Search, XCircle } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, Clock3, Database, ExternalLink, LoaderCircle, Play, RefreshCw, Search, XCircle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 type ScrapeTask = {
