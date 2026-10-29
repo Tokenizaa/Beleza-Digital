@@ -195,16 +195,12 @@ function getFocusSpecificContent(
         },
         // Dados mínimos mas completos
         photos: data.photos.length > 0 ? data.photos.slice(0, 3) : [],
-        description:
-          data.description ||
-          'Estabelecimento de beleza com foco na qualidade dos serviços e atendimento personalizado.',
+        description: data.description || '',
       };
     }
 
     case 'corporativo': {
       // Safira Executivo - foco corporativo
-      const categoryLower = data.category.toLowerCase();
-
       return {
         corporativo: {
           establishmentType: data.category || '',
