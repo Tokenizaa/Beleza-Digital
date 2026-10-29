@@ -365,7 +365,7 @@ export function ScrapingConsole() {
               <button type="button" onClick={() => setSelected(null)} className="shrink-0 rounded-xl p-2.5 text-zinc-400 hover:bg-zinc-800 hover:text-white" aria-label="Fechar ficha individual"><XCircle className="h-5 w-5" /></button>
             </header>
             <div className="space-y-6 px-6 py-6">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"><p className="text-xs text-neutral-500">Qualificação</p><p className="mt-2 text-2xl font-bold text-emerald-300">{selected.qualification_score ?? "—"}<span className="ml-1 text-xs font-medium text-neutral-500">pts</span></p></div>
                 <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Avaliação pública</p><p className="mt-2 text-2xl font-bold text-white">{typeof rating === "number" ? rating.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) : displayEvidence(rating)}<span className="ml-2 text-xs font-normal text-neutral-500">/ 5</span></p></div>
                 <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-4"><p className="text-xs text-neutral-500">Quantidade de avaliações</p><p className="mt-2 text-2xl font-bold text-white">{displayEvidence(reviews)}</p></div>
@@ -422,7 +422,7 @@ export function ScrapingConsole() {
                 <p className="break-all">ID do registro: {selected.id}</p>
               </footer>
             </div>
-          </div>
+          </section>
         </div>;
       })()}
     </div>
