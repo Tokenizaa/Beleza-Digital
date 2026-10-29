@@ -63,8 +63,8 @@ export async function onRequestPost({ request, env }: Context) {
     }, 503);
   }
 
-  let body: { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown; executionId?: unknown };
-  try { body = (await request.json()) as { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown }; }
+  let body: { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown; executionId?: unknown; minimumScore?: unknown };
+  try { body = (await request.json()) as { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown; executionId?: unknown; minimumScore?: unknown }; }
   catch { return json({ error: 'Envie um JSON válido com segment e region.' }, 400); }
 
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
