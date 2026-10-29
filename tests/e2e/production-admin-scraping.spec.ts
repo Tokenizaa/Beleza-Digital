@@ -86,5 +86,17 @@ test.describe('Produção — autenticação e páginas de prospecção', () => 
     await expect(page.getByRole('status')).toBeVisible({ timeout: 15_000 });
     await page.getByRole('button', { name: 'Atualizar' }).click();
     await expect.poll(() => tasks.count(), { timeout: 30_000 }).toBeGreaterThan(before);
+
+    // A 2xx response only proves enqueueing. Wait for this newest task to finish,
+    // then assert that the worker completed it rather than leaving it queued.
+    const newestTaskRow = tasks.first().locator('..').locator('..');
+    await expect.poll(async () => {
+      await page.getByRole('button', { name: 'Atualizar' }).click();
+      return await newestTaskRow.textContent();
+    }, { timeout: 90_000, intervals: [3000, 5000] }).toMatch(/Concluída/);
+
+    const collectedValue = await page.getByText('Estabelecimentos coletados', { exact: true })
+      .locator('..').locator('..').locator('p').last().textContent();
+    expect(Number(collectedValue)).toBeGreaterThan(0);
   });
 });
