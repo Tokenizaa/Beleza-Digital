@@ -17,6 +17,13 @@
 | `site_project_versions` | Histórico imutável de versões da demonstração e seleção de modelo. |
 | `audit_events` | Registro de ações relevantes de segurança, administração e publicação. |
 
+## Separação dos papéis administrativos
+
+- `platform_admins` representa a administração global do SaaS. Esse perfil usa o painel da plataforma (rede de estabelecimentos, administradores, auditoria, configurações e módulos globais), sem receber o dashboard operacional de um salão como página inicial ou módulo permanente.
+- `establishment_memberships` representa o vínculo de um usuário com um estabelecimento. O administrador local acessa somente o painel operacional do estabelecimento ao qual está vinculado.
+- O Superadmin só pode visualizar o ambiente operacional de um estabelecimento por uma ação explícita de inspeção/impersonação, registrada em auditoria. Essa inspeção é temporária e não transforma o Superadmin em membro nem concede a ele um painel local por padrão.
+- A interface deve ocultar módulos incompatíveis com o papel e bloquear também a renderização direta de seções não autorizadas. Essas verificações visuais complementam, mas não substituem, autorização no servidor e RLS.
+
 ## Fluxo de dados
 
 ```text
