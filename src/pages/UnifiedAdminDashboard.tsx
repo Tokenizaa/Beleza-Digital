@@ -511,65 +511,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             </div>
           )}
 
-          {/* MÓDULOS E SUBMENUS                                   */}
-          <div className="relative">
-            <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
-              Salão Ativo
-            </label>
-            <button
-              type="button"
-              onClick={() => setEstablishmentDropdownOpen(!establishmentDropdownOpen)}
-              className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 hover:border-neutral-700 flex items-center justify-between text-left transition cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-white truncate">
-                    {establishment.name}
-                  </p>
-                  <p className="text-[10px] text-neutral-400 truncate">
-                    /{establishment.slug}
-                  </p>
-                </div>
-              </div>
-              <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
-            </button>
-
-            {/* Dropdown Menu */}
-            {establishmentDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-950 border border-neutral-800 rounded-xl shadow-2xl p-1.5 z-50 max-h-56 overflow-y-auto space-y-1">
-                {allEstablishments.map((est) => (
-                  <button
-                    key={est.id}
-                    onClick={() => handleSelectEstablishment(est.id)}
-                    className={`w-full p-2 rounded-lg text-left text-xs flex items-center justify-between transition ${
-                      est.id === establishment.id
-                        ? 'bg-amber-500/10 text-amber-300 font-bold'
-                        : 'text-neutral-300 hover:bg-neutral-900'
-                    }`}
-                  >
-                    <span className="truncate">{est.name}</span>
-                    {est.id === establishment.id && (
-                      <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    )}
-                  </button>
-                ))}
-                <div className="pt-1.5 border-t border-neutral-800">
-                  <button
-                    onClick={() => {
-                      setActiveSection('rede-novo');
-                      setEstablishmentDropdownOpen(false);
-                    }}
-                    className="w-full p-2 rounded-lg text-left text-xs text-amber-400 hover:bg-neutral-900 flex items-center gap-1.5 font-bold"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Cadastrar Novo Salão</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* ---------------------------------------------------- */}
           {/* MÓDULOS E SUBMENUS                                   */}
           {/* ---------------------------------------------------- */}
