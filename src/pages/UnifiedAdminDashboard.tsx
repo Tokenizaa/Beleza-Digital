@@ -77,7 +77,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
 
   const [activeSection, setActiveSection] = useState<UnifiedAdminSection>(initialSection);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [establishmentDropdownOpen, setEstablishmentDropdownOpen] = useState(false);
 
   // Collapsible modules state in sidebar
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({
@@ -101,14 +100,34 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   } = useStore();
 
   // Derived auth state: user is authorized if they have a session with appropriate role
-  const isAuthorized =
-    userRole === 'super_admin' ||
-    userRole === 'establishment_admin';
+  const isAuthorized = userRole === 'super_admin' || userRole === 'establishment_admin';
+  // A rota PlatformAdminDashboard já validou um administrador global no servidor.
+  const isPlatformAdmin = preAuthenticated || userRole === 'super_admin';
+  const isImpersonatingEstablishment =
+    userRole === 'super_admin' && Boolean(session?.impersonatedBySuperAdmin);
+  const canManageEstablishment =
+    isImpersonatingEstablishment || (!preAuthenticated && userRole === 'establishment_admin');
+  const isPlatformWorkspace = isPlatformAdmin && !isImpersonatingEstablishment;
 
   const [isAuthenticated, setIsAuthenticatedState] = useState<boolean>(
     preAuthenticated || storeIsAuthenticated || Boolean(isAuthorized)
   );
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Impede que uma seção anterior ou uma URL interna mantenha o papel no painel errado.
+  useEffect(() => {
+    if (isImpersonatingEstablishment && !activeSection.startsWith('salao-')) {
+      setActiveSection('salao-dashboard');
+      return;
+    }
+    if (isPlatformWorkspace && activeSection.startsWith('salao-')) {
+      setActiveSection('prospeccao-hoje');
+      return;
+    }
+    if (!isPlatformAdmin && userRole === 'establishment_admin' && !activeSection.startsWith('salao-')) {
+      setActiveSection('salao-dashboard');
+    }
+  }, [activeSection, isImpersonatingEstablishment, isPlatformWorkspace, isPlatformAdmin, userRole]);
 
   // Template Showcase preview state
   const [selectedShowcaseTemplate, setSelectedShowcaseTemplate] = useState<SiteVariationId>('ouro-classico');
@@ -134,11 +153,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   const handleLogout = () => {
     logout(); // encerra sessão da store e do Supabase (quando configurado)
     setIsAuthenticatedState(false);
-  };
-
-  const handleSelectEstablishment = (estId: string) => {
-    store.selectEstablishment(estId);
-    setEstablishmentDropdownOpen(false);
   };
 
   // Synchronize section changes from sub-components
@@ -243,6 +257,9 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   const renderContent = () => {
     // Módulo 1: Gestão do Salão
     if (activeSection.startsWith('salao-')) {
+      if (!canManageEstablishment) {
+        return <div className="m-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">Acesso ao painel do estabelecimento não permitido para este perfil.</div>;
+      }
       const tabMap: Record<string, AdminTab> = {
         'salao-dashboard': 'dashboard',
         'salao-servicos': 'servicos',
@@ -271,6 +288,9 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       activeSection === 'prospeccao-crm' ||
       activeSection === 'prospeccao-automacao'
     ) {
+      if (!isPlatformWorkspace) {
+        return <div className="m-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">Acesso restrito à administração da plataforma.</div>;
+      }
       const tabMap: Record<string, 'hoje' | 'buscar' | 'empresas'> = {
         'prospeccao-hoje': 'hoje',
         'prospeccao-buscar': 'buscar',
@@ -290,6 +310,9 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
 
     // Módulo 3: Rede White-Label & Super Admin
     if (activeSection.startsWith('rede-')) {
+      if (!isPlatformWorkspace) {
+        return <div className="m-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">Acesso restrito à administração da plataforma.</div>;
+      }
       const tabMap: Record<string, SuperAdminTab> = {
         'rede-saloes': 'establishments',
         'rede-novo': 'new-establishment',
@@ -316,6 +339,9 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
 
     // Módulo 4: Catálogo de Modelos (Templates)
     if (activeSection === 'templates-catalogo') {
+      if (!isPlatformWorkspace) {
+        return <div className="m-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">Acesso restrito à administração da plataforma.</div>;
+      }
       const currentConfig =
         SITE_TEMPLATES_LIST.find((t) => t.id === selectedShowcaseTemplate) ||
         SITE_TEMPLATES_LIST[0];
@@ -477,7 +503,15 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             </button>
           </div>
 
-          {/* ESTABLISHMENT SELECTOR DROPDOWN */}
+          {canManageEstablishment && (
+            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Estabelecimento em contexto</label>
+              <p className="text-xs font-semibold text-white">{establishment.name}</p>
+              <p className="text-[10px] text-neutral-500">/{establishment.slug}</p>
+            </div>
+          )}
+
+          {/* MÓDULOS E SUBMENUS                                   */}
           <div className="relative">
             <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
               Salão Ativo
@@ -540,8 +574,8 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           {/* MÓDULOS E SUBMENUS                                   */}
           {/* ---------------------------------------------------- */}
           <nav className="space-y-5">
-            {/* MÓDULO 1: GESTÃO DO SALÃO */}
-            <div className="space-y-1">
+            {canManageEstablishment && (
+              <div className="space-y-1">
               <button
                 type="button"
                 onClick={() => toggleModuleCollapse('salao')}
@@ -591,10 +625,11 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                   })}
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
-            {/* MÓDULO 2: PROSPECÇÃO & RASPAGEM (CRM ALVANTO) */}
-            <div className="space-y-1">
+            {isPlatformWorkspace && (
+              <div className="space-y-1">
               <button
                 type="button"
                 onClick={() => toggleModuleCollapse('prospeccao')}
@@ -640,10 +675,11 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                   })}
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
-            {/* MÓDULO 3: REDE WHITE-LABEL & SUPER ADMIN */}
-            <div className="space-y-1">
+            {isPlatformWorkspace && (
+              <div className="space-y-1">
               <button
                 type="button"
                 onClick={() => toggleModuleCollapse('rede')}
@@ -691,10 +727,11 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                   })}
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
-            {/* MÓDULO 4: CATÁLOGO DE MODELOS */}
-            <div className="space-y-1">
+            {isPlatformWorkspace && (
+              <div className="space-y-1">
               <button
                 type="button"
                 onClick={() => {
@@ -715,7 +752,9 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                   5
                 </span>
               </button>
-            </div>
+              </div>
+            )}
+
           </nav>
         </div>
 
@@ -763,7 +802,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           </button>
 
           <span className="text-sm font-bold text-white truncate max-w-[200px]">
-            {establishment.name}
+            {isPlatformWorkspace ? platformConfig.platformName : establishment.name}
           </span>
 
           {onBackToApp ? (
