@@ -276,6 +276,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           initialTab={initialTab}
           embeddedInUnifiedAdmin={true}
           onTabChange={handleAdminPageTabChange}
+          onNavigateToSuperAdmin={() => setActiveSection('rede-saloes')}
           onBackToApp={onBackToApp}
         />
       );
