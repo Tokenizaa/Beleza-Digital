@@ -23,8 +23,6 @@ import { normalizeAddress, normalizePhone, normalizeWebsite, normalizeBusinessSt
 // Import shared qualification logic from frontend library
 import {
   normalizeBusinessName,
-  normalizeWebsite,
-  normalizePhone,
   createProspectDedupeKey,
   qualifyProspect,
   qualifyCommercialOpportunity,

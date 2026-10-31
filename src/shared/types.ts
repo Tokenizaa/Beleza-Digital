@@ -4,6 +4,8 @@ export interface PlaceRecord {
   name: string;
   category: string;
   address: string;
+  /** Neighborhood explicitly present in the displayed address, when separable. */
+  neighborhood?: string;
   phone: string;
   website: string;
   rating: string;
@@ -102,7 +104,8 @@ export interface ExportCsvPayload {
 export const EXPORTABLE_FIELDS: { key: keyof PlaceRecord; label: string; description: string }[] = [
   { key: 'name', label: 'Nome do estabelecimento', description: 'Nome exibido na ficha' },
   { key: 'category', label: 'Categoria', description: 'Categoria exibida' },
-  { key: 'address', label: 'Endereço', description: 'Endereço exibido' },
+  { key: 'address', label: 'Endereço', description: 'Endereço completo exibido na ficha' },
+  { key: 'neighborhood', label: 'Bairro', description: 'Bairro separado do endereço quando explicitamente identificável' },
   { key: 'phone', label: 'Telefone', description: 'Telefone exibido' },
   { key: 'website', label: 'Site', description: 'URL apresentada na ficha' },
   { key: 'rating', label: 'Nota', description: 'Avaliação exibida' },
@@ -143,36 +146,3 @@ export const EXPORTABLE_FIELDS: { key: keyof PlaceRecord; label: string; descrip
   { key: 'field_status', label: 'Estado de captura dos campos', description: 'JSON com status de observação por campo' },
   { key: 'collected_at', label: 'Data e hora da coleta', description: 'Registrada pelo aplicativo' },
 ];
-
-
-/** Input contract for the independent capture engine. */
-export interface ScrapeInput {
-  query: string;
-  location: string;
-  limit?: number;
-  executionId?: string;
-  browserWSEndpoint?: string;
-  signal?: AbortSignal;
-  onProgress?: (progress: ScrapeProgress) => void | Promise<void>;
-}
-
-export interface ScrapeProgress {
-  stage: "connecting" | "searching" | "collecting" | "completed";
-  totalFound: number;
-  totalCollected: number;
-  totalErrors: number;
-  currentUrl?: string;
-}
-
-export interface ScrapeResult {
-  executionId: string;
-  query: string;
-  location: string;
-  totalFound: number;
-  totalCollected: number;
-  totalErrors: number;
-  results: PlaceRecord[];
-  errors: Array<{ url: string; message: string }>;
-  startedAt: string;
-  completedAt: string;
-}
