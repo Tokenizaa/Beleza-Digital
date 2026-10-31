@@ -33,7 +33,7 @@ export const PublicShowcaseDemo: React.FC = () => {
     horario: establishment.openingHoursNote || undefined,
     services, products, media,
   };
-  const showcaseWhatsapp = (establishment.whatsappClean || preview.whatsapp || '').replace(/\\D/g, '');
+  const showcaseWhatsapp = establishment.whatsappClean || preview.whatsapp || '';
   return (
   <div className="min-h-screen bg-neutral-950">
     <SharedSitePreview preview={showcasePreview} controlMode="sidebar" />
