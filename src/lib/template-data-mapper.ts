@@ -65,6 +65,15 @@ export interface TemplateGeneratedContent {
   rating: number | null;
   reviewCount: number | null;
 
+  // Conteúdo compartilhado entre todos os cinco modelos
+  services?: Array<{
+    name: string;
+    description: string;
+    price?: number | null;
+    durationMinutes?: number | null;
+  }>;
+  media_items?: any[];
+
   // Dados específicos por tipo de template (opcionais)
   // - services: serviços oferecidos (template Ouro Clássico focus: services)
   // - portfolio: itens de portfólio / galeria (template Preto Esmeralda focus: portfolio)
@@ -135,6 +144,15 @@ export function mapDataForTemplate(
 
     photos: data.photos.length > 0 ? data.photos : [],
     videos: data.videos.length > 0 ? data.videos : [],
+    services: (data.services_attributes || [])
+      .filter((svc: any) => Boolean(svc?.service_name || svc?.name))
+      .map((svc: any) => ({
+        name: svc.service_name || svc.name,
+        description: svc.description || svc.desc || '',
+        price: svc.price ?? null,
+        durationMinutes: svc.duration ?? svc.durationMinutes ?? null,
+      })),
+    media_items: data.media_items || [],
     rating: data.rating,
     reviewCount: data.review_count,
     originalProvider: 'mapscrape',
