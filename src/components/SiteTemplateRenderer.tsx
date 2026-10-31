@@ -311,7 +311,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* Galeria Clássica */}
-      <section id="galeria" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-amber-900/30 font-sans">
+      <section id="galeria" hidden={rawMedia.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-amber-900/30 font-sans">
         <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
           <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">Galeria & Portfólio</span>
           <h2 className="text-2xl sm:text-3xl font-serif text-amber-100 font-bold">Trabalhos Realizados</h2>
@@ -399,7 +399,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* PORTFOLIO FIRST: Destaque de Cortes & Fade Urbano */}
-      <section id="galeria" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-neutral-800">
+      <section id="galeria" hidden={rawMedia.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-neutral-800">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <span className="font-mono text-xs text-emerald-400 uppercase tracking-widest">// GALERIA & STREET VIBES</span>
@@ -760,7 +760,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   // Common interactive booking section adapted to current theme
   const renderSharedBookingSection = () => {
     return (
-      <section id="agendamento" className="max-w-4xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
+      <section id="agendamento" hidden={rawServices.length === 0} className="max-w-4xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
         <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
           <span className="text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300">
             Agendamento Online
