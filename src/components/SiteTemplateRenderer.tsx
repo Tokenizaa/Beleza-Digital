@@ -507,7 +507,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
   // ==========================================================================
 
-//   // RENDERER 3: MINIMAL STUDIO (Clean Modern & Arejado • Platina & Ardósia)
+// RENDERER 3: MINIMAL STUDIO (Clean Modern & Arejado • Platina & Ardósia)
   // ==========================================================================
   const renderMinimalStudio = () => (
     <div className="bg-[#0b0f17] text-slate-100 font-sans font-light selection:bg-slate-300/20 selection:text-white">
@@ -608,9 +608,8 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   );
 
   // ==========================================================================
-      {renderGallerySection()}
 
-//   // RENDERER 4: SAFIRA EXECUTIVO (Clube Corporativo & Navy VIP)
+// RENDERER 4: SAFIRA EXECUTIVO (Clube Corporativo & Navy VIP)
   // ==========================================================================
   const renderSafiraExecutivo = () => (
     <div className="bg-[#070d1e] text-blue-50 font-sans selection:bg-blue-600/30 selection:text-blue-200">
@@ -734,9 +733,8 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   );
 
   // ==========================================================================
-      {renderProductSection()}
 
-//   // RENDERER 5: RUBI LOUNGE (Velvet Aesthetic & Editorial Nobre)
+// RENDERER 5: RUBI LOUNGE (Velvet Aesthetic & Editorial Nobre)
   // ==========================================================================
   const renderRubiLounge = () => (
     <div className="bg-[#140609] text-rose-50 font-serif selection:bg-rose-500/30 selection:text-rose-200">
@@ -861,7 +859,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   );
 
 
-// Common interactive booking section adapted to current theme
+  // Common interactive booking section adapted to current theme
   const renderSharedBookingSection = () => {
     return (
       <section id="agendamento" className="max-w-4xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
