@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Check, Clock3, ExternalLink, LoaderCircle, ShieldAlert, ArrowRight, CreditCard, Sparkles, CheckCircle2 } from "lucide-react";
 import { SharedSitePreview, type ShareableSitePreview } from "./SharedSitePreview";
 import { buildDemoForToken } from "../lib/api-interceptor";
+import type { ServiceItem, ProductItem, MediaItem, MediaCategory } from "../types";
 
 type DemoVersion = {
   id: string;
@@ -39,6 +40,80 @@ function contentText(version: DemoVersion | null | undefined, keys: string[]) {
     if (value) return value;
   }
   return "";
+}
+
+function contentArray(version: DemoVersion | null | undefined, keys: string[]): unknown[] {
+  const content = version?.generated_content ?? {};
+  for (const key of keys) {
+    if (Array.isArray(content[key])) return content[key] as unknown[];
+  }
+  return [];
+}
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+function firstText(value: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const found = text(value[key]);
+    if (found) return found;
+  }
+  return "";
+}
+function numberOrNull(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value.replace(",", ".")) : NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function demoServices(version: DemoVersion | null): ServiceItem[] {
+  return contentArray(version, ["services", "services_attributes"]).map((entry, index) => {
+    const item = asRecord(entry);
+    return {
+      id: firstText(item, ["id"]) || "demo-service-" + index,
+      name: firstText(item, ["name", "service_name", "title"]),
+      description: firstText(item, ["description", "desc"]),
+      price: numberOrNull(item.price),
+      durationMinutes: numberOrNull(item.durationMinutes ?? item.duration ?? item.duration_minutes),
+      category: firstText(item, ["category", "type"]) || "Serviços",
+      featured: Boolean(item.featured),
+    };
+  }).filter((item) => item.name);
+}
+function demoProducts(version: DemoVersion | null): ProductItem[] {
+  return contentArray(version, ["products", "featured_products"]).map((entry, index) => {
+    const item = asRecord(entry);
+    const mainImage = firstText(item, ["mainImage", "main_image", "imageUrl", "image_url", "image"]);
+    return {
+      id: firstText(item, ["id"]) || "demo-product-" + index,
+      name: firstText(item, ["name", "title", "product_name"]),
+      description: firstText(item, ["description", "desc"]),
+      price: numberOrNull(item.price) ?? 0,
+      mainImage,
+      additionalImages: Array.isArray(item.additionalImages) ? item.additionalImages.filter((image): image is string => typeof image === "string") : [],
+      available: item.available !== false,
+      category: firstText(item, ["category", "type"]) || "Produtos",
+      featured: Boolean(item.featured),
+    };
+  }).filter((item) => item.name && item.mainImage);
+}
+function demoMedia(version: DemoVersion | null): MediaItem[] {
+  const source = contentArray(version, ["media", "media_items", "portfolio"]);
+  const entries = source.length ? source : contentArray(version, ["photos"]).map((url) => ({ url }));
+  const categories: MediaCategory[] = ["Cílios", "Sobrancelhas", "Cabelos", "Unhas", "Barbearia", "Tranças", "Produtos", "Ambiente", "Outros"];
+  return entries.map((entry, index) => {
+    const item = asRecord(entry);
+    const url = firstText(item, ["url", "imageUrl", "image_url", "src", "videoUrl", "video_url"]);
+    const rawCategory = firstText(item, ["category", "type"]);
+    return {
+      id: firstText(item, ["id"]) || "demo-media-" + index,
+      title: firstText(item, ["title", "name", "service_name"]) || "Trabalho " + (index + 1),
+      type: item.type === "video" || Boolean(item.videoUrl || item.video_url) ? "video" as const : "image" as const,
+      url,
+      thumbnailUrl: firstText(item, ["thumbnailUrl", "thumbnail_url", "imageUrl", "image_url"]) || undefined,
+      isReelVertical: Boolean(item.isReelVertical ?? item.is_reel_vertical),
+      category: categories.includes(rawCategory as MediaCategory) ? rawCategory as MediaCategory : "Outros",
+      dateAdded: firstText(item, ["dateAdded", "date_added", "created_at"]) || new Date().toISOString(),
+      featured: Boolean(item.featured),
+    };
+  }).filter((item) => item.url);
 }
 export function PublicDemoSelectionPage({ token }: { token: string }) {
   const [data, setData] = useState<DemoData | null>(null);
@@ -194,6 +269,9 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
     'quantidade-de-avaliacoes': contentText(activeVersion, ["quantidade_de_avaliacoes", "reviews_count", "qtd_avaliacoes"]),
     'faixa-de-preco': contentText(activeVersion, ["faixa_de_preco", "price_range", "faixa_preco"]),
     horario: contentText(activeVersion, ["horario", "horario_funcionamento", "horario_atendimento"]),
+    services: demoServices(activeVersion),
+    products: demoProducts(activeVersion),
+    media: demoMedia(activeVersion),
   } : null;
 
   const hasSelection = selected !== null || data?.selectedVersionId !== null;
