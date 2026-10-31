@@ -6,12 +6,17 @@ import { X, Sparkles, MessageCircle, Play } from 'lucide-react';
 interface MediaModalProps {
   media: MediaItem | null;
   onClose: () => void;
+  whatsappNumber?: string;
 }
 
-export const MediaModal: React.FC<MediaModalProps> = ({ media, onClose }) => {
+export const MediaModal: React.FC<MediaModalProps> = ({ media, onClose, whatsappNumber }) => {
   const { store } = useStore();
 
   if (!media) return null;
+
+  const cleanWhatsapp = (whatsappNumber || '').replace(/\D/g, '');
+  const contactMessage = 'Olá! Vi o trabalho "' + media.title + '" (' + media.category + ') no site e gostaria de agendar um horário.';
+  const contactUrl = cleanWhatsapp ? 'https://wa.me/' + cleanWhatsapp + '?text=' + encodeURIComponent(contactMessage) : store.buildWhatsAppUrl(contactMessage);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
@@ -67,9 +72,7 @@ export const MediaModal: React.FC<MediaModalProps> = ({ media, onClose }) => {
           </div>
 
           <a
-            href={store.buildWhatsAppUrl(
-              `Olá! Vi o trabalho "${media.title}" (${media.category}) no site da Yeshua e gostaria de agendar um horário para fazer algo parecido!`
-            )}
+            href={contactUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all shrink-0 cursor-pointer"
