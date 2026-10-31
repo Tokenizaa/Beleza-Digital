@@ -96,9 +96,11 @@ function demoProducts(version: DemoVersion | null): ProductItem[] {
 }
 function demoMedia(version: DemoVersion | null): MediaItem[] {
   const source = contentArray(version, ["media", "media_items", "portfolio"]);
-  const entries = source.length ? source : contentArray(version, ["photos"]).map((url) => ({ url }));
+  const photos = contentArray(version, ["photos"]).map((url) => ({ url, type: "image" }));
+  const videos = contentArray(version, ["videos"]).map((url) => ({ url, type: "video" }));
+  const entries = [...source, ...photos, ...videos];
   const categories: MediaCategory[] = ["Cílios", "Sobrancelhas", "Cabelos", "Unhas", "Barbearia", "Tranças", "Produtos", "Ambiente", "Outros"];
-  return entries.map((entry, index) => {
+  const mapped = entries.map((entry, index) => {
     const item = asRecord(entry);
     const url = firstText(item, ["url", "imageUrl", "image_url", "src", "videoUrl", "video_url"]);
     const rawCategory = firstText(item, ["category", "type"]);
@@ -114,6 +116,7 @@ function demoMedia(version: DemoVersion | null): MediaItem[] {
       featured: Boolean(item.featured),
     };
   }).filter((item) => item.url);
+  return mapped.filter((item, index) => mapped.findIndex((candidate) => candidate.url === item.url) === index);
 }
 export function PublicDemoSelectionPage({ token }: { token: string }) {
   const [data, setData] = useState<DemoData | null>(null);
