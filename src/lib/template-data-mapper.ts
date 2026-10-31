@@ -75,17 +75,11 @@ export interface TemplateGeneratedContent {
   media_items?: any[];
 
   // Dados específicos por tipo de template (opcionais)
-  // - services: serviços oferecidos (template Ouro Clássico focus: services)
+  // - services: serviços compartilhados por todos os templates
   // - portfolio: itens de portfólio / galeria (template Preto Esmeralda focus: portfolio)
   // - essential: informações essenciais (template Minimal Studio focus: essential)
   // - corporativo: dados corporativos (template Safira Executivo focus: corporativo)
   // - experience: experiência do cliente (template Rubi Lounge focus: experience)
-  services?: Array<{
-    name: string;
-    description: string;
-    price?: number | null;
-    durationMinutes?: number | null;
-  }>;
   portfolio?: Array<{
     name: string;
     description: string;
