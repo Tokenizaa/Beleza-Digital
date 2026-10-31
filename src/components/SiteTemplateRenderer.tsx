@@ -163,7 +163,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
             {rawMedia.slice(0, 8).map((item) => (
               <button key={item.id} type="button" onClick={() => setSelectedMedia(item)} className={`group relative aspect-[4/5] overflow-hidden text-left ${style.card}`}>
-                <img src={item.thumbnailUrl || item.url} alt={item.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                {item.thumbnailUrl || item.type === "image" ? <img src={item.thumbnailUrl || item.url} alt={item.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="grid h-full w-full place-items-center bg-black/50 text-white"><Play className="h-10 w-10" /></div>}
                 {item.type === 'video' && <span className="absolute left-3 top-3 rounded-full bg-black/75 p-2 text-white"><Play className="h-4 w-4" /></span>}
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3 pt-10 text-sm font-semibold text-white">{item.title}</span>
               </button>
@@ -331,28 +331,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         </div>
       </section>
 
-      {/* Galeria Clássica */}
-      <section id="galeria" hidden={rawMedia.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-amber-900/30 font-sans">
-        <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
-          <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">Galeria & Portfólio</span>
-          <h2 className="text-2xl sm:text-3xl font-serif text-amber-100 font-bold">Trabalhos Realizados</h2>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {rawMedia.slice(0, 4).map((item) => (
-            <div
-              key={item.id}
-              onClick={() => setSelectedMedia(item)}
-              className="group relative aspect-square rounded-xl overflow-hidden border border-amber-900/40 cursor-pointer"
-            >
-              <img src={item.url} alt={item.title} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition p-3 flex flex-col justify-end">
-                <p className="text-xs font-serif font-bold text-amber-200">{item.title}</p>
-                <span className="text-[10px] text-amber-400/80">{item.category}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {renderGallerySection()}
       {renderInstagramSection()}
       {renderProductSection()}
     </div>
@@ -420,40 +399,8 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         </div>
       </section>
 
-      {/* PORTFOLIO FIRST: Destaque de Cortes & Fade Urbano */}
-      <section id="galeria" hidden={rawMedia.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-neutral-800">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-          <div>
-            <span className="font-mono text-xs text-emerald-400 uppercase tracking-widest">// GALERIA & STREET VIBES</span>
-            <h2 className="text-3xl font-black uppercase tracking-tight text-white mt-1">Portfolio & Cortes</h2>
-          </div>
-          <div className="flex gap-2">
-            {['#SKIN_FADE', '#FREESTYLE', '#TAPER', '#DESIGN'].map((tag) => (
-              <span key={tag} className="font-mono text-[10px] text-emerald-300/80 bg-emerald-950/50 border border-emerald-500/30 px-2 py-1 rounded">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
+      {renderGallerySection()}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {rawMedia.slice(0, 4).map((item) => (
-            <div
-              key={item.id}
-              onClick={() => setSelectedMedia(item)}
-              className="group relative aspect-[4/5] rounded-lg overflow-hidden border border-neutral-800 hover:border-emerald-500 transition cursor-pointer"
-            >
-              <img src={item.url} alt={item.title} className="w-full h-full object-cover filter contrast-125 transition duration-500 group-hover:scale-110" />
-              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent p-4 flex flex-col justify-end">
-                <span className="font-mono text-[10px] text-emerald-400 uppercase font-bold">{item.category}</span>
-                <p className="font-bold text-sm text-white group-hover:text-emerald-300 transition">{item.title}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Serviços Tech-Spec */}
       <section id="servicos" hidden={rawServices.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-neutral-800">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className="font-mono text-xs text-emerald-400 uppercase tracking-widest">// MENU DE PROCEDIMENTOS</span>
