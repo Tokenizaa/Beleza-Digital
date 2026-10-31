@@ -150,14 +150,24 @@ export function ScrapingConsole() {
     return () => window.clearInterval(timer);
   }, [hasActiveTasks, refresh]);
 
-  // Função utilitária que executa o runner.ts e obtém o JSON bruto com 5 fichas de Porto Alegre
+  // Função utilitária que executa o runner.ts e obtém o JSON bruto com os parâmetros do formulário
   const testScraperRunnerPoa = async () => {
     setTestingRunner(true);
     setError("");
     setNotice("");
     try {
       const response = await fetch("/api/scraper/test-runner", {
-        headers: { accept: "application/json" },
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          segment: segment.trim(),
+          region: region.trim(),
+          limit,
+          countryCode: countryCode.trim().toUpperCase(),
+        }),
       });
       if (!response.ok) throw new Error("Falha ao executar o runner do scraper.");
       const result = await response.json();
@@ -219,11 +229,11 @@ export function ScrapingConsole() {
       const response = await fetch("/api/prospecting/run", {
         method: "POST",
         headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ segment: "barbearia e salão", region: "Porto Alegre - RS", countryCode: "BR", limit: 5 }),
+        body: JSON.stringify({ segment: segment.trim(), region: region.trim(), countryCode: countryCode.trim().toUpperCase(), limit }),
       });
       const body = await response.json() as { message?: string; error?: string };
       if (!response.ok) throw new Error(body.error || "Não foi possível executar o benchmark.");
-      setNotice(body.message || "Benchmark de Porto Alegre executado com sucesso: 5 estabelecimentos coletados e qualificados.");
+      setNotice(body.message || "Benchmark executado com sucesso: estabelecimentos coletados e qualificados.");
       await refresh(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao executar o benchmark.");
@@ -427,8 +437,8 @@ export function ScrapingConsole() {
             <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
               {candidates.map((candidate) => {
                 const demoToken = candidate.raw_evidence?.demo_token || candidate.token || `demo-${candidate.id}`;
-                const cadastralScore = candidate.qualification_score ?? candidate.raw_evidence?.cadastral_score ?? 60;
-                const commercialScore = candidate.raw_evidence?.commercial_score ?? 80;
+                const cadastralScore = candidate.qualification_score ?? candidate.raw_evidence?.cadastralScore ?? candidate.raw_evidence?.completenessScore ?? 0;
+                const commercialScore = candidate.raw_evidence?.commercialScore ?? candidate.raw_evidence?.opportunityScore ?? 0;
                 const isHighOpportunity = commercialScore >= 70;
 
                 return (
@@ -448,11 +458,13 @@ export function ScrapingConsole() {
                         )}
                       </div>
 
-                      {/* Dois Indicadores Separados */}
+                      {/* Dois Indicadores Separados - Usa dados reais do banco sem fallbacks mock */}
                       <div className="grid grid-cols-2 gap-2 pt-2 pb-1">
                         <div className="p-2.5 rounded-lg bg-zinc-900/80 border border-zinc-850">
                           <span className="text-[10px] text-zinc-400 block">Completude Cadastral</span>
-                          <span className="text-sm font-bold text-zinc-200">{cadastralScore}/100</span>
+                          <span className="text-sm font-bold text-zinc-200">
+                            {candidate.qualification_score ?? candidate.raw_evidence?.cadastralScore ?? candidate.raw_evidence?.completenessScore ?? 0}/100
+                          </span>
                           <span className="text-[10px] text-zinc-500 block truncate">Dados identificados</span>
                         </div>
                         <div className={`p-2.5 rounded-lg border ${commercialScore >= 70 ? 'bg-emerald-950/40 border-emerald-500/40' : 'bg-zinc-900/80 border-zinc-850'}`}>
@@ -534,10 +546,10 @@ export function ScrapingConsole() {
                           <p className="text-zinc-500 truncate max-w-xs">{c.website_url || "Sem site"}</p>
                         </td>
                         <td className="px-4 py-3 font-semibold text-zinc-200">
-                          {c.qualification_score ?? c.raw_evidence?.cadastral_score ?? 60}/100
+                          {c.qualification_score ?? c.raw_evidence?.cadastralScore ?? c.raw_evidence?.completenessScore ?? 0}/100
                         </td>
                         <td className="px-4 py-3 font-black text-emerald-400">
-                          {c.raw_evidence?.commercial_score ?? 80}/100
+                          {c.raw_evidence?.commercialScore ?? c.raw_evidence?.opportunityScore ?? 0}/100
                         </td>
                         <td className="px-4 py-3 text-right space-x-2">
                           <button
@@ -779,7 +791,7 @@ export function ScrapingConsole() {
                   Etapa 1 & 2 // Deduplicação com SHA-256
                 </span>
                 <p className="font-mono text-zinc-300 break-all bg-zinc-950 p-2.5 rounded border border-zinc-850">
-                  {selected.raw_evidence?.dedupe_key || "sha256:7f3b892a01ce489ef01a88bb92110c71aef45b20"}
+                  {selected.raw_evidence?.dedupe_key || "—"}
                 </p>
                 <p className="text-zinc-400 text-[11px]">
                   Evita duplicação caso o mesmo salão apareça em consultas distintas no Google Maps.
@@ -793,13 +805,13 @@ export function ScrapingConsole() {
                     Etapa 3 // Completude Cadastral (0-100)
                   </span>
                   <span className="font-bold text-white">
-                    {selected.qualification_score ?? selected.raw_evidence?.cadastral_score ?? 75} / 100
+                    {selected.qualification_score ?? selected.raw_evidence?.cadastralScore ?? selected.raw_evidence?.completenessScore ?? 0} / 100
                   </span>
                 </div>
                 <p className="text-zinc-400">Avalia quanto foi possível identificar e validar sobre o estabelecimento no Google Maps.</p>
-                {Array.isArray(selected.raw_evidence?.cadastral_reasons) && (
+                {Array.isArray(selected.raw_evidence?.cadastralReasons ?? selected.raw_evidence?.missingFields) && (
                   <ul className="list-disc pl-5 space-y-1 text-zinc-300 text-[11px]">
-                    {selected.raw_evidence.cadastral_reasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
+                    {(selected.raw_evidence?.cadastralReasons ?? selected.raw_evidence?.missingFields ?? []).map((r: string, i: number) => <li key={i}>{r}</li>)}
                   </ul>
                 )}
               </div>
@@ -811,15 +823,15 @@ export function ScrapingConsole() {
                     Etapa 4 // Oportunidade Comercial (0-100)
                   </span>
                   <span className="font-black text-emerald-300 text-sm">
-                    {selected.raw_evidence?.commercial_score ?? 90} / 100 ({selected.raw_evidence?.commercial_level ?? 'Alta'})
+                    {selected.raw_evidence?.commercialScore ?? selected.raw_evidence?.opportunityScore ?? 0} / 100 ({selected.raw_evidence?.commercialLevel ?? selected.raw_evidence?.level ?? '—'})
                   </span>
                 </div>
                 <p className="text-zinc-300">
                   Mede a probabilidade do estabelecimento contratar o BelezaDigital com base na dor de presença digital, WhatsApp ativo e tração de clientes.
                 </p>
-                {Array.isArray(selected.raw_evidence?.commercial_reasons) && (
+                {Array.isArray(selected.raw_evidence?.commercialReasons) && (
                   <ul className="list-disc pl-5 space-y-1 text-emerald-200/80 text-[11px]">
-                    {selected.raw_evidence.commercial_reasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
+                    {selected.raw_evidence.commercialReasons.map((r: string, i: number) => <li key={i}>{r}</li>)}
                   </ul>
                 )}
               </div>

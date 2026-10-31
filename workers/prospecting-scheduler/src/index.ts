@@ -16,6 +16,22 @@ export interface Env {
   WHATSAPP_API_VERSION?: string;
 }
 
+// Import rich extractor and normalizer from migrated mais-clientes-v2 logic
+import { extractPlaceDetails } from './extractor';
+import { normalizeAddress, normalizePhone, normalizeWebsite, normalizeBusinessStatus, normalizeRating, normalizeReviewCount, normalizePriceRange, parseAddressComponents, parseSearchLocationFallback, extractSourcePlaceId } from './normalizer';
+
+// Import shared qualification logic from frontend library
+import {
+  normalizeBusinessName,
+  normalizeWebsite,
+  normalizePhone,
+  createProspectDedupeKey,
+  qualifyProspect,
+  qualifyCommercialOpportunity,
+  type CommercialPotentialInput,
+  type CommercialOpportunityQualification,
+} from "../../../src/lib/prospecting";
+
 interface ProspectingTask {
   id: number;
   task_type: "discover" | "capture" | "qualify" | "generate_demo" | "publish_demo" | "send_whatsapp" | "sync_delivery";
@@ -81,82 +97,9 @@ function firstCaptured(prospect: Prospect, keys: string[]): unknown {
   return first(captured as Prospect, keys);
 }
 
-function qualify(prospect: Prospect) {
-  const name = first(prospect, ["business_name", "name", "businessName", "company_name"]);
-  const category = first(prospect, ["category", "business_category", "segment"]);
-  const website = first(prospect, ["website_url", "website", "url", "websiteUrl"]);
-  const phone = first(prospect, ["phone", "phone_number", "whatsapp", "mobile"]);
-  const country = first(prospect, ["country_code", "countryCode"]) ?? "BR";
-  const email = first(prospect, ["email", "email_address"]);
-  const address = firstCaptured(prospect, ["address", "formatted_address"]);
-  const description = firstCaptured(prospect, ["description", "business_description"]);
-  const source = firstCaptured(prospect, ["source_url", "sourceUrl", "source_link"]);
-  const ratingValue = first(prospect, ["rating", "stars"]);
-  const rating = typeof ratingValue === "number" && ratingValue >= 0 && ratingValue <= 5 ? ratingValue : null;
-  const reviewCount = parseCount(first(prospect, ["reviewsCount", "reviewCount", "reviews_count", "reviews"]));
-  const images = first(prospect, ["images", "photos"]);
-  const openingHours = first(prospect, ["openingHours", "opening_hours", "hours"]);
-  const latitude = first(prospect, ["latitude", "lat"]);
-  const longitude = first(prospect, ["longitude", "lng", "lon"]);
-  const normalizedName = normalizeName(String(name ?? ""));
-  const hasWebsite = Boolean(normalizeWebsite(website));
-  const hasPhone = Boolean(normalizePhone(phone, country));
-  const hasAddress = Boolean(String(address ?? "").trim());
-  const hasImages = Array.isArray(images) && images.length > 0;
-  const hasHours = Array.isArray(openingHours) && openingHours.length > 0;
-  const hasCoordinates = typeof latitude === "number" && typeof longitude === "number";
-
-  // Completude mede quanto do cadastro foi preenchido; não mede valor comercial.
-  const completenessFields: Array<[string, boolean]> = [
-    ["businessName", Boolean(normalizedName)],
-    ["category", Boolean(String(category ?? "").trim())],
-    ["address", hasAddress],
-    ["phone", hasPhone],
-    ["websiteUrl", hasWebsite],
-    ["email", Boolean(typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))],
-    ["rating", rating !== null],
-    ["reviewCount", reviewCount !== null],
-    ["images", hasImages],
-    ["openingHours", hasHours],
-    ["coordinates", hasCoordinates],
-    ["sourceUrl", Boolean(normalizeWebsite(source))],
-  ];
-  const completenessScore = Math.round(completenessFields.filter((field) => field[1]).length / completenessFields.length * 100);
-  const missingFields = completenessFields.filter((field) => !field[1]).map((field) => field[0]);
-
-  // Oportunidade é uma métrica separada. A ausência de site é apenas uma hipótese comercial
-  // quando há evidência de um negócio real; nunca é registrada como inexistência confirmada.
-  let score = 0;
-  const reasons: string[] = [];
-  const add = (points: number, reason: string) => { score += points; reasons.push("+" + points + ": " + reason); };
-  if (normalizedName) add(15, "nome comercial identificado");
-  if (String(category ?? "").trim()) add(5, "categoria identificada");
-  if (hasAddress) add(10, "endereço público disponível");
-  if (hasPhone) add(20, "telefone público disponível");
-  if (rating !== null) {
-    add(rating >= 4.7 ? 15 : rating >= 4.3 ? 12 : rating >= 3.8 ? 8 : 3, "reputação pública de " + rating.toFixed(1) + "/5");
-  }
-  if (reviewCount !== null && reviewCount >= 100) add(10, "volume relevante de avaliações");
-  else if (reviewCount !== null && reviewCount >= 10) add(6, "avaliações públicas disponíveis");
-  if (hasImages) add(5, "fotos públicas identificadas");
-  if (hasHours) add(3, "horários públicos identificados");
-  if (hasCoordinates) add(2, "localização geográfica identificada");
-  if (hasWebsite) add(5, "site público identificado para avaliar qualidade");
-  else if (hasPhone || hasAddress) add(10, "site não identificado nesta coleta; oportunidade a confirmar");
-
-  return {
-    score: Math.min(100, score),
-    reasons,
-    missingFields,
-    completenessScore,
-    opportunityScore: Math.min(100, score),
-    normalized_website: normalizeWebsite(website),
-    normalized_phone: normalizePhone(phone, country),
-  };
-}
-
+// Use shared preferredTemplateSlug logic
 function preferredTemplateSlug(prospect: Prospect): string {
-  const signal = normalizeName([
+  const signal = normalizeBusinessName([
     first(prospect, ["category", "business_category", "segment"]),
     first(prospect, ["business_name", "name", "company_name"]),
     first(prospect, ["description", "business_description"]),
@@ -507,78 +450,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       try {
         await page.goto(listingUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
         await page.waitForTimeout(700);
-        const detail = await page.evaluate(() => {
-          const textOf = (selector: string): string | null => {
-            const element = document.querySelector(selector);
-            const value = (element as HTMLElement | null)?.innerText || element?.getAttribute("aria-label") || "";
-            return value.replace(/\s+/g, " ").trim() || null;
-          };
-          const hrefOf = (selector: string): string | null => {
-            const element = document.querySelector(selector) as HTMLAnchorElement | null;
-            const value = element?.href || null;
-            return value && /^https?:\/\//i.test(value) ? value : null;
-          };
-          const bodyText = document.body?.innerText || "";
-          const ratingLabel = document.querySelector('div.F7nice, [aria-label*="stars"], [aria-label*="estrelas"]')?.getAttribute("aria-label") || "";
-          const ratingText = textOf("div.F7nice") || "";
-          const reviewLabel = document.querySelector('button[aria-label*="reviews"], button[aria-label*="avaliações"], [aria-label*="reviews"], [aria-label*="avaliações"]')?.getAttribute("aria-label") || "";
-          const ratingSource = [ratingLabel, ratingText, reviewLabel, bodyText.slice(0, 8000)].join(" ");
-          const ratingMatch = ratingSource.match(/(?:^|\s)([0-5](?:[.,]\d+)?)\s*(?:estrelas?|stars?)?/i) || bodyText.match(/([0-5][.,]\d)\s*\(/);
-          const reviewMatch = ratingSource.match(/([\d.,]+)\s*(?:avaliações|avaliação|reviews|review|comentários)/i) || bodyText.match(/\(([0-9][0-9.,]*)\)/);
-          const parseCount = (value: string | null): number | null => {
-            if (!value) return null;
-            const digits = value.replace(/[.,](?=\d{3}\b)/g, "").replace(/\D/g, "");
-            const parsed = Number(digits);
-            return Number.isSafeInteger(parsed) ? parsed : null;
-          };
-          const hours = Array.from(document.querySelectorAll('table.eK4R0e tr, table[aria-label*="hours"] tr'))
-            .map((row) => ((row as HTMLElement).innerText || "").replace(/\s+/g, " ").trim())
-            .filter(Boolean).slice(0, 14);
-          const images = Array.from(document.querySelectorAll("img"))
-            .map((image) => (image as HTMLImageElement).currentSrc || (image as HTMLImageElement).src || "")
-            .filter((url) => /^https?:\/\//i.test(url) && /googleusercontent|gstatic/i.test(url));
-          const category = textOf("button.DkEaL") || textOf('button[jsaction*="category"]');
-          const address = textOf('[data-item-id="address"]');
-          const phoneElement = document.querySelector('[data-item-id^="phone:tel"], a[href^="tel:"]') as HTMLAnchorElement | null;
-          const phone = phoneElement?.getAttribute("href")?.startsWith("tel:")
-            ? phoneElement.getAttribute("href")?.slice(4) || null
-            : (phoneElement as HTMLElement | null)?.innerText?.trim() || null;
-          const website = hrefOf('a[data-item-id="authority"]') || hrefOf('a[aria-label*="Website"]') || hrefOf('a[aria-label*="website"]');
-          const coordinates = location.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-          const feature = location.href.match(/!1s([^!/?]+)/);
-          const placeId = location.href.match(/[?&]place_id=([^&]+)/i);
-          const price = bodyText.match(/(?:Preço|Price)\s*[:·]?\s*(\${1,4}|R\${1,4})/i);
-          return {
-            name: textOf("h1.DUwDvf") || document.querySelector("h1")?.textContent?.trim() || null,
-            category,
-            address,
-            phone,
-            website,
-            rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
-            reviewsCount: reviewMatch ? parseCount(reviewMatch[1]) : null,
-            sourceUrl: location.href,
-            placeId: placeId ? decodeURIComponent(placeId[1]) : null,
-            featureId: feature ? decodeURIComponent(feature[1]) : null,
-            latitude: coordinates ? Number(coordinates[1]) : null,
-            longitude: coordinates ? Number(coordinates[2]) : null,
-            images: Array.from(new Set(images)).slice(0, 20),
-            openingHours: hours,
-            priceLevel: price?.[1] || null,
-            editorialSummary: textOf('[class*="PYvSYb"], [class*="WeS02d"]'),
-            rawListingText: bodyText.slice(0, 8000),
-            fieldStatus: {
-              name: "name",
-              category: category ? "found" : "not_found_in_capture",
-              address: address ? "found" : "not_found_in_capture",
-              phone: phone ? "found" : "not_found_in_capture",
-              website: website ? "found" : "not_found_in_capture",
-              rating: ratingMatch ? "found" : "not_found_in_capture",
-              reviewsCount: reviewMatch ? "found" : "not_found_in_capture",
-              images: images.length ? "found" : "not_found_in_capture",
-              openingHours: hours.length ? "found" : "not_found_in_capture",
-            },
-          };
-        });
+        const detail = await extractPlaceDetails(page);
         scrapedResults.push({
           ...listing,
           ...detail,
@@ -589,6 +461,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           countryCode,
           provider: "google-maps-cloudflare-playwright",
           searchQuery,
+          fieldStatus: detail.fieldStatus,
         });
       } catch (detailError) {
         // Mantém a listagem como evidência parcial; não inventa dados ausentes.
@@ -693,16 +566,40 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     };
     const dedupeKey = await createDedupeKey(identityCandidate);
     if (!businessName || !dedupeKey) { rejected++; continue; }
-    const result = qualify({
-      business_name: businessName, category,
-      website_url: websiteNormalized, phone: phoneNormalized,
-      country_code: country,
-      email: first(candidate, ["email", "emailAddress", "email_address"]),
-      address: first(candidate, ["address", "formattedAddress", "formatted_address"]),
-      description: first(candidate, ["description", "businessDescription"]),
-      source_url: sourceUrl,
-    });
-    if (result.score >= 50) qualified++;
+
+    // Use shared qualification logic (cadastral + commercial)
+    const ratingValue = first(candidate, ["rating", "stars"]);
+    const rating = typeof ratingValue === "number" && ratingValue >= 0 && ratingValue <= 5 ? ratingValue : null;
+    const reviewCount = parseCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"]));
+    const openingHours = first(candidate, ["openingHours", "opening_hours", "hours"]);
+    const operatingStatus = first(candidate, ["operatingStatus", "business_status"]);
+
+    const cadastralInput = {
+      businessName: businessName,
+      category: category || undefined,
+      websiteUrl: websiteNormalized,
+      phone: phoneNormalized,
+      email: first(candidate, ["email", "emailAddress", "email_address"]) as string | null,
+      address: first(candidate, ["address", "formattedAddress", "formatted_address"]) as string | null,
+      description: first(candidate, ["description", "businessDescription"]) as string | null,
+      sourceUrl: sourceUrl,
+      countryCode: country,
+    };
+
+    const commercialInput: CommercialPotentialInput = {
+      ...cadastralInput,
+      rating: rating ?? undefined,
+      reviewCount: reviewCount ?? undefined,
+      operatingStatus: operatingStatus as string | null,
+      openingHours: openingHours as string | null,
+    };
+
+    const cadastralResult = qualifyProspect(cadastralInput);
+    const commercialResult = qualifyCommercialOpportunity(commercialInput, cadastralResult);
+
+    // Qualify based on commercial score (opportunity)
+    if (commercialResult.commercialScore >= 50) qualified++;
+
     const providerRecordId = String(first(candidate, ["featureId", "feature_id", "placeId", "place_id", "providerId", "provider_record_id"]) ?? "").slice(0, 250) || null;
     const stored = await db(env, "prospecting_candidates?on_conflict=dedupe_key", {
       method: "POST",
@@ -725,15 +622,15 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         country_code: country,
         description: typeof first(candidate, ["description", "businessDescription"]) === "string" ? String(first(candidate, ["description", "businessDescription"])).slice(0, 3000) : null,
         source_url: sourceUrl,
-        qualification_score: result.score,
-        qualification_reasons: result.reasons,
-        missing_fields: result.missingFields,
-        status: result.score >= 50 ? "qualified" : "discovered",
+        qualification_score: cadastralResult.score, // Cadastral/completeness score
+        qualification_reasons: cadastralResult.reasons,
+        missing_fields: cadastralResult.missingFields,
+        status: commercialResult.commercialScore >= 50 ? "qualified" : "discovered",
         raw_evidence: {
           schemaVersion: 2,
-          rating: typeof first(candidate, ["rating", "stars"]) === "number" ? first(candidate, ["rating", "stars"]) : null,
-          reviewsCount: parseCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"])),
-          reviewCount: parseCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"])),
+          rating: rating ?? null,
+          reviewsCount: reviewCount,
+          reviewCount: reviewCount,
           placeId: first(candidate, ["placeId", "place_id"]) ?? null,
           featureId: first(candidate, ["featureId", "feature_id"]) ?? null,
           latitude: first(candidate, ["latitude", "lat"]) ?? null,
@@ -743,9 +640,16 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           priceLevel: first(candidate, ["priceLevel", "price_level"]) ?? null,
           editorialSummary: first(candidate, ["editorialSummary", "editorial_summary"]) ?? null,
           fieldStatus: candidate.fieldStatus && typeof candidate.fieldStatus === "object" ? candidate.fieldStatus : {},
-          completenessScore: result.completenessScore,
-          opportunityScore: result.opportunityScore,
-          opportunityReasons: result.reasons,
+          // Fields expected by frontend (ScrapingConsole.tsx)
+          cadastralScore: cadastralResult.score,
+          completenessScore: cadastralResult.score,
+          cadastralReasons: cadastralResult.reasons,
+          cadastralMissingFields: cadastralResult.missingFields,
+          commercialScore: commercialResult.commercialScore,
+          opportunityScore: commercialResult.commercialScore,
+          commercialReasons: commercialResult.commercialReasons,
+          commercialLevel: commercialResult.commercialLevel,
+          suggestedTemplate: commercialResult.suggestedTemplate,
           providerRecordId,
           providerRequestId: null,
           observedAt: new Date().toISOString(),
@@ -1144,19 +1048,46 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
     return "blocked";
   }
 
-  const result = qualify(prospects[0]);
+  const prospect = prospects[0];
+
+  // Use shared qualification logic (cadastral + commercial)
+  const cadastralInput = {
+    businessName: first(prospect, ["business_name", "name", "company_name"]) as string | null,
+    category: first(prospect, ["category", "business_category", "segment"]) as string | null,
+    websiteUrl: first(prospect, ["website_url", "website", "url"]) as string | null,
+    phone: first(prospect, ["normalized_phone", "phone", "phone_number", "whatsapp", "mobile"]) as string | null,
+    email: first(prospect, ["email", "email_address"]) as string | null,
+    address: firstCaptured(prospect, ["address", "formatted_address"]) as string | null,
+    description: firstCaptured(prospect, ["description", "business_description"]) as string | null,
+    sourceUrl: firstCaptured(prospect, ["source_url", "sourceUrl", "source_link"]) as string | null,
+    countryCode: first(prospect, ["country_code", "countryCode"]) as string | null,
+  };
+
+  const commercialInput = {
+    ...cadastralInput,
+    rating: first(prospect, ["rating", "stars"]) as number | null,
+    reviewCount: first(prospect, ["review_count", "reviewsCount", "reviewCount", "reviews"]) as number | null,
+    operatingStatus: first(prospect, ["operating_status", "business_status"]) as string | null,
+    openingHours: firstCaptured(prospect, ["opening_hours", "openingHours", "hours"]) as string | null,
+  };
+
+  const cadastralResult = qualifyProspect(cadastralInput);
+  const commercialResult = qualifyCommercialOpportunity(commercialInput, cadastralResult);
+
   const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
   const minimumScoreRaw = Number(payload.minimumScore ?? 50);
   const minimumScore = Number.isFinite(minimumScoreRaw) ? Math.max(0, Math.min(100, Math.floor(minimumScoreRaw))) : 50;
-  const passedQualification = result.score >= minimumScore;
+  // Use commercial score for qualification decision
+  const passedQualification = commercialResult.commercialScore >= minimumScore;
+
   const write = await db(env, `prospects?id=eq.${encodeURIComponent(task.prospect_id)}&select=id`, {
     method: "PATCH",
     headers: { prefer: "return=representation" },
     body: JSON.stringify({
-      qualification_score: result.score,
-      qualification_reasons: result.reasons,
-      normalized_website: result.normalized_website,
-      normalized_phone: result.normalized_phone,
+      qualification_score: cadastralResult.score, // Store cadastral score
+      qualification_reasons: cadastralResult.reasons,
+      normalized_website: cadastralResult.evidence.websiteUrl as string | null,
+      normalized_phone: cadastralResult.evidence.phone as string | null,
       last_seen_at: new Date().toISOString(),
     }),
   });
@@ -1172,7 +1103,11 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
       event_type: passedQualification ? "qualified" : "disqualified",
       source_provider: "prospecting-worker",
       idempotency_key: `task:${task.id}:qualification:${passedQualification ? "qualified" : "disqualified"}`,
-      evidence: { score: result.score, missing_fields: result.missingFields },
+      evidence: {
+        cadastralScore: cadastralResult.score,
+        commercialScore: commercialResult.commercialScore,
+        missing_fields: cadastralResult.missingFields
+      },
     }),
   });
   if (!event.ok) throw new Error(`prospect_event_http_${event.status}`);
@@ -1184,11 +1119,23 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
       headers: { prefer: "return=representation" },
       body: JSON.stringify({
         status: passedQualification ? "qualified" : "disqualified",
-        qualification_score: result.score,
-        qualification_reasons: result.reasons,
-        missing_fields: result.missingFields,
+        qualification_score: cadastralResult.score, // Cadastral score
+        qualification_reasons: cadastralResult.reasons,
+        missing_fields: cadastralResult.missingFields,
         prospect_id: task.prospect_id,
         updated_at: new Date().toISOString(),
+        raw_evidence: {
+          // Update raw_evidence with both scores
+          cadastralScore: cadastralResult.score,
+          completenessScore: cadastralResult.score,
+          cadastralReasons: cadastralResult.reasons,
+          cadastralMissingFields: cadastralResult.missingFields,
+          commercialScore: commercialResult.commercialScore,
+          opportunityScore: commercialResult.commercialScore,
+          commercialReasons: commercialResult.commercialReasons,
+          commercialLevel: commercialResult.commercialLevel,
+          suggestedTemplate: commercialResult.suggestedTemplate,
+        },
       }),
     });
     if (!candidateUpdate.ok || !(await candidateUpdate.json() as unknown[]).length) {
@@ -1205,7 +1152,7 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
       created_at?: string;
       site_templates?: { slug?: string; is_active?: boolean } | null;
     }>;
-    const preferredSlug = preferredTemplateSlug(prospects[0]);
+    const preferredSlug = commercialResult.suggestedTemplate; // Use shared logic
     const activeTemplates = templates.filter((item) => item.site_templates?.is_active !== false);
     const selectedTemplate = activeTemplates.find((item) => item.site_templates?.slug === preferredSlug)
       ?? activeTemplates.find((item) => item.site_templates?.slug === "ouro-classico")
@@ -1238,7 +1185,13 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "qualified", score: result.score, missingFields: result.missingFields, demoPipeline },
+    result: {
+      outcome: "qualified",
+      cadastralScore: cadastralResult.score,
+      commercialScore: commercialResult.commercialScore,
+      missingFields: cadastralResult.missingFields,
+      demoPipeline
+    },
   });
   return "succeeded";
 }
@@ -1339,11 +1292,90 @@ export default {
     if (!env.PROSPECTING_WORKER_SECRET || supplied !== `Bearer ${env.PROSPECTING_WORKER_SECRET}`) {
       return json({ error: "unauthorized" }, 401);
     }
+
+    // Lê o body da requisição para permitir enfileirar uma nova descoberta manual.
+    // Um body vazio ou inválido é tratado como ausência de parâmetros de discovery.
+    let body: { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; executionId?: unknown };
+    try {
+      body = (await request.json()) as { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; executionId?: unknown };
+    } catch {
+      body = {};
+    }
+
+    const segment = typeof body.segment === "string" && body.segment.trim() ? body.segment.trim() : null;
+    const region = typeof body.region === "string" && body.region.trim() ? body.region.trim() : null;
+
+    // Quando houver parâmetros de discovery, enfileira uma nova task "discover" no Supabase
+    // em vez de apenas processar o lote de tarefas já enfileiradas.
+    if (segment && region) {
+      const limitRaw = Number(body.limit ?? 10);
+      const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 100)) : 10;
+      const countryCode = typeof body.countryCode === "string" && body.countryCode.trim() ? body.countryCode.trim().toUpperCase() : "BR";
+      const executionId = typeof body.executionId === "string" && /^[0-9a-f-]{36}$/i.test(body.executionId) ? body.executionId : crypto.randomUUID();
+      const idempotencyKey = `manual-discover:${executionId}`;
+
+      const enqueued = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+        method: "POST",
+        headers: { prefer: "resolution=ignore-duplicates,return=representation" },
+        body: JSON.stringify({
+          campaign_id: null,
+          task_type: "discover",
+          status: "pending",
+          idempotency_key: idempotencyKey,
+          payload: {
+            executionId,
+            segment,
+            region,
+            countryCode,
+            dailyDiscoveryLimit: limit,
+            minimumScore: 50,
+            manual: true,
+          },
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (!enqueued.ok) {
+        return json({ status: "failed", enqueued: false, error: "Não foi possível enfileirar a tarefa de descoberta.", detail: await enqueued.text().catch(() => "") }, 503);
+      }
+
+      const rows = await enqueued.json() as Array<{ id: number; status: string }>;
+      if (!rows.length) {
+        // Repetição da mesma solicitação: recuperar a tarefa criada anteriormente pela chave idempotente.
+        const existingResponse = await db(env, `prospecting_tasks?idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&select=id,status&limit=1`);
+        if (!existingResponse.ok) {
+          return json({ status: "failed", enqueued: false, error: "Não foi possível confirmar a tarefa já enfileirada." }, 503);
+        }
+        const existing = await existingResponse.json() as Array<{ id: number; status: string }>;
+        if (!existing.length) {
+          return json({ status: "failed", enqueued: false, error: "A tarefa não foi enfileirada; não houve confirmação de persistência." }, 503);
+        }
+        return json({
+          status: "pending",
+          enqueued: true,
+          taskId: String(existing[0].id),
+          idempotencyKey,
+          message: "Descoberta já enfileirada anteriormente (duplicata ignorada pela chave idempotente).",
+          payload: { segment, region, countryCode, dailyDiscoveryLimit: limit, minimumScore: 50, manual: true },
+        }, 202);
+      }
+
+      return json({
+        status: "running",
+        enqueued: true,
+        taskId: String(rows[0].id),
+        idempotencyKey,
+        message: "Tarefa de descoberta enfileirada com sucesso.",
+        payload: { segment, region, countryCode, dailyDiscoveryLimit: limit, minimumScore: 50, manual: true },
+      }, 202);
+    }
+
+    // Sem parâmetros de discovery: manter comportamento atual de processar o lote existente.
     try {
       const counts = await processBatch(env);
-      return json({ status: "ok", ...counts });
+      return json({ status: "ok", enqueued: false, ...counts });
     } catch (error) {
-      return json({ status: "blocked", error: error instanceof Error ? error.message : "worker_failed" }, 503);
+      return json({ status: "blocked", enqueued: false, error: error instanceof Error ? error.message : "worker_failed" }, 503);
     }
   },
 };
