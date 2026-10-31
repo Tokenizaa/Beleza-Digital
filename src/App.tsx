@@ -18,6 +18,7 @@ import { PlatformAccessPage } from './pages/PlatformAccessPage';
 import { PlatformLeadsDashboard } from './pages/PlatformLeadsDashboard';
 import { readShareablePreview, SharedSitePreview } from './pages/SharedSitePreview';
 import { PublicDemoSelectionPage } from './pages/PublicDemoSelectionPage';
+import { PublicShowcaseDemo } from './pages/PublicShowcaseDemo';
 import { AlertTriangle } from 'lucide-react';
 import { ToastProvider } from './context/ToastContext';
 
@@ -67,6 +68,10 @@ export default function App() {
   // CRM e raspagem ficam no painel da plataforma, nunca no painel do salão.
   if (['/plataforma/prospeccao', '/plataforma/crm', '/plataforma/leads', '/prospeccao', '/plataforma/scraping'].includes(window.location.pathname)) {
     return <PlatformLeadsDashboard />;
+  }
+
+  if (window.location.pathname === '/demo' || window.location.pathname === '/preview') {
+    return <PublicShowcaseDemo />;
   }
 
   if (publicDemoMatch) {
