@@ -235,7 +235,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
     <div className="bg-[#0e0d0b] text-[#f7f3e8] font-serif selection:bg-amber-500/30 selection:text-amber-200">
       {/* Top Heritage Badge */}
       <div className="border-b border-amber-600/20 bg-[#161410] px-4 py-2 text-center text-xs tracking-widest text-amber-400 uppercase font-sans">
-        ♦ Tradição, Mestres Barbeiros & Atendimento de Alto Padrão ♦
+        ♦ ESTILO CLÁSSICO • ELEGÂNCIA ATEMPORAL ♦
       </div>
 
       {/* Hero Ouro Clássico */}
@@ -368,9 +368,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       <div className="border-b border-emerald-500/30 bg-[#090e0b] px-4 py-2 font-mono text-[11px] text-emerald-400 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-          <span>[ STATUS: OPERACIONAL // AGENDA ABERTA // STREET CULTURE ]</span>
+          <span>[ VISUAL URBANO // DESIGN CONTEMPORÂNEO ]</span>
         </div>
-        <span className="hidden sm:inline">HIGH CONTRAST // MATTE BLACK</span>
+        <span className="hidden sm:inline">ALTO CONTRASTE // DESIGN</span>
       </div>
 
       {/* Hero Preto Esmeralda */}
@@ -508,7 +508,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
     <div className="bg-[#f8fafc] text-slate-900 font-sans font-light selection:bg-slate-300/20 selection:text-white">
       {/* Discreet Header */}
       <div className="border-b border-slate-200 bg-white px-4 py-2 text-center text-xs tracking-wider text-slate-400 font-mono">
-        espaço privativo • atendimento individual com hora marcada
+        design minimalista • informação clara • contato direto
       </div>
 
       {/* Hero Minimal Studio */}
@@ -578,6 +578,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
       {renderProductSection()}
       {renderGallerySection()}
+      {renderInstagramSection()}
     </div>
   );
 
@@ -589,7 +590,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
     <div className="bg-[#070d1e] text-blue-50 font-sans selection:bg-blue-600/30 selection:text-blue-200">
       {/* Executive Header */}
       <div className="border-b border-blue-900/50 bg-[#0b142d] px-4 py-2 text-center text-xs tracking-wider text-blue-300 uppercase font-semibold">
-        ★ Clube Corporativo • Pontualidade Britânica & Atendimento VIP ★
+        ★ DESIGN EXECUTIVO • ELEGÂNCIA E CLAREZA ★
       </div>
 
       {/* Hero Safira Executivo */}
@@ -677,6 +678,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         </div>
       </section>
       {renderGallerySection()}
+      {renderInstagramSection()}
     </div>
   );
 
@@ -688,7 +690,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
     <div className="bg-[#140609] text-rose-50 font-serif selection:bg-rose-500/30 selection:text-rose-200">
       {/* Editorial Header */}
       <div className="border-b border-rose-950/80 bg-[#1c080d] px-4 py-2 text-center text-xs tracking-widest text-rose-300 font-sans uppercase">
-        ♥ Experiência Sensorial, Beleza & Cuidado Imersivo ♥
+        ♥ ESTÉTICA EDITORIAL • BELEZA & CUIDADO ♥
       </div>
 
       {/* Hero Rubi Lounge */}
@@ -776,8 +778,6 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
       {renderProductSection()}
       {renderGallerySection()}
-      {renderInstagramSection()}
-      {renderInstagramSection()}
       {renderInstagramSection()}
     </div>
   );
