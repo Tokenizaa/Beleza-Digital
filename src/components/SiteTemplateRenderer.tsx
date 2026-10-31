@@ -215,7 +215,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   <div className="text-[10px] font-semibold uppercase tracking-wider opacity-60">{product.category}</div>
                   <h3 className="min-h-10 text-base font-semibold">{product.name}</h3>
                   <div className="flex items-center justify-between gap-3">
-                    <span className={`font-bold ${style.price}`}>R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}</span>
+                    <span className={`font-bold ${style.price}`}>{Number(product.price || 0) > 0 ? 'R$ ' + Number(product.price).toFixed(2).replace('.', ',') : 'Consulte valor'}</span>
                     <button type="button" onClick={() => setSelectedProduct(product)} className={`rounded-lg px-3 py-2 text-xs font-bold ${style.button}`}>Ver produto</button>
                   </div>
                   {!product.available && <p className="text-xs opacity-60">Consulte disponibilidade</p>}
