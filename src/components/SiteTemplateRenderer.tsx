@@ -253,7 +253,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-amber-500/40 bg-amber-950/60 text-amber-300 text-xs font-sans uppercase tracking-widest backdrop-blur-md">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>{businessData.category || 'Barbearia Clássica & Alta Estética'}</span>
+            <span>{businessData.category || 'Beleza & Estética'}</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-amber-100 font-serif">
@@ -267,7 +267,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </div>
 
           <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto leading-relaxed font-sans font-light">
-            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
+            {businessData.description || businessData.tagline || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 font-sans">
@@ -462,7 +462,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden border-b border-slate-200 px-4 sm:px-8 py-20">
         <div className="max-w-3xl mx-auto text-center space-y-6">
           <span className="inline-block text-xs uppercase tracking-[0.25em] text-slate-600 border border-slate-300 px-3.5 py-1 rounded-full">
-            {businessData.category || 'Studio de Estética & Visagismo'}
+            {businessData.category || 'Beleza & Estética'}
           </span>
 
           <h1 className="text-4xl sm:text-6xl font-extralight tracking-tight text-slate-100">
@@ -655,7 +655,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-rose-500/40 bg-rose-950/80 text-rose-300 text-xs font-sans tracking-wide">
             <Heart className="w-3.5 h-3.5 text-rose-400" />
-            <span>{businessData.category || 'Velvet Lounge & Spa Capilar'}</span>
+            <span>{businessData.category || 'Beleza & Estética'}</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-normal italic tracking-tight text-white font-serif">
