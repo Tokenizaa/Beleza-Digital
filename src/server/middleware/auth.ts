@@ -138,12 +138,21 @@ export function jobOwnershipMiddleware(required: boolean = true): (req: Request,
 
 /**
  * Generate a session token for frontend use (Supabase Auth session)
- * This is used for the frontend sessionStorage approach
+ *
+ * @deprecated Esta função usava base64 não assinado (btoa), que não é um
+ * token de sessão válido nem seguro. O frontend deve usar o Supabase JS SDK
+ * diretamente (supabase.auth.signInWithPassword / signInWithOAuth) para
+ * obter um JWT assinado pelo Supabase. Esta função lança um erro para
+ * evitar uso acidental em produção.
  */
-export function generateSupabaseSession(userId: string, email: string, role: 'admin' | 'user'): string {
-  // In a real Supabase Auth setup, we'd use supabase.auth.getSession()
-  // or create a signed JWT from Supabase. For now, we return a simple
-  // format that the frontend can use with the homegrown API routes.
-  // The frontend should ideally use Supabase JS SDK directly.
-  return btoa(`${userId}:${email}:${role}`);
+export function generateSupabaseSession(
+  _userId: string,
+  _email: string,
+  _role: 'admin' | 'user',
+): string {
+  throw new Error(
+    'generateSupabaseSession não é mais suportado: use o Supabase JS SDK ' +
+    'diretamente no cliente (supabase.auth.signIn*) para obter um JWT ' +
+    'assinado. Não gere tokens de sessão manualmente com base64.',
+  );
 }

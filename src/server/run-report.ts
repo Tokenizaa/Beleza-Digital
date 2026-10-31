@@ -1,6 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import puppeteer from 'puppeteer';
+
+/**
+ * puppeteer-core não é uma dependência deste projeto. A geração de PDF é
+ * opcional e não bloqueia o motor de captura. Usamos import dinâmico com
+ * tipo any para evitar erros de compilação quando o módulo não está instalado.
+ */
+type PuppeteerCore = any;
 import { countPlaces, getAllPlaces, getJob, getPlacesByIds, getRunReport, saveRunReport, getAuthenticatedUser } from './db';
 import { listAuditLogs } from './audit-log';
 import { PlaceRecord } from '../shared/types';
@@ -152,10 +158,11 @@ export async function writeRunReport(jobId: string, baselineCount: number, optio
   const pdfPath = path.join(reportDirectory, jobId + '.pdf');
   if (options.generatePdf !== false && !process.env.VERCEL) {
     await fs.mkdir(reportDirectory, { recursive: true });
-    let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+    let browser: any = null;
     try {
       report.artifacts.pdf_generated = true;
-      browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
+      const puppeteerModule = (await import('puppeteer-core')) as PuppeteerCore;
+      browser = await puppeteerModule.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
       const page = await browser.newPage();
       await page.setContent(renderReportHtml(report), { waitUntil: 'domcontentloaded' });
       const pdf = await page.pdf({

@@ -29,9 +29,16 @@ export default {
           message.ack();
           continue;
         }
-        await runScraperJob(job.id, job.segment, job.location, job.limit_requested, async (progress: Partial<ScrapeJob>) => {
-          await updateJobProgress(job.id, progress);
-        }, env.BROWSER_WS_ENDPOINT);
+        await runScraperJob({
+          jobId: job.id,
+          segment: job.segment,
+          location: job.location,
+          limitRequested: job.limit_requested,
+          onProgress: async (progress: Partial<ScrapeJob>) => {
+            await updateJobProgress(job.id, progress);
+          },
+          browserWsEndpoint: env.BROWSER_WS_ENDPOINT,
+        });
         message.ack();
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);

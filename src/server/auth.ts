@@ -36,6 +36,30 @@ export interface AuthOk {
 export type AuthResult = AuthOk | AuthError;
 
 /**
+ * Valida variáveis de ambiente obrigatórias no boot do servidor.
+ * Lança erro se alguma estiver ausente (fail-fast), evitando que a
+ * aplicação inicie em um estado inconsistente.
+ */
+export function validateRequiredEnv(): void {
+  const missing: string[] = [];
+  const required = [
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY',
+  ];
+  for (const key of required) {
+    const value = String(process.env[key] ?? '').trim();
+    if (!value) missing.push(key);
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      'Variáveis de ambiente obrigatórias ausentes: ' +
+      missing.join(', ') +
+      '. Configure-as antes de iniciar o servidor.',
+    );
+  }
+}
+
+/**
  * Envia 401/503 quando a autenticação falhar e retorna true.
  * Retorna false (e não envia resposta) quando autenticado, já com o contexto
  * narrowado para AuthOk via type guard.

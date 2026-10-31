@@ -14,16 +14,17 @@ Cada ficha contém dados como: nome, categoria, endereço, telefone, site, nota,
 
 ## 2. Arquivos que compõem a ficha do lead
 
-Todos esses arquivos estão em `src/server/scraper-engine/` (cópia isolada do repositório `Tokenizaa/mais-clientes-v2`, com apenas isolamento de dependências):
+O motor de captura original (`src/server/scraper-engine/`) foi substituído por uma arquitetura distribuída entre o Cloudflare Worker e a camada de servidor:
 
 | Arquivo | Função |
 |---------|--------|
-| **`types.ts`** | Define a interface **`PlaceRecord`** (contrato de dados da ficha) e `ScrapeResult`, `ScrapeInput`, `ScrapeProgress`. É a definição oficial de cada campo da ficha. |
-| **`extractor.ts`** | Contém `extractPlaceDetails()`. Extrai todos os campos públicos da ficha do Google Maps (DOM do place sheet): nome, categoria, telefone, site, endereço, nota, avaliações, fotos, vídeos, redes sociais, horário, status, etc. |
-| **`runner.ts`** | Contém `scrapeGoogleMaps()`. Orquestra a coleta: conecta no navegador remoto (Puppeteer + Browserless), busca no Google Maps, coleta URLs de estabelecimentos, abre cada ficha e chama o extrator. Retorna `ScrapeResult` com o array `results[]` de `PlaceRecord`. |
-| **`normalizer.ts`** | Funções de normalização de campos (endereço, telefone, site, categoria, nota, preço, status de funcionamento, parsing de endereço, extração de coordenadas e place ID). |
-| **`selectors.ts`** | Seletores CSS centralizados para o feed de busca e a ficha do place (título, categoria, nota, endereço, telefone, site, fotos, vídeos, logo, etc.). |
-| **`browserless-endpoint.ts`** | Resolve o endpoint WebSocket do navegador remoto (`BROWSER_WS_ENDPOINT`) usado pelo Puppeteer. |
+| **`src/shared/types.ts`** | Define a interface **`PlaceRecord`** (contrato de dados da ficha) e `ScrapeJob`, `ScrapeStartPayload`. É a definição oficial de cada campo da ficha. |
+| **`workers/prospecting-scheduler/src/index.ts`** | Worker Cloudflare principal. Orquestra a coleta via Playwright + Cloudflare Browser Run: busca no Google Maps, coleta URLs de estabelecimentos, abre cada ficha e extrai detalhes. |
+| **`workers/prospecting-scheduler/src/extractor.ts`** | Contém `extractPlaceDetails()`. Extrai todos os campos públicos da ficha do Google Maps (DOM do place sheet): nome, categoria, telefone, site, endereço, nota, avaliações, fotos, vídeos, redes sociais, horário, status, etc. |
+| **`workers/prospecting-scheduler/src/normalizer.ts`** | Funções de normalização de campos (endereço, telefone, site, categoria, nota, preço, status de funcionamento, parsing de endereço, extração de coordenadas e place ID). |
+| **`src/server/scraper/runner.ts`** | Ponte do consumidor de fila para o Worker de prospecção. Expõe `runScraperJob` que delega a execução via HTTP ao Worker. |
+| **`src/server/scraper/normalizer.ts`** | Funções auxiliares de normalização de endereços e localizações para o consumidor de fila. |
+| **`scripts/scrape-local.cjs`** | Scraper CLI standalone local (Playwright + Node) para execução fora do Cloudflare. |
 
 ### Arquivos de qualificação e persistência (camada acima do motor)
 
@@ -39,7 +40,7 @@ Todos esses arquivos estão em `src/server/scraper-engine/` (cópia isolada do r
 
 ## 3. Contrato da ficha (PlaceRecord)
 
-Definido em `src/server/scraper-engine/types.ts`. Campos principais:
+Definido em `src/shared/types.ts` (e espelho em `src/server/db.ts`). Campos principais:
 
 - `id`, `job_id` — identificadores da ficha e da execução
 - `name` — nome comercial

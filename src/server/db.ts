@@ -354,6 +354,8 @@ export interface PlaceRecord {
   name: string;
   category: string;
   address: string;
+  /** Neighborhood explicitly present in the displayed address, when separable. */
+  neighborhood?: string;
   phone: string;
   website: string;
   rating: string;

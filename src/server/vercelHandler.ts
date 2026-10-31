@@ -1,21 +1,25 @@
-import type { Request, Response } from 'express';
-import { createApp } from '../../server.js';
-
-let appPromise: ReturnType<typeof createApp> | undefined;
-
 /**
- * Shared entry point for Vercel Functions.
- * Keep the Express app initialization lazy so each serverless bundle can reuse it.
+ * vercelHandler.ts — Entry point serverless (stub funcional).
+ *
+ * O projeto BelezaDigital está direcionado ao Cloudflare Pages, não ao
+ * Vercel Functions com Express. Este arquivo é mantido como stub para
+ * evitar referências quebradas em qualquer ferramenta que ainda o importe.
+ *
+ * Retorna 503 com mensagem informativa indicando que o servidor não está
+ * configurado para este runtime.
  */
-export default async function vercelHandler(req: Request, res: Response): Promise<void> {
-  try {
-    appPromise ??= createApp();
-    const app = await appPromise;
-    app(req, res);
-  } catch (error) {
-    console.error('[Vercel API] Application initialization failed:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Falha ao inicializar a API.' });
-    }
-  }
+
+import type { Request, Response } from 'express';
+
+export default async function vercelHandler(
+  _req: Request,
+  res: Response,
+): Promise<void> {
+  res.status(503).json({
+    error: 'servidor_indisponível_para_vercel',
+    message:
+      'Este projeto está direcionado ao Cloudflare Pages. O vercelHandler é um stub ' +
+      'mantido para evitar importações quebradas. Use o build do Cloudflare Pages ' +
+      '(wrangler pages deploy) ou o Worker prospecting-scheduler.',
+  });
 }

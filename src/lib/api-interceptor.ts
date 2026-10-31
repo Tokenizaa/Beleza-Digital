@@ -784,8 +784,8 @@ export function initApiInterceptor() {
         startedAt,
         completedAt,
         engineAudit: {
-          runner: 'src/server/scraper-engine/runner.ts',
-          contract: 'PlaceRecord (src/server/scraper-engine/types.ts)',
+          runner: 'src/server/scraper/runner.ts',
+          contract: 'PlaceRecord (src/shared/types.ts)',
           isolation: 'Sem dependência de Supabase, CRM ou persistência de leads',
           fieldsCapturedCount: 20,
           status: 'success',
