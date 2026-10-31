@@ -107,7 +107,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </h3>
 
                 <div className="text-2xl font-bold text-amber-400 font-display">
-                  {typeof product.price === 'number'
+                  {typeof product.price === 'number' && product.price > 0
                     ? `R$ ${product.price.toFixed(2).replace('.', ',')}`
                     : 'Consulte valor'}
                 </div>
