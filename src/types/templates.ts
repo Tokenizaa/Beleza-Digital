@@ -72,7 +72,7 @@ export const SITE_TEMPLATES: Record<SiteVariationId, SiteTemplateConfig> = {
     borderColor: 'border-emerald-500/30',
     previewThumbnail: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80',
     recommendedFor: 'Barbearias urbanas, barbearias jovens, conceito fade e freestyle',
-    sections: ['hero', 'gallery', 'instagram', 'services', 'products', 'appointment', 'contact'],
+    sections: ['hero', 'gallery', 'services', 'instagram', 'products', 'appointment', 'contact'],
     focus: 'portfolio',
   },
   'minimal-studio': {
