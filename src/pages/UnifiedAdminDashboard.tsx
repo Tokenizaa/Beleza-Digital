@@ -274,17 +274,19 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       );
     }
 
-    if (activeSection === 'prospeccao-scraping' || activeSection === 'prospeccao-buscar') {
+    if (activeSection === 'prospeccao-scraping') {
       return <ScrapingConsole />;
     }
 
     if (
       activeSection === 'prospeccao-hoje' ||
+      activeSection === 'prospeccao-buscar' ||
       activeSection === 'prospeccao-crm' ||
       activeSection === 'prospeccao-automacao'
     ) {
-      const tabMap: Record<string, 'hoje' | 'empresas'> = {
+      const tabMap: Record<string, 'hoje' | 'buscar' | 'empresas'> = {
         'prospeccao-hoje': 'hoje',
+        'prospeccao-buscar': 'buscar',
         'prospeccao-crm': 'empresas',
         'prospeccao-automacao': 'hoje',
       };
@@ -295,7 +297,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           initialTab={currentTab}
           embeddedInUnifiedAdmin={true}
           onTabChange={handleLeadsDashboardTabChange}
-          onNavigateToScraping={() => setActiveSection('prospeccao-scraping')}
         />
       );
     }
@@ -616,8 +617,9 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                   <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
                     {[
                       { id: 'prospeccao-hoje', label: 'Painel do Dia (Hoje)', icon: Compass },
-                      { id: 'prospeccao-scraping', label: 'Console Scraping (Busca & Coleta)', icon: Database },
+                      { id: 'prospeccao-buscar', label: 'Nova Busca & Raspagem', icon: Search },
                       { id: 'prospeccao-crm', label: 'Pipeline CRM & Empresas', icon: Users },
+                      { id: 'prospeccao-scraping', label: 'Console de Scraping', icon: Database },
                     ].map((sub) => {
                       const Icon = sub.icon;
                       const isActive = activeSection === sub.id;

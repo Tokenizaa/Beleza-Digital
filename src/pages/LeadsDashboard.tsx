@@ -28,14 +28,11 @@ import {
   Check,
   RotateCw,
   SlidersHorizontal,
-  ChevronDown,
-  Database
+  ChevronDown
 } from 'lucide-react';
 import { createShareablePreviewUrl } from './SharedSitePreview';
 import { SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId, normalizeTemplateId } from '../types/templates';
 import { supabase } from '../lib/supabase';
-import { getStoredProspecting } from '../lib/api-interceptor';
-import { LeadSheetModal, type LeadSheetData } from '../components/LeadSheetModal';
 
 export type LeadStage = 'novo' | 'contatado' | 'respondeu' | 'reuniao' | 'fechado';
 export type OpportunityLevel = 'alta' | 'media' | 'baixa';
@@ -99,14 +96,12 @@ const INITIAL_COMPANIES: LeadCompany[] = [];
 export interface LeadsDashboardProps {
   initialTab?: 'hoje' | 'buscar' | 'empresas';
   onTabChange?: (tab: 'hoje' | 'buscar' | 'empresas') => void;
-  onNavigateToScraping?: () => void;
   embeddedInUnifiedAdmin?: boolean;
 }
 
 export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   initialTab = 'hoje',
   onTabChange,
-  onNavigateToScraping,
   embeddedInUnifiedAdmin = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'hoje' | 'buscar' | 'empresas'>(initialTab);
@@ -118,13 +113,10 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   }, [initialTab]);
 
   const switchTab = (tab: 'hoje' | 'buscar' | 'empresas') => {
-    if (tab === 'buscar' && onNavigateToScraping) {
-      onNavigateToScraping();
-      return;
-    }
     setActiveTab(tab);
     if (onTabChange) onTabChange(tab);
   };
+  // Never seed operational CRM with sample businesses. Persist only after a server-backed API is connected.
   const [companies, setCompanies] = useState<LeadCompany[]>(INITIAL_COMPANIES);
   const [crmLoading, setCrmLoading] = useState(true);
   const [crmError, setCrmError] = useState<string | null>(null);
@@ -132,40 +124,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
   const loadCompanies = async () => {
     if (!supabase) {
-      // Fallback gracioso para os estabelecimentos coletados pelo console de scraping
-      const stored = getStoredProspecting();
-      const mapped: LeadCompany[] = (stored.candidates || []).map((cand: any) => {
-        const raw = cand.raw_evidence || {};
-        const phone = String(cand.phone || '').replace(/\D/g, '');
-        const websiteUrl = String(cand.website_url || '');
-        const category = String(cand.category || 'Salão de Beleza & Barbearia');
-        return {
-          id: cand.id,
-          name: cand.business_name,
-          niche: category,
-          category,
-          city: cand.city || 'Porto Alegre',
-          state: cand.region || 'RS',
-          address: cand.address || `${cand.city || 'Porto Alegre'} - ${cand.region || 'RS'}`,
-          phone,
-          whatsapp: phone,
-          websiteUrl,
-          demoUrl: `/demo/${raw.demo_token || cand.token || `demo-${cand.id}`}`,
-          rating: raw.rating ?? 4.8,
-          reviewsCount: raw.review_count ?? raw.reviewsCount ?? 45,
-          digitalDiagnosis: websiteUrl ? 'site_identificado' : 'nao_identificado',
-          opportunity: (raw.commercial_score ?? 80) >= 70 ? 'alta' : (raw.commercial_score ?? 80) >= 40 ? 'media' : 'baixa',
-          stage: (cand.status as any) || 'novo',
-          selectedTemplate: (raw.selected_template || 'ouro-classico') as LeadTemplateKey,
-          notes: raw.notes ? [raw.notes] : [],
-          createdAt: cand.created_at || new Date().toISOString(),
-          status: raw.operating_status || 'OPERATIONAL',
-          note: raw.notes || '',
-          faixaDePreco: raw.price_range || '$$',
-          horario: raw.opening_hours || 'Segunda a Sábado, 09h às 19h30',
-        };
-      });
-      setCompanies(mapped);
+      setCrmError('Supabase não está configurado neste ambiente. Configure a URL e a chave pública no build do Cloudflare Pages.');
       setCrmLoading(false);
       return;
     }
@@ -175,43 +134,8 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       supabase.from('prospecting_candidates').select('id,prospect_id,business_name,category,city,region,address,phone,normalized_phone,website_url,normalized_website,qualification_score,status,source_url,raw_evidence,created_at').order('created_at', { ascending: false }).limit(500),
       supabase.from('prospecting_crm_state').select('candidate_id,stage,selected_template,notes,follow_up_date'),
     ]);
-    if (candidateResult.error || !candidateResult.data || candidateResult.data.length === 0) {
-      // Fallback para candidatos armazenados se banco estiver vazio ou offline
-      const stored = getStoredProspecting();
-      if (stored.candidates && stored.candidates.length > 0) {
-        const mappedFallback: LeadCompany[] = stored.candidates.map((cand: any) => {
-          const raw = cand.raw_evidence || {};
-          const phone = String(cand.phone || '').replace(/\D/g, '');
-          const websiteUrl = String(cand.website_url || '');
-          const category = String(cand.category || 'Salão de Beleza & Barbearia');
-          return {
-            id: cand.id,
-            name: cand.business_name,
-            niche: category,
-            category,
-            city: cand.city || 'Porto Alegre',
-            state: cand.region || 'RS',
-            address: cand.address || `${cand.city || 'Porto Alegre'} - ${cand.region || 'RS'}`,
-            phone,
-            whatsapp: phone,
-            websiteUrl,
-            demoUrl: `/demo/${raw.demo_token || cand.token || `demo-${cand.id}`}`,
-            rating: raw.rating ?? 4.8,
-            reviewsCount: raw.review_count ?? raw.reviewsCount ?? 45,
-            digitalDiagnosis: websiteUrl ? 'site_identificado' : 'nao_identificado',
-            opportunity: (raw.commercial_score ?? 80) >= 70 ? 'alta' : (raw.commercial_score ?? 80) >= 40 ? 'media' : 'baixa',
-            stage: (cand.status as any) || 'novo',
-            selectedTemplate: (raw.selected_template || 'ouro-classico') as LeadTemplateKey,
-            notes: raw.notes ? [raw.notes] : [],
-            createdAt: cand.created_at || new Date().toISOString(),
-            status: raw.operating_status || 'OPERATIONAL',
-            note: raw.notes || '',
-            faixaDePreco: raw.price_range || '$$',
-            horario: raw.opening_hours || 'Segunda a Sábado, 09h às 19h30',
-          };
-        });
-        setCompanies(mappedFallback);
-      }
+    if (candidateResult.error) {
+      setCrmError('Não foi possível carregar empresas persistidas. Verifique a sessão de Admin Geral, as permissões e as migrations do Supabase.');
       setCrmLoading(false);
       return;
     }
@@ -779,14 +703,15 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
               </button>
 
               <button
-                onClick={() => {
-                  if (onNavigateToScraping) onNavigateToScraping();
-                  else switchTab('empresas');
-                }}
-                title="Console de Scraping"
-                className="h-11 w-11 rounded-xl flex items-center justify-center text-neutral-400 hover:text-white hover:bg-[#1a1f28] transition-all"
+                onClick={() => switchTab('buscar')}
+                title="Nova busca de leads"
+                className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
+                  activeTab === 'buscar'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
+                }`}
               >
-                <Database className="h-5 w-5 text-purple-400" />
+                <Search className="h-5 w-5" />
               </button>
 
               <button
@@ -832,7 +757,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
               <button
                 type="button"
                 onClick={() => switchTab('hoje')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'hoje'
                     ? 'bg-purple-600 text-white shadow-sm'
                     : 'text-neutral-400 hover:text-white'
@@ -842,25 +767,25 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
               </button>
               <button
                 type="button"
+                onClick={() => switchTab('buscar')}
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  activeTab === 'buscar'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Nova busca
+              </button>
+              <button
+                type="button"
                 onClick={() => switchTab('empresas')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'empresas'
                     ? 'bg-purple-600 text-white shadow-sm'
                     : 'text-neutral-400 hover:text-white'
                 }`}
               >
                 CRM / Empresas
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onNavigateToScraping) onNavigateToScraping();
-                  else if (window.location.pathname !== '/plataforma/prospeccao') window.location.assign('/plataforma/prospeccao');
-                }}
-                className="px-3 py-1 rounded-lg text-xs font-semibold text-neutral-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer ml-1 border-l border-[#2d3443] pl-2.5"
-                title="Abrir Console de Raspagem Google Maps"
-              >
-                <Database className="w-3.5 h-3.5 text-purple-400" />
               </button>
             </div>
 
@@ -911,13 +836,10 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (onNavigateToScraping) onNavigateToScraping();
-                    else switchTab('empresas');
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 text-sm font-bold flex items-center gap-2 transition shadow-lg shadow-amber-500/10 cursor-pointer"
+                  onClick={() => switchTab('buscar')}
+                  className="px-5 py-2.5 rounded-xl bg-[#facc15] hover:bg-[#fde047] text-neutral-950 text-sm font-bold flex items-center gap-2 transition shadow-lg shadow-yellow-500/10 cursor-pointer"
                 >
-                  <Database className="h-4 w-4" /> Console de Scraping
+                  <Search className="h-4 w-4" /> Nova busca
                 </button>
               </div>
             </div>
@@ -1069,33 +991,232 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         {/* VIEW 2: NOVA BUSCA (SCRAPER & DISCOVERY)           */}
         {/* -------------------------------------------------- */}
         {activeTab === 'buscar' && (
-          <main className="p-6 md:p-10 max-w-5xl mx-auto w-full space-y-6">
-            <div className="bg-[#12151b] border border-[#202530] rounded-3xl p-8 text-center space-y-4 shadow-2xl">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-purple-500/15 border border-purple-500/40 flex items-center justify-center text-purple-400">
-                <Database className="w-8 h-8" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Central de Prospecção & Raspagem Unificada</h2>
-              <p className="text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
-                A busca e extração de leads foi unificada no <strong>Console de Scraping</strong> com suporte completo ao contrato PlaceRecord, deduplicação SHA-256 e Qualificação Dupla para os 5 modelos de sites.
+          <main className="p-6 md:p-10 max-w-7xl mx-auto w-full space-y-8">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-purple-400">
+                NOVA BUSCA
               </p>
-              <div className="pt-2 flex justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onNavigateToScraping) onNavigateToScraping();
-                    else window.location.assign('/plataforma/prospeccao');
-                  }}
-                  className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-600/30 transition cursor-pointer flex items-center gap-2"
-                >
-                  <Database className="w-4 h-4" /> Abrir Console de Scraping
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchTab('empresas')}
-                  className="px-5 py-3 rounded-xl bg-[#1c212c] hover:bg-[#252b39] border border-[#2d3443] text-sm font-semibold text-neutral-200 transition cursor-pointer"
-                >
-                  Ver Leads no CRM
-                </button>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
+                Encontre quem precisa do que você vende.
+              </h1>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Form Section */}
+              <div className="lg:col-span-2 bg-[#12151b] border border-[#202530] rounded-2xl p-6 sm:p-8 space-y-6">
+                <div className="flex items-center justify-between border-b border-[#202530] pb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-white">Nova busca</h2>
+                    <p className="text-xs text-neutral-400 mt-0.5">Nicho e cidade. A busca só exibirá dados retornados por uma fonte real.</p>
+                  </div>
+                  <Sparkles className="h-5 w-5 text-purple-400" />
+                </div>
+
+                {searchSuccessMessage && (
+                  <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-800 text-amber-200 text-xs flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
+                    <span>{searchSuccessMessage}</span>
+                  </div>
+                )}
+
+                {/* Estado da operação de busca em tempo real */}
+                {searchOperation.status !== 'idle' && (
+                  <div className="p-4 rounded-xl border bg-[#171b23] text-xs">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          searchOperation.status === 'completed'
+                            ? 'bg-emerald-500'
+                            : searchOperation.status === 'failed'
+                            ? 'bg-red-500'
+                            : 'bg-purple-500 animate-pulse'
+                        }`}
+                      />
+                      <span className="font-bold text-neutral-200">
+                        {searchOperation.status === 'completed'
+                          ? 'Concluída'
+                          : searchOperation.status === 'blocked'
+                          ? 'Bloqueada'
+                          : searchOperation.status === 'failed'
+                          ? 'Falha'
+                          : searchOperation.status === 'completed_partial'
+                          ? 'Concluída parcialmente'
+                          : 'Processando…'}
+                      </span>
+                    </div>
+                    {searchOperation.message && <p className="text-neutral-400 text-[11px] mb-2">{searchOperation.message}</p>}
+                    {searchOperation.error && (
+                      <p className="text-red-400 text-[11px] mb-2">{searchOperation.error}</p>
+                    )}
+                    {searchOperation.result && searchOperation.result.blocked > 0 && (
+                      <p className="text-[11px] text-red-300 mb-2">
+                        {searchOperation.error || 'Worker reportou tarefas com restrição ou bloqueio: '}
+                        {searchOperation.result.blocked} tarefa(s) não puderam ser concluídas pela fonte de dados.
+                      </p>
+                    )}
+                    {searchOperation.result && searchOperation.result.blocked === 0 && searchOperation.result.found === 0 && (
+                      <p className="text-[11px] text-amber-300 mb-2">
+                        Nenhum novo estabelecimento retornado para esta combinação de nicho e localização.
+                      </p>
+                    )}
+                    {searchOperation.result && (
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-[11px]">
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Encontrados</span>
+                          <span className="text-white font-bold">{searchOperation.result.found}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Novos</span>
+                          <span className="text-emerald-400 font-bold">{searchOperation.result.inserted}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Duplicados</span>
+                          <span className="text-neutral-400 font-bold">{searchOperation.result.duplicates}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Qualificados</span>
+                          <span className="text-amber-400 font-bold">{searchOperation.result.qualified ?? '—'}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Sucedidos</span>
+                          <span className="text-emerald-400 font-bold">{searchOperation.result.succeeded ?? 0}</span>
+                        </div>
+                        <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
+                          <span className="text-neutral-500 block">Bloqueados</span>
+                          <span className="text-red-400 font-bold">{searchOperation.result.blocked}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5">Nicho</label>
+                    <input
+                      type="text"
+                      value={searchNiche}
+                      onChange={(e) => setSearchNiche(e.target.value)}
+                      placeholder="Ex: Barbearia, Salão de Beleza, Clínica Estética"
+                      className="w-full px-3.5 py-3 rounded-xl bg-[#171b23] border border-[#2d3443] text-neutral-100 text-sm focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5">Estado</label>
+                    <select
+                      value={searchState}
+                      onChange={(e) => setSearchState(e.target.value)}
+                      className="w-full px-3.5 py-3 rounded-xl bg-[#171b23] border border-[#2d3443] text-neutral-100 text-sm focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="RS">Rio Grande do Sul (RS)</option>
+                      <option value="SP">São Paulo (SP)</option>
+                      <option value="RJ">Rio de Janeiro (RJ)</option>
+                      <option value="MG">Minas Gerais (MG)</option>
+                      <option value="PR">Paraná (PR)</option>
+                      <option value="SC">Santa Catarina (SC)</option>
+                      <option value="BA">Bahia (BA)</option>
+                      <option value="AM">Amazonas (AM)</option>
+                      <option value="DF">Distrito Federal (DF)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5">Cidade</label>
+                  <input
+                    type="text"
+                    value={searchCity}
+                    onChange={(e) => setSearchCity(e.target.value)}
+                    placeholder="Digite a cidade..."
+                    className="w-full px-3.5 py-3 rounded-xl bg-[#171b23] border border-[#2d3443] text-neutral-100 text-sm focus:outline-none focus:border-purple-500"
+                  />
+                  <p className="text-[11px] text-neutral-500 mt-1.5">
+                    Nicho e cidade fora da lista podem ser escritos. Bairro e raio ficam para um refinamento posterior.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-neutral-300">Quantidade</label>
+                    <span className="text-xs font-bold text-purple-400">{searchLimit} empresas</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    step="5"
+                    value={searchLimit}
+                    onChange={(e) => setSearchLimit(Number(e.target.value))}
+                    className="w-full accent-purple-600 bg-[#1c212c] rounded-lg h-2"
+                  />
+                  <div className="flex justify-between text-[10px] text-neutral-500 mt-1">
+                    <span>5 empresas</span>
+                    <span>20</span>
+                    <span>35</span>
+                    <span>50 empresas</span>
+                  </div>
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    Limite diário aplicado. Quantidade real pode ser menor se limite diário expirado ou dados indisponíveis no Google Maps.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    disabled={isSearching || !searchNiche || !searchCity}
+                    onClick={handleExecuteSearch}
+                    className="w-full py-3.5 rounded-xl bg-[#facc15] hover:bg-[#fde047] disabled:opacity-50 text-neutral-950 text-sm font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-yellow-500/10 cursor-pointer"
+                  >
+                    {isSearching ? (
+                      <>
+                        <RotateCw className="h-4 w-4 animate-spin" /> Registrando busca...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4" /> Buscar {searchLimit} empresas
+                      </>
+                    )}
+                  </button>
+                  <p className="text-center text-[11px] text-neutral-500 mt-2">
+                    A busca é processada pelo Worker do Cloudflare. Os resultados só aparecem após a coleta real e a gravação no banco.
+                  </p>
+                </div>
+              </div>
+
+              {/* Sidebar Info & History */}
+              <div className="space-y-6">
+                <div className="bg-[#12151b] border border-[#202530] rounded-2xl p-6">
+                  <div className="flex items-center justify-between text-xs mb-4">
+                    <h3 className="font-bold text-white">Suas buscas</h3>
+                    <span className="text-neutral-400 font-medium">Histórico</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {searchHistory.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-[#171b23] border border-[#202530] rounded-xl p-3 text-xs space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-white line-clamp-1">{item.niche} em {item.location}</span>
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded">
+                            Concluída
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                          <span>{item.count} empresas novas</span>
+                          <span>{item.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {searchOperation.result && (
+                      <div className="flex items-center justify-between text-xs text-neutral-400">
+                        <span>Encontrados: {searchOperation.result.found}</span>
+                        <span className="font-medium">de {searchLimit} solicitadas</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </main>
