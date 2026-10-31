@@ -6,16 +6,22 @@ import { X, MessageCircle, Check, AlertCircle, Sparkles } from 'lucide-react';
 interface ProductDetailModalProps {
   product: ProductItem | null;
   onClose: () => void;
+  whatsappNumber?: string;
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   product,
   onClose,
+  whatsappNumber,
 }) => {
   const { store } = useStore();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (!product) return null;
+
+  const cleanWhatsapp = (whatsappNumber || '').replace(/\D/g, '');
+  const purchaseMessage = 'Olá! Tenho interesse no produto ' + product.name + '.';
+  const purchaseUrl = cleanWhatsapp ? 'https://wa.me/' + cleanWhatsapp + '?text=' + encodeURIComponent(purchaseMessage) : store.buildProductInquiryUrl(product.name);
 
   const currentImg = selectedImage || product.mainImage;
   const allImages = [
@@ -119,7 +125,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {/* WhatsApp Purchase CTA */}
               <div className="pt-4 border-t border-neutral-800/80">
                 <a
-                  href={store.buildProductInquiryUrl(product.name)}
+                  href={purchaseUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold text-sm shadow-lg hover:shadow-emerald-600/30 transition-all transform active:scale-98"
@@ -128,7 +134,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span>Comprar pelo WhatsApp</span>
                 </a>
                 <p className="text-[11px] text-center text-neutral-400 mt-2">
-                  Atendimento direto com a equipe Yeshua para retirada ou entrega.
+                  Atendimento direto com a equipe do estabelecimento para consultar disponibilidade.
                 </p>
               </div>
             </div>
