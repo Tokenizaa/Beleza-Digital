@@ -50,7 +50,7 @@ export const SITE_TEMPLATES: Record<SiteVariationId, SiteTemplateConfig> = {
     borderColor: 'border-amber-500/30',
     previewThumbnail: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=600&q=80',
     recommendedFor: 'Barbearias tradicionais, barbearias vintage e salões masculinos de alto padrão',
-    sections: ['hero', 'services', 'gallery', 'products', 'appointment', 'contact'],
+    sections: ['hero', 'services', 'gallery', 'instagram', 'products', 'appointment', 'contact'],
     focus: 'services',
   },
   'preto-esmeralda': {
@@ -72,7 +72,7 @@ export const SITE_TEMPLATES: Record<SiteVariationId, SiteTemplateConfig> = {
     borderColor: 'border-emerald-500/30',
     previewThumbnail: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80',
     recommendedFor: 'Barbearias urbanas, barbearias jovens, conceito fade e freestyle',
-    sections: ['hero', 'gallery', 'services', 'products', 'appointment', 'contact'],
+    sections: ['hero', 'gallery', 'instagram', 'services', 'products', 'appointment', 'contact'],
     focus: 'portfolio',
   },
   'minimal-studio': {
@@ -94,7 +94,7 @@ export const SITE_TEMPLATES: Record<SiteVariationId, SiteTemplateConfig> = {
     borderColor: 'border-slate-700',
     previewThumbnail: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80',
     recommendedFor: 'Estúdios unissex, salões de beleza boutique, clínicas de estética e visagismo',
-    sections: ['hero', 'services', 'products', 'gallery', 'appointment', 'contact'],
+    sections: ['hero', 'services', 'products', 'gallery', 'instagram', 'appointment', 'contact'],
     focus: 'essential',
   },
   'safira-executivo': {
@@ -116,7 +116,7 @@ export const SITE_TEMPLATES: Record<SiteVariationId, SiteTemplateConfig> = {
     borderColor: 'border-blue-500/30',
     previewThumbnail: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=600&q=80',
     recommendedFor: 'Barbearias executivas em centros comerciais, lounges VIP e barbearias de hotéis',
-    sections: ['hero', 'products', 'services', 'gallery', 'appointment', 'contact'],
+    sections: ['hero', 'products', 'services', 'gallery', 'instagram', 'appointment', 'contact'],
     focus: 'corporativo',
   },
   'rubi-lounge': {
