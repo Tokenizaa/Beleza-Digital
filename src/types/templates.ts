@@ -138,7 +138,7 @@ export const SITE_TEMPLATES: Record<SiteVariationId, SiteTemplateConfig> = {
     borderColor: 'border-rose-500/30',
     previewThumbnail: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=600&q=80',
     recommendedFor: 'Salões de beleza conceituais, spas urbanos, barbearias com bar & café',
-    sections: ['hero', 'services', 'products', 'gallery', 'appointment', 'contact'],  // 5 sections, products antes da gallery
+    sections: ['hero', 'services', 'products', 'gallery', 'instagram', 'appointment', 'contact'],
     focus: 'experience',
   },
 };
