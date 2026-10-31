@@ -170,6 +170,8 @@ export interface SiteBusinessData {
   instagramHandle?: string;
   instagramUrl?: string;
   googleMapsUrl?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   services?: ServiceItem[];
   products?: ProductItem[];
   media?: MediaItem[];

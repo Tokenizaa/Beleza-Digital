@@ -63,8 +63,8 @@ export async function onRequestPost({ request, env }: Context) {
     }, 503);
   }
 
-  let body: { projectName?: unknown; categoryName?: unknown; segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown; executionId?: unknown; minimumScore?: unknown };
-  try { body = (await request.json()) as { projectName?: unknown; categoryName?: unknown; segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown; executionId?: unknown; minimumScore?: unknown }; }
+  let body: { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown; executionId?: unknown };
+  try { body = (await request.json()) as { segment?: unknown; region?: unknown; limit?: unknown; countryCode?: unknown; createCampaign?: unknown }; }
   catch { return json({ error: 'Envie um JSON válido com segment e region.' }, 400); }
 
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -105,13 +105,11 @@ export async function onRequestPost({ request, env }: Context) {
         idempotency_key: idempotencyKey,
         payload: {
           executionId,
-          projectName: typeof body.projectName === 'string' ? body.projectName.trim().slice(0, 120) : null,
-          categoryName: typeof body.categoryName === 'string' ? body.categoryName.trim().slice(0, 120) : null,
           segment,
           region,
           countryCode,
           dailyDiscoveryLimit: limit,
-          minimumScore: typeof body.minimumScore === 'number' ? body.minimumScore : 50,
+          minimumScore: 50,
           manual: true,
         },
       }),
@@ -135,7 +133,7 @@ export async function onRequestPost({ request, env }: Context) {
     }
     const taskId = String(taskRows[0].id);
 
-    // Solicita processamento imediato ao Worker. A fila persistida permite retomada pelo agendador caso a chamada falhe.
+    // Solicita processamento imediato. A fila persistida permite retomada pelo agendador caso a chamada falhe.
     let workerWarning: string | null = null;
     try {
       const workerResponse = await fetch(env.PROSPECTING_WORKER_URL!, {

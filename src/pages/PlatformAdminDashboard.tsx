@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { UnifiedAdminDashboard } from "./UnifiedAdminDashboard";
+import { store } from "../data/store";
 
 export function PlatformAdminDashboard() {
   const [authorized, setAuthorized] = useState(false);
@@ -12,9 +13,9 @@ export function PlatformAdminDashboard() {
     // para evitar o redirecionamento quebrado que existia antes.
     let active = true;
     const verify = async () => {
-      if (isSupabaseConfigured) {
+      if (isSupabaseConfigured && supabase) {
         // Modo Supabase real: verificar sessão + platform_admins
-        let client = supabase;
+        const client = supabase;
         const { data: { session } } = await client.auth.getSession();
         if (!session) {
           if (active) window.location.replace("/plataforma/acesso?mode=login");
@@ -33,7 +34,6 @@ export function PlatformAdminDashboard() {
         setAuthorized(true);
       } else {
         // Modo demo/synthetic: verificar sessão da store
-        const store = useStore.getState();
         const storeSession = store.getCurrentSession();
         if (storeSession && storeSession.role) {
           setAuthorized(true);
@@ -52,9 +52,11 @@ export function PlatformAdminDashboard() {
   }
   // Renderiza o painel unificado.
   // Usa a seção de prospecção como inicial, pois é o módulo principal do admin.
+  // Módulo de Gestão do Salão (salao-*) é excluído: admin da plataforma não acessa funções de salão.
   return <UnifiedAdminDashboard
     initialSection="prospeccao-hoje"
     preAuthenticated
+    excludeModules={['salao']}
     onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign("/") }}
   />;
 }

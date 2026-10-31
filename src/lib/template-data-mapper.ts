@@ -11,6 +11,8 @@
  * dados são destacados para cada layout de template.
  */
 
+import type { SiteTemplateConfig, SiteVariationId } from '../types/templates';
+
 // Interface com todos os campos possíveis do Mapscrape.
 // Baseado na estrutura do buildCandidate() em scripts/scrape-local.cjs
 // e nos campos mencionados na documentação/issue.
@@ -135,6 +137,7 @@ export function mapDataForTemplate(
     videos: data.videos.length > 0 ? data.videos : [],
     rating: data.rating,
     reviewCount: data.review_count,
+    originalProvider: 'mapscrape',
   };
 
   // Lógica switch por template.focus - mapeia dados relevantes para cada template

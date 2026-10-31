@@ -114,6 +114,8 @@ function stableDedupeKey(place) {
   return 'sha256:' + crypto.createHash('sha256').update(identity).digest('hex');
 }
 
+const createDedupeKey = stableDedupeKey;
+
 function boundedInteger(value, fallback, min, max) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
@@ -521,6 +523,7 @@ module.exports = {
   normalizePhone,
   parseRatingAndReviewCount,
   stableDedupeKey,
+  createDedupeKey,
   scoreCompleteness,
   scoreOpportunity,
   buildCandidate,

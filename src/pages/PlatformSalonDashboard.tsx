@@ -46,10 +46,12 @@ export function PlatformSalonDashboard() {
   if (checking || !authorized) {
     return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">Verificando acesso ao salão…</main>;
   }
-  // Renderiza o painel unificado com sidebar única (gestão do salão). O wrapper já validou a sessão Supabase.
+  // Renderiza o painel unificado com sidebar única (gestão do salão).
+  // Apenas módulo de Gestão do Salão (salao-*) está disponível; prospecção/rede são excluídas.
   return <UnifiedAdminDashboard
     initialSection="salao-dashboard"
     preAuthenticated
+    excludeModules={['prospeccao', 'rede', 'templates']}
     onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign('/'); }}
   />;
 }

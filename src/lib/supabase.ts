@@ -10,8 +10,10 @@ function envVar(...keys: string[]): string | undefined {
       value = (import.meta.env as any)?.[key];
     } catch {}
     if (value) return value;
-    value = process.env[key];
-    if (value) return value;
+    if (typeof process !== 'undefined' && process.env) {
+      value = process.env[key];
+      if (value) return value;
+    }
   }
   return undefined;
 }
@@ -33,8 +35,8 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabasePublishableKey, {
       auth: {
         persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
+        autoRefreshToken: false, // desliga renovação automática para evitar loop de 400 em dev local
+        detectSessionInUrl: false, // desliga detecção de sessão na URL em dev local
       },
     })
   : null;

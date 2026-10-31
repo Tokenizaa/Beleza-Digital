@@ -10,10 +10,11 @@
 export type CopyFallback = 'fallback' | 'empty' | 'none';
 
 export interface CopyTemplate {
-  template: (value: string | number | null | undefined) => string;
-  fallback: string;
+  template: (value?: any) => string;
+  fallback: string | null;
   useForMap?: boolean;
   useForGallery?: boolean;
+  useForBranding?: boolean;
 }
 
 /**
@@ -169,13 +170,13 @@ export function getFieldCopy(
   value: string | number | null | undefined
 ): string {
   const template = copyTemplates[fieldName];
-  if (!template) return copyTemplates.nome.fallback;
+  if (!template) return copyTemplates.nome.fallback || '';
   
   if (template.useForMap || template.useForGallery) {
-    return template.useForMap ? '' : template.fallback;
+    return template.useForMap ? '' : (template.fallback || '');
   }
   
-  return template.template(value) || template.fallback;
+  return template.template(value) || template.fallback || '';
 }
 
 /**
