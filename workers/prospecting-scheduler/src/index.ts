@@ -370,6 +370,12 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const BASE_DELAY_MS = 2_000; // 2s base delay
   const MAX_DELAY_MS = 60_000; // 60s max delay
   let lastError: Error | null = null;
+  let step = "init";
+  let bindingType = "unknown";
+  let bindingIsString = false;
+  let bindingLength = 0;
+  let scrapedResults: Array<Record<string, unknown>> = [];
+  let browser: any;
 
   for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
   // Build search query for Google Maps / local business directories
@@ -380,17 +386,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
 
   // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
   // No Docker, container, VPS, or external Python service is required.
-  let scrapedResults: Array<Record<string, unknown>> = [];
-  let browser: any;
-  let step = "init";
-  let bindingType = "unknown";
-  let bindingIsString = false;
-  let bindingLength = 0;
   try {
     const browserBindingValue = env.PROSPECTING_BROWSER;
-    bindingType = typeof browserBindingValue;
-    bindingIsString = typeof browserBindingValue === "string";
-    bindingLength = bindingIsString ? browserBindingValue.length : 0;
     step = "browser_connect";
     if (!browserBindingValue) throw new Error("prospecting_browser_binding_missing");
 
