@@ -94,7 +94,7 @@ export const SITE_TEMPLATES: Record<SiteVariationId, SiteTemplateConfig> = {
     borderColor: 'border-slate-700',
     previewThumbnail: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80',
     recommendedFor: 'Estúdios unissex, salões de beleza boutique, clínicas de estética e visagismo',
-    sections: ['hero', 'services', 'gallery', 'products', 'appointment', 'contact'],  // 5 sections, ordem minimalista: hero primeiro, contact em segundo
+    sections: ['hero', 'services', 'products', 'gallery', 'appointment', 'contact'],
     focus: 'essential',
   },
   'safira-executivo': {
