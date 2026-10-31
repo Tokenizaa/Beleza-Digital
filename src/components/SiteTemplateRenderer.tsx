@@ -29,6 +29,7 @@ import {
   Heart,
   Wine,
   Feather,
+  Play,
   Flame,
   CheckSquare,
   Layers,
@@ -84,73 +85,6 @@ interface SiteTemplateRendererProps {
   onContinueToActivation?: () => void;
 }
 
-// Fallback curated services per archetype when business doesn't provide explicit services
-const ARCHETYPE_SERVICES: Record<SiteVariationId, Array<{ name: string; desc: string; price: number; duration: number; cat: string }>> = {
-  'ouro-classico': [
-    { name: 'Corte Clássico & Visagismo Nobre', desc: 'Corte tradicional personalizado com acabamento em navalha e toalha quente aromática.', price: 70, duration: 45, cat: 'Corte' },
-    { name: 'Barboterapia Imperial com Ozônio', desc: 'Alinhamento completo, esfoliação facial, vapor de ozônio e toalha quente relaxante.', price: 55, duration: 40, cat: 'Barba' },
-    { name: 'Combo Real (Corte + Barba + Sobrancelha)', desc: 'Experiência completa dos mestres com finalização em pomada nobre e loção pós-barba.', price: 115, duration: 75, cat: 'Combo' },
-    { name: 'Tratamento Capilar Anti-Queda & Massagem', desc: 'Tonificação profunda do couro cabeludo com massagem craniofacial revigorante.', price: 65, duration: 35, cat: 'Tratamento' },
-  ],
-  'preto-esmeralda': [
-    { name: 'Skin Fade Cirúrgico // Graduação Zero', desc: 'Degradê de alta precisão com navalhamento milimétrico e linhas de acabamento afiadas.', price: 65, duration: 40, cat: 'Fade' },
-    { name: 'Barba Freestyle & Pigmentação HD', desc: 'Design e alinhamento angular de barba com realce óptico de pigmentação temporária.', price: 50, duration: 35, cat: 'Street' },
-    { name: 'Combo Underground // Fade + Barba + Risco', desc: 'Pacote completo urbano com navalhado completo, desenho freestyle e finalização matte.', price: 110, duration: 70, cat: 'Combo' },
-    { name: 'Texturização & Pompadour Street', desc: 'Modelagem moderna para cabelos médios/longos com pó texturizador profissional.', price: 45, duration: 30, cat: 'Styling' },
-  ],
-  'minimal-studio': [
-    { name: 'Design Capilar Contemporâneo', desc: 'Corte estruturado e minimalista focado na anatomia e caimento natural dos fios.', price: 80, duration: 50, cat: 'Essencial' },
-    { name: 'Harmonização de Fios & Hidratação Limpa', desc: 'Tratamento botânico sustentável com fórmulas puras, livres de sulfatos e parabenos.', price: 95, duration: 45, cat: 'Tratamento' },
-    { name: 'Alinhamento Sutil de Barba & Cuidados', desc: 'Definição natural e hidratação profunda com óleos essenciais orgânicos.', price: 50, duration: 30, cat: 'Barba' },
-    { name: 'Sessão Individual Privativa Completa', desc: 'Atendimento exclusivo 1-a-1 em sala privativa, incluindo café especial e análise estética.', price: 140, duration: 80, cat: 'Experiência' },
-  ],
-  'safira-executivo': [
-    { name: 'Executive Quick Cut (30 min)', desc: 'Corte corporativo ágil e impecável, ideal para intervalos entre compromissos de negócios.', price: 75, duration: 30, cat: 'Express' },
-    { name: 'Alinhamento Executivo & Barba VIP', desc: 'Navalha de precisão, contorno milimétrico e toalha morna com óleo de sândalo.', price: 60, duration: 35, cat: 'Executivo' },
-    { name: 'Combo Presidencial (Corte + Barba + Massagem)', desc: 'Cuidado completo de imagem profissional com massagem relaxante anti-estresse.', price: 130, duration: 65, cat: 'VIP' },
-    { name: 'Camuflagem Discreta de Fios Brancos', desc: 'Pigmentação sutil que preserva a maturidade e sofisticação sem parecer tingido.', price: 70, duration: 30, cat: 'Coloração' },
-  ],
-  'rubi-lounge': [
-    { name: 'Ritual Capilar Nutritivo & Cronograma Velvet', desc: 'Tratamento profundo com óleos preciosos e infusão botânica para brilho sedoso imediato.', price: 120, duration: 60, cat: 'Ritual' },
-    { name: 'Design de Olhar & Harmonização de Sobrancelhas', desc: 'Visagismo facial com pinçamento de precisão e hidratação com sérum de peptídeos.', price: 60, duration: 40, cat: 'Estética' },
-    { name: 'Corte Visagista & Escova Modelada Lounge', desc: 'Análise de proporção áurea, corte de precisão e finalização editorial com ondas suaves.', price: 95, duration: 60, cat: 'Cabelos' },
-    { name: 'Spa das Mãos & Esmaltação em Gel Nobre', desc: 'Esfoliação com cristais de açúcar, massagem com manteiga de karité e esmalte de longa duração.', price: 70, duration: 50, cat: 'Unhas' },
-  ],
-};
-
-const ARCHETYPE_GALLERY: Record<SiteVariationId, Array<{ id: string; title: string; category: string; url: string }>> = {
-  'ouro-classico': [
-    { id: 'oc-1', title: 'Corte Clássico Pompadour', category: 'Cabelo', url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=800&q=80' },
-    { id: 'oc-2', title: 'Barboterapia Tradicional', category: 'Barba', url: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=800&q=80' },
-    { id: 'oc-3', title: 'Navalha & Acabamento Retrô', category: 'Detalhe', url: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=800&q=80' },
-    { id: 'oc-4', title: 'Ambiente Imperial & Madeira', category: 'Espaço', url: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=800&q=80' },
-  ],
-  'preto-esmeralda': [
-    { id: 'pe-1', title: 'Mid Skin Fade & Texturizado', category: 'Fade', url: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=800&q=80' },
-    { id: 'pe-2', title: 'Taper Fade com Pigmentação', category: 'Freestyle', url: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=800&q=80' },
-    { id: 'pe-3', title: 'Barba Alinhada em Ângulo', category: 'Barba', url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80' },
-    { id: 'pe-4', title: 'High Contrast Streetwear Look', category: 'Street', url: 'https://images.unsplash.com/photo-1517832606589-7629c3397143?auto=format&fit=crop&w=800&q=80' },
-  ],
-  'minimal-studio': [
-    { id: 'ms-1', title: 'Corte Geométrico Fluido', category: 'Design', url: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80' },
-    { id: 'ms-2', title: 'Espaço Privativo & Iluminação Natural', category: 'Estúdio', url: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80' },
-    { id: 'ms-3', title: 'Cosmética Limpa & Botânica', category: 'Produtos', url: 'https://images.unsplash.com/photo-1608248597359-2e11894a4c58?auto=format&fit=crop&w=800&q=80' },
-    { id: 'ms-4', title: 'Finalização Orgânica & Textura', category: 'Cabelo', url: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80' },
-  ],
-  'safira-executivo': [
-    { id: 'se-1', title: 'Corte Executivo Impecável', category: 'Business', url: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=800&q=80' },
-    { id: 'se-2', title: 'Lounge Corporativo & Café', category: 'Espaço', url: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=800&q=80' },
-    { id: 'se-3', title: 'Barba de Alta Precisão', category: 'Barba', url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=800&q=80' },
-    { id: 'se-4', title: 'Alinhamento Discreto de Fios', category: 'Grooming', url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80' },
-  ],
-  'rubi-lounge': [
-    { id: 'rl-1', title: 'Mechas Luminosas & Tons Veludo', category: 'Coloração', url: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=800&q=80' },
-    { id: 'rl-2', title: 'Lounge Bar & Taça de Espumante', category: 'Hospitality', url: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80' },
-    { id: 'rl-3', title: 'Design de Olhar & Sobrancelhas', category: 'Visagismo', url: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80' },
-    { id: 'rl-4', title: 'Ritual de Relaxamento & Cuidado', category: 'Spa', url: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80' },
-  ],
-};
-
 export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   businessData,
   template: explicitTemplate,
@@ -184,34 +118,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
   const timeslots = ['09:00', '10:00', '11:00', '13:30', '14:30', '15:30', '16:30', '17:30', '18:30'];
 
-  // Resolve services: if businessData has services, use them; otherwise use curated archetype services
-  const rawServices: ServiceItem[] = businessData.services && businessData.services.length > 0
-    ? businessData.services
-    : ARCHETYPE_SERVICES[activeVariation].map((s, idx) => ({
-        id: `srv-${activeVariation}-${idx}`,
-        name: s.name,
-        category: s.cat,
-        description: s.desc,
-        price: s.price,
-        durationMinutes: s.duration,
-        featured: idx < 2,
-      }));
-
-  // Resolve media/gallery
-  const rawMedia: MediaItem[] = businessData.media && businessData.media.length > 0
-    ? businessData.media
-    : ARCHETYPE_GALLERY[activeVariation].map((m) => ({
-        id: m.id,
-        establishmentId: 'est-demo',
-        title: m.title,
-        type: 'image' as const,
-        url: m.url,
-        category: (['Barbearia', 'Ambiente', 'Cabelos', 'Unhas', 'Sobrancelhas', 'Produtos', 'Tranças', 'Outros'].includes(m.category)
-          ? m.category
-          : 'Barbearia') as any,
-        featured: true,
-        dateAdded: new Date().toISOString(),
-      }));
+  // Os modelos usam somente dados reais fornecidos pela demonstração.
+  // Não preencher serviços, produtos ou fotos com conteúdo fictício.
+  const rawServices: ServiceItem[] = businessData.services ?? [];
+  const rawProducts: ProductItem[] = businessData.products ?? [];
+  const rawMedia: MediaItem[] = businessData.media ?? [];
 
   const handleSelectVariation = (id: SiteVariationId) => {
     setCurrentVariation(id);
@@ -220,6 +131,81 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
   const whatsappClean = (businessData.whatsapp || businessData.phone || '').replace(/\D/g, '');
   const whatsappUrl = `https://wa.me/${whatsappClean}?text=${encodeURIComponent(`Olá! Gostaria de agendar um atendimento na ${businessData.name}.`)}`;
+
+  const galleryStyle: Record<SiteVariationId, { shell: string; heading: string; card: string; label: string }> = {
+    'ouro-classico': { shell: 'border-y border-amber-900/30 bg-[#100e0a]', heading: 'font-serif text-amber-100', card: 'rounded-xl border border-amber-900/40', label: 'text-amber-300' },
+    'preto-esmeralda': { shell: 'border-y border-emerald-900/40 bg-[#050706]', heading: 'font-black uppercase tracking-tight text-white', card: 'rounded-lg border border-neutral-800 hover:border-emerald-500/60', label: 'text-emerald-300' },
+    'minimal-studio': { shell: 'border-y border-slate-200 bg-[#f8fafc] text-slate-900', heading: 'font-light tracking-tight text-slate-900', card: 'rounded-none border border-slate-200', label: 'text-slate-600' },
+    'safira-executivo': { shell: 'border-y border-blue-900/50 bg-[#081126]', heading: 'font-extrabold text-white', card: 'rounded-xl border border-blue-900/60', label: 'text-blue-300' },
+    'rubi-lounge': { shell: 'border-y border-rose-950/80 bg-[#1a080d]', heading: 'font-serif italic text-white', card: 'rounded-2xl border border-rose-950/80', label: 'text-rose-300' },
+  };
+  const productStyle: Record<SiteVariationId, { shell: string; heading: string; card: string; price: string; button: string }> = {
+    'ouro-classico': { shell: 'bg-[#0e0d0b] border-amber-900/30', heading: 'font-serif text-amber-100', card: 'bg-[#17140f] border-amber-900/40 rounded-xl', price: 'text-amber-300', button: 'bg-amber-500 text-neutral-950 hover:bg-amber-400' },
+    'preto-esmeralda': { shell: 'bg-[#050706] border-neutral-800', heading: 'font-black uppercase text-white', card: 'bg-[#090e0b] border-emerald-900/50 rounded-lg', price: 'text-emerald-300', button: 'bg-emerald-500 text-neutral-950 hover:bg-emerald-400' },
+    'minimal-studio': { shell: 'bg-[#f8fafc] border-slate-200', heading: 'font-light text-slate-900', card: 'bg-white border-slate-200 rounded-none', price: 'text-slate-900', button: 'bg-slate-900 text-white hover:bg-slate-700' },
+    'safira-executivo': { shell: 'bg-[#070d1e] border-blue-900/50', heading: 'font-extrabold text-white', card: 'bg-[#0b142d] border-blue-900/60 rounded-xl', price: 'text-blue-300', button: 'bg-blue-600 text-white hover:bg-blue-500' },
+    'rubi-lounge': { shell: 'bg-[#140609] border-rose-950/80', heading: 'font-serif italic text-white', card: 'bg-[#1c080e] border-rose-950 rounded-2xl', price: 'text-rose-300', button: 'bg-rose-500 text-white hover:bg-rose-400' },
+  };
+
+  const renderGallerySection = () => {
+    if (rawMedia.length === 0) return null;
+    const style = galleryStyle[activeVariation];
+    return (
+      <section id="galeria" className={`px-4 sm:px-8 py-16 ${style.shell}`}>
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${style.label}`}>Galeria</p>
+              <h2 className={`mt-2 text-3xl sm:text-4xl ${style.heading}`}>Conheça nosso trabalho</h2>
+            </div>
+            <p className="max-w-md text-sm opacity-70">Imagens e vídeos apresentados pelo próprio estabelecimento.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {rawMedia.slice(0, 8).map((item) => (
+              <button key={item.id} type="button" onClick={() => setSelectedMedia(item)} className={`group relative aspect-[4/5] overflow-hidden text-left ${style.card}`}>
+                <img src={item.thumbnailUrl || item.url} alt={item.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                {item.type === 'video' && <span className="absolute left-3 top-3 rounded-full bg-black/75 p-2 text-white"><Play className="h-4 w-4" /></span>}
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3 pt-10 text-sm font-semibold text-white">{item.title}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  const renderProductSection = () => {
+    if (rawProducts.length === 0) return null;
+    const style = productStyle[activeVariation];
+    return (
+      <section id="produtos" className={`border-y px-4 sm:px-8 py-16 ${style.shell}`}>
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] opacity-70">Produtos</p>
+            <h2 className={`mt-2 text-3xl sm:text-4xl ${style.heading}`}>Produtos em destaque</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {rawProducts.slice(0, 8).map((product) => (
+              <article key={product.id} className={`overflow-hidden border ${style.card}`}>
+                <button type="button" onClick={() => setSelectedProduct(product)} className="block aspect-square w-full overflow-hidden bg-black/10">
+                  <img src={product.mainImage} alt={product.name} loading="lazy" className="h-full w-full object-cover transition duration-500 hover:scale-105" />
+                </button>
+                <div className="space-y-3 p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider opacity-60">{product.category}</div>
+                  <h3 className="min-h-10 text-base font-semibold">{product.name}</h3>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={`font-bold ${style.price}`}>R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}</span>
+                    <button type="button" onClick={() => setSelectedProduct(product)} className={`rounded-lg px-3 py-2 text-xs font-bold ${style.button}`}>Ver produto</button>
+                  </div>
+                  {!product.available && <p className="text-xs opacity-60">Consulte disponibilidade</p>}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  };
 
   // ==========================================================================
   // RENDERER 1: OURO CLÁSSICO (Tradicional & Imperial • Estilo Yeshua)
@@ -313,7 +299,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* Menu Board Tradicional com Linhas Pontilhadas */}
-      <section id="servicos" className="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-amber-900/30 font-sans">
+      <section id="servicos" hidden={rawServices.length === 0} className="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-amber-900/30 font-sans">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">Tabela de Serviços</span>
           <h2 className="text-2xl sm:text-3xl font-serif text-amber-100 font-bold">Menu de Atendimentos</h2>
@@ -378,7 +364,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   );
 
   // ==========================================================================
-  // RENDERER 2: PRETO ESMERALDA (Bold Street & Streetwear • Alto Contraste)
+      {renderProductSection()}
+    </div>
+  );
+
+  // ==========================================================================
+  //   // RENDERER 2: PRETO ESMERALDA (Bold Street & Streetwear • Alto Contraste)
   // ==========================================================================
   const renderPretoEsmeralda = () => (
     <div className="bg-[#050706] text-neutral-100 font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
@@ -472,7 +463,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* Serviços Tech-Spec */}
-      <section id="servicos" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-neutral-800">
+      <section id="servicos" hidden={rawServices.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-neutral-800">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className="font-mono text-xs text-emerald-400 uppercase tracking-widest">// MENU DE PROCEDIMENTOS</span>
           <h2 className="text-3xl font-black uppercase tracking-tight text-white">Serviços Especializados</h2>
@@ -517,7 +508,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   );
 
   // ==========================================================================
-  // RENDERER 3: MINIMAL STUDIO (Clean Modern & Arejado • Platina & Ardósia)
+      {renderProductSection()}
+    </div>
+  );
+
+  // ==========================================================================
+  //   // RENDERER 3: MINIMAL STUDIO (Clean Modern & Arejado • Platina & Ardósia)
   // ==========================================================================
   const renderMinimalStudio = () => (
     <div className="bg-[#0b0f17] text-slate-100 font-sans font-light selection:bg-slate-300/20 selection:text-white">
@@ -616,7 +612,13 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   );
 
   // ==========================================================================
-  // RENDERER 4: SAFIRA EXECUTIVO (Clube Corporativo & Navy VIP)
+      {renderGallerySection()}
+      {renderProductSection()}
+    </div>
+  );
+
+  // ==========================================================================
+  //   // RENDERER 4: SAFIRA EXECUTIVO (Clube Corporativo & Navy VIP)
   // ==========================================================================
   const renderSafiraExecutivo = () => (
     <div className="bg-[#070d1e] text-blue-50 font-sans selection:bg-blue-600/30 selection:text-blue-200">
@@ -738,7 +740,13 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   );
 
   // ==========================================================================
-  // RENDERER 5: RUBI LOUNGE (Velvet Aesthetic & Editorial Nobre)
+      {renderProductSection()}
+      {renderGallerySection()}
+    </div>
+  );
+
+  // ==========================================================================
+  //   // RENDERER 5: RUBI LOUNGE (Velvet Aesthetic & Editorial Nobre)
   // ==========================================================================
   const renderRubiLounge = () => (
     <div className="bg-[#140609] text-rose-50 font-serif selection:bg-rose-500/30 selection:text-rose-200">
@@ -860,7 +868,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
     </div>
   );
 
-  // Common interactive booking section adapted to current theme
+      {renderGallerySection()}
+    </div>
+  );
+
+  // ==========================================================================
+  //   // Common interactive booking section adapted to current theme
   const renderSharedBookingSection = () => {
     return (
       <section id="agendamento" className="max-w-4xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
@@ -1080,10 +1093,10 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
       {/* Modais */}
       {selectedMedia && (
-        <MediaModal media={selectedMedia} onClose={() => setSelectedMedia(null)} />
+        <MediaModal media={selectedMedia} whatsappNumber={businessData.whatsapp || businessData.phone} onClose={() => setSelectedMedia(null)} />
       )}
       {selectedProduct && (
-        <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+        <ProductDetailModal product={selectedProduct} whatsappNumber={businessData.whatsapp || businessData.phone} onClose={() => setSelectedProduct(null)} />
       )}
     </div>
   );
