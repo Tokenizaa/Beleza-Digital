@@ -16,7 +16,6 @@ import {
   Instagram,
   Settings,
   Compass,
-  Search,
   Users,
   Activity,
   Building2,
@@ -49,7 +48,6 @@ export type UnifiedAdminSection =
   | 'salao-instagram'
   | 'salao-configuracoes'
   | 'prospeccao-hoje'
-  | 'prospeccao-buscar'
   | 'prospeccao-crm'
   | 'prospeccao-automacao'
   | 'prospeccao-scraping'
@@ -160,7 +158,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   const handleLeadsDashboardTabChange = (tab: 'hoje' | 'buscar' | 'empresas') => {
     const map: Record<'hoje' | 'buscar' | 'empresas', UnifiedAdminSection> = {
       hoje: 'prospeccao-hoje',
-      buscar: 'prospeccao-buscar',
+      buscar: 'prospeccao-hoje',
       empresas: 'prospeccao-crm',
     };
     if (map[tab]) setActiveSection(map[tab]);
@@ -280,13 +278,11 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
 
     if (
       activeSection === 'prospeccao-hoje' ||
-      activeSection === 'prospeccao-buscar' ||
       activeSection === 'prospeccao-crm' ||
       activeSection === 'prospeccao-automacao'
     ) {
       const tabMap: Record<string, 'hoje' | 'buscar' | 'empresas'> = {
         'prospeccao-hoje': 'hoje',
-        'prospeccao-buscar': 'buscar',
         'prospeccao-crm': 'empresas',
         'prospeccao-automacao': 'hoje',
       };
@@ -617,7 +613,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                   <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
                     {[
                       { id: 'prospeccao-hoje', label: 'Painel do Dia (Hoje)', icon: Compass },
-                      { id: 'prospeccao-buscar', label: 'Nova Busca & Raspagem', icon: Search },
                       { id: 'prospeccao-crm', label: 'Pipeline CRM & Empresas', icon: Users },
                       { id: 'prospeccao-scraping', label: 'Console de Scraping', icon: Database },
                     ].map((sub) => {
