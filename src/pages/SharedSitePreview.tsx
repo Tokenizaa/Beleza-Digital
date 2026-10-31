@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
 import type { ServiceItem, ProductItem, MediaItem } from '../types';
 import { normalizeTemplateId, SiteBusinessData, SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId } from '../types/templates';
@@ -204,6 +204,10 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
   // Active variation state - allows the lead to toggle live between the 5 models
   const initialVar = normalizeTemplateId(preview.templateId);
   const [activeVariation, setActiveVariation] = useState<SiteVariationId>(initialVar);
+
+  useEffect(() => {
+    setActiveVariation(normalizeTemplateId(preview.templateId));
+  }, [preview.templateId]);
 
   const currentTemplate = SITE_TEMPLATES[activeVariation] || SITE_TEMPLATES['ouro-classico'];
   const templateName = currentTemplate.name;
