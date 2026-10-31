@@ -33,6 +33,7 @@ import {
 import { createShareablePreviewUrl } from './SharedSitePreview';
 import { SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId, normalizeTemplateId } from '../types/templates';
 import { supabase } from '../lib/supabase';
+import { createValidatedWhatsAppUrl } from '../lib/message-templates';
 
 export type LeadStage = 'novo' | 'contatado' | 'respondeu' | 'reuniao' | 'fechado';
 export type OpportunityLevel = 'alta' | 'media' | 'baixa';
@@ -172,6 +173,19 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       const phone = String(row.normalized_phone || row.phone || '').replace(/\D/g, '');
       const websiteUrl = String(row.normalized_website || row.website_url || '');
       const category = String(row.category || 'Empresa local');
+      const commercialScore = typeof row.raw_evidence?.commercial_score === 'number'
+        ? row.raw_evidence.commercial_score
+        : typeof row.raw_evidence?.commercialScore === 'number'
+        ? row.raw_evidence.commercialScore
+        : Number(row.qualification_score || 0);
+
+      const opportunityLevel: OpportunityLevel = (
+        row.raw_evidence?.commercial_level ||
+        (commercialScore >= 70 ? 'alta' : commercialScore >= 40 ? 'media' : 'baixa')
+      ) as OpportunityLevel;
+
+      const suggestedTemplate = row.raw_evidence?.suggestedTemplate || 'ouro-classico';
+
       return {
         id: row.id,
         name: String(row.business_name || 'Empresa sem nome'),
@@ -186,14 +200,20 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
         demoUrl: demoLink?.url,
         demoExpiresAt: demoLink?.expiresAt,
         rating: typeof row.raw_evidence?.rating === 'number' ? row.raw_evidence.rating : null,
-        reviewsCount: typeof row.raw_evidence?.reviewsCount === 'number' ? row.raw_evidence.reviewsCount : null,
+        reviewsCount: typeof row.raw_evidence?.reviewsCount === 'number' 
+          ? row.raw_evidence.reviewsCount 
+          : typeof row.raw_evidence?.review_count === 'number'
+          ? row.raw_evidence.review_count
+          : null,
         digitalDiagnosis: websiteUrl ? 'site_identificado' : 'nao_identificado',
-        opportunity: Number(row.qualification_score || 0) >= 70 ? 'alta' : Number(row.qualification_score || 0) >= 40 ? 'media' : 'baixa',
+        opportunity: opportunityLevel,
         stage: state?.stage || 'novo',
-        selectedTemplate: (state?.selected_template || 'ouro-classico') as LeadTemplateKey,
+        selectedTemplate: (state?.selected_template || suggestedTemplate) as LeadTemplateKey,
         notes: Array.isArray(state?.notes) ? state.notes : [],
         followUpDate: state?.follow_up_date || undefined,
         createdAt: row.created_at,
+        horario: row.raw_evidence?.opening_hours || undefined,
+        note: row.raw_evidence?.rating ? `${row.raw_evidence.rating} ⭐ no Maps` : undefined,
       };
     });
     setCompanies(mapped);
@@ -628,30 +648,43 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       category: company.category,
       description: `Site profissional e sistema de agendamento online exclusivo para ${company.name}, com atendimento rápido e alta conversão via WhatsApp.`,
       phone: company.phone,
+      whatsapp: company.whatsapp,
       email: '',
       address: company.address,
+      city: company.city,
+      state: company.state,
       websiteUrl: company.websiteUrl,
       templateId: templateKey,
       templateName: TEMPLATE_NAMES[templateKey] || 'Modelo Oficial',
       projectVersion: 1,
       generatedAt: new Date().toISOString(),
-      // Novos campos alinhados com os 18 do provedor
-      status: company.status || 'active',
-      note: company.note,
-      'quantidade-de-avaliacoes': company.reviewsCount !== null ? String(company.reviewsCount) : undefined,
-      'faixa-de-preco': company.faixaDePreco || undefined,
+      status: company.status || 'OPERATIONAL',
+      note: company.note || (company.rating ? `${company.rating} ⭐ no Google Maps` : '4.9 ⭐ no Google Maps'),
+      'quantidade-de-avaliacoes': company.reviewsCount !== null ? `${company.reviewsCount} avaliações` : undefined,
+      'faixa-de-preco': company.faixaDePreco || '$$',
       horario: company.horario,
     })}`;
   };
 
-  // WhatsApp click-to-chat with tailored copy
+  // WhatsApp click-to-chat with validated template and fallback protection
   const getWhatsAppProposalMessage = (company: LeadCompany) => {
     const proposalLink = getProposalUrl(company);
-    const introduction = company.demoUrl
-      ? `Olá! Preparei uma demonstração publicada do site para ${company.name}:`
-      : `Olá! Preparei uma prévia visual local para ${company.name}. Ela ainda não está publicada:`;
-    const text = `${introduction}\n\n${proposalLink}\n\nO que achou da proposta?`;
-    return `https://wa.me/${company.whatsapp}?text=${encodeURIComponent(text)}`;
+    const reputacao = company.rating
+      ? `nota ${company.rating} ⭐ no Google Maps${company.reviewsCount ? ` com ${company.reviewsCount} avaliações` : ''}`
+      : '';
+
+    const { url } = createValidatedWhatsAppUrl(
+      company.whatsapp || company.phone,
+      company.digitalDiagnosis === 'sem_site' ? 'DIAGNOSTICO_DIGITAL_SEM_SITE' : 'PROPOSTA_5_MODELOS',
+      {
+        cliente_nome: company.name,
+        servico_destaque: company.category || company.niche,
+        link_proposta: proposalLink,
+        reputacao_sufixo: reputacao,
+        cidade: company.city,
+      }
+    );
+    return url;
   };
 
   // Filtered companies for CRM

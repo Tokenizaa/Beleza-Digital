@@ -79,6 +79,7 @@ interface SiteTemplateRendererProps {
   template?: SiteTemplateConfig;
   initialVariation?: SiteVariationId;
   isDemoSelection?: boolean;
+  hideTopBar?: boolean;
   onSelectVariation?: (variationId: SiteVariationId) => void;
   onContinueToActivation?: () => void;
 }
@@ -155,10 +156,18 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   template: explicitTemplate,
   initialVariation = 'ouro-classico',
   isDemoSelection = false,
+  hideTopBar = false,
   onSelectVariation,
   onContinueToActivation,
 }) => {
   const [currentVariation, setCurrentVariation] = useState<SiteVariationId>(initialVariation);
+  
+  React.useEffect(() => {
+    if (initialVariation) {
+      setCurrentVariation(initialVariation);
+    }
+  }, [initialVariation]);
+
   const activeVariation = currentVariation || initialVariation;
   const templateConfig = explicitTemplate || SITE_TEMPLATES[activeVariation] || SITE_TEMPLATES['ouro-classico'];
 
@@ -1002,57 +1011,59 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       {/* ================================================================= */}
       {/* BARRA SUPERIOR DE SELEÇÃO ENTRE OS 5 TEMPLATES                    */}
       {/* ================================================================= */}
-      <div className="sticky top-0 z-50 bg-neutral-900/95 backdrop-blur-md border-b border-neutral-800 px-4 py-3 shadow-xl">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 text-xs font-black">
-              5
-            </span>
-            <div>
-              <p className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5 text-amber-400" /> Modelos Visuais Distintos
-              </p>
-              <p className="text-[11px] text-neutral-400 hidden sm:block">
-                Alterne e veja 5 arquiteturas de design reais para o mesmo estabelecimento
-              </p>
+      {!hideTopBar && (
+        <div className="sticky top-0 z-50 bg-neutral-900/95 backdrop-blur-md border-b border-neutral-800 px-4 py-3 shadow-xl">
+          <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 text-xs font-black">
+                5
+              </span>
+              <div>
+                <p className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Palette className="w-3.5 h-3.5 text-amber-400" /> Modelos Visuais Distintos
+                </p>
+                <p className="text-[11px] text-neutral-400 hidden sm:block">
+                  Alterne e veja 5 arquiteturas de design reais para o mesmo estabelecimento
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0" role="tablist">
-            {SITE_TEMPLATES_LIST.map((tpl) => {
-              const isSelected = activeVariation === tpl.id;
-              return (
-                <button
-                  key={tpl.id}
-                  onClick={() => handleSelectVariation(tpl.id)}
-                  role="tab"
-                  aria-selected={isSelected}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap border ${
-                    isSelected
-                      ? 'border-amber-400 bg-amber-500/20 text-amber-200 shadow-md'
-                      : 'border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:text-white hover:border-neutral-700'
-                  }`}
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: tpl.primaryColor }}
-                  />
-                  <span>{tpl.shortName}</span>
-                </button>
-              );
-            })}
-          </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0" role="tablist">
+              {SITE_TEMPLATES_LIST.map((tpl) => {
+                const isSelected = activeVariation === tpl.id;
+                return (
+                  <button
+                    key={tpl.id}
+                    onClick={() => handleSelectVariation(tpl.id)}
+                    role="tab"
+                    aria-selected={isSelected}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap border ${
+                      isSelected
+                        ? 'border-amber-400 bg-amber-500/20 text-amber-200 shadow-md'
+                        : 'border-neutral-800 bg-neutral-950/60 text-neutral-400 hover:text-white hover:border-neutral-700'
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: tpl.primaryColor }}
+                    />
+                    <span>{tpl.shortName}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-          {onContinueToActivation && (
-            <button
-              onClick={onContinueToActivation}
-              className="px-4 py-2 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-md transition shrink-0"
-            >
-              Quero Este Modelo
-            </button>
-          )}
+            {onContinueToActivation && (
+              <button
+                onClick={onContinueToActivation}
+                className="px-4 py-2 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-neutral-950 shadow-md transition shrink-0"
+              >
+                Quero Este Modelo
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Render the specific visual archetype layout */}
       <main className="flex-1">

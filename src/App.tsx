@@ -26,7 +26,7 @@ export default function App() {
   const [selectedServiceIdForBooking, setSelectedServiceIdForBooking] = useState<string | null>(null);
   const { establishment, store } = useStore();
   const sharedPreview = readShareablePreview(window.location.search);
-  const publicDemoMatch = window.location.pathname.match(/^\/demo\/([A-Za-z0-9_-]{8,100})\/?$/);
+  const publicDemoMatch = window.location.pathname.match(/^\/(?:demo|proposta|preview|demonstracao)\/([A-Za-z0-9_-]{3,100})\/?$/);
 
   const handleBookService = (serviceId?: string) => {
     setSelectedServiceIdForBooking(serviceId || null);
@@ -153,6 +153,17 @@ export default function App() {
         );
     }
   };
+
+  if (currentPage === 'home') {
+    return (
+      <ToastProvider>
+        <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
+          <HomePage setCurrentPage={setCurrentPage} onBookService={handleBookService} />
+          <OfflineIndicator />
+        </div>
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>

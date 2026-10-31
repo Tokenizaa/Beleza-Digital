@@ -18,7 +18,22 @@ export interface Env {
 
 // Import rich extractor and normalizer from migrated mais-clientes-v2 logic
 import { extractPlaceDetails } from './extractor';
-import { normalizeAddress, normalizePhone, normalizeWebsite, normalizeBusinessStatus, normalizeRating, normalizeReviewCount, normalizePriceRange, parseAddressComponents, parseSearchLocationFallback, extractSourcePlaceId } from './normalizer';
+import {
+  normalizeAddress,
+  normalizePhone,
+  normalizeWebsite,
+  normalizeBusinessStatus,
+  normalizeRating,
+  normalizeReviewCount,
+  normalizePriceRange,
+  parseAddressComponents,
+  parseSearchLocationFallback,
+  extractSourcePlaceId,
+  cleanBusinessName,
+  sanitizeRating,
+  sanitizeReviewCount,
+  sanitizePhotos,
+} from './normalizer';
 
 // Import shared qualification logic from frontend library
 import {
@@ -29,6 +44,7 @@ import {
   type CommercialPotentialInput,
   type CommercialOpportunityQualification,
 } from "../../../src/lib/prospecting";
+import { validateAndHydrateMessageTemplate } from "../../../src/lib/message-templates";
 
 interface ProspectingTask {
   id: number;
@@ -107,6 +123,114 @@ function preferredTemplateSlug(prospect: Prospect): string {
   if (/salao|cabeleireir|hair|rubi|lounge/.test(signal)) return "rubi-lounge";
   if (/estetica|clinica|spa|studio|manicure|depilacao/.test(signal)) return "minimal-studio";
   return "ouro-classico";
+}
+
+function qualify(prospect: Prospect): {
+  score: number;
+  completenessScore: number;
+  reasons: string[];
+  missingFields: string[];
+} {
+  let score = 0;
+  let completenessScore = 0;
+  const reasons: string[] = [];
+  const missingFields: string[] = [];
+
+  const name = first(prospect, ["name", "business_name", "company_name"]);
+  if (name && typeof name === "string" && name.trim()) {
+    score += 10;
+    completenessScore += 10;
+    reasons.push("+10: nome comercial identificado");
+  } else {
+    missingFields.push("businessName");
+  }
+
+  const category = first(prospect, ["category", "business_category", "segment"]);
+  if (category && typeof category === "string" && category.trim()) {
+    score += 10;
+    completenessScore += 10;
+    reasons.push("+10: categoria identificada");
+  } else {
+    missingFields.push("category");
+  }
+
+  const website = normalizeWebsite(first(prospect, ["website", "website_url", "url"]));
+  if (website) {
+    score += 10;
+    completenessScore += 10;
+    reasons.push("+10: site público identificado");
+  } else {
+    missingFields.push("websiteUrl");
+  }
+
+  const phone = normalizePhone(first(prospect, ["phone", "normalized_phone"]), first(prospect, ["countryCode", "country_code"]) || "BR");
+  if (phone) {
+    score += 15;
+    completenessScore += 10;
+    reasons.push("+15: telefone válido");
+  } else {
+    missingFields.push("phone");
+  }
+
+  const email = first(prospect, ["email", "email_address"]);
+  if (email && typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    score += 10;
+    completenessScore += 10;
+    reasons.push("+10: email comercial identificado");
+  } else {
+    missingFields.push("email");
+  }
+
+  const address = firstCaptured(prospect, ["address", "formatted_address"]);
+  if (address && typeof address === "string" && address.trim()) {
+    completenessScore += 10;
+    reasons.push("+10: endereço disponível");
+  } else {
+    missingFields.push("address");
+  }
+
+  const rating = first(prospect, ["rating"]);
+  if (typeof rating === "number" && rating > 0) {
+    score += 10;
+    completenessScore += 10;
+    reasons.push("+10: reputação com nota no Maps");
+  } else {
+    missingFields.push("rating");
+  }
+
+  const reviews = first(prospect, ["reviewsCount", "review_count", "reviewCount"]);
+  if (reviews !== null && reviews !== undefined && Number(reviews) > 0) {
+    score += 10;
+    completenessScore += 10;
+    reasons.push("+10: tração de avaliações");
+  } else {
+    missingFields.push("reviewsCount");
+  }
+
+  const images = first(prospect, ["images", "photos"]);
+  if (Array.isArray(images) && images.length > 0) {
+    score += 5;
+    completenessScore += 10;
+    reasons.push("+5: acervo de fotos da ficha");
+  } else {
+    missingFields.push("images");
+  }
+
+  const openingHours = first(prospect, ["openingHours", "opening_hours", "horario"]);
+  if (openingHours) {
+    score += 5;
+    completenessScore += 10;
+    reasons.push("+5: horários de funcionamento");
+  } else {
+    missingFields.push("openingHours");
+  }
+
+  return {
+    score,
+    completenessScore,
+    reasons,
+    missingFields,
+  };
 }
 
 function requiredEnv(env: Env): string | null {
@@ -221,6 +345,25 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
     return "blocked";
   }
 
+  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
+  const requestedTemplateId = typeof payload.templateId === "string" ? payload.templateId : "PROPOSTA_5_MODELOS";
+  
+  const clientName = first(prospect, ["business_name", "name", "company_name"]);
+  const serviceHighlight = first(prospect, ["category", "business_category", "segment"]);
+  const demoUrl = typeof payload.demoUrl === "string" ? payload.demoUrl : first(prospect, ["demo_url"]);
+  const city = first(prospect, ["city", "locality"]);
+  const rating = first(prospect, ["rating"]);
+  const reviewsCount = first(prospect, ["reviewsCount", "review_count"]);
+  const reputationStr = rating ? `nota ${rating} ⭐ no Maps${reviewsCount ? ` com ${reviewsCount} avaliações` : ''}` : '';
+
+  const validation = validateAndHydrateMessageTemplate(requestedTemplateId, {
+    cliente_nome: clientName,
+    servico_destaque: serviceHighlight,
+    link_proposta: demoUrl,
+    reputacao_sufixo: reputationStr,
+    cidade: city,
+  });
+
   const queued = await db(env, "prospect_outbound_messages?on_conflict=idempotency_key", {
     method: "POST",
     headers: { prefer: "resolution=ignore-duplicates,return=representation" },
@@ -230,8 +373,9 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
       channel: "whatsapp",
       provider: "whatsapp_business_platform",
       destination_hash: destinationHash,
-      template_name: env.WHATSAPP_TEMPLATE_NAME,
-      template_variables: {},
+      template_name: typeof payload.templateName === "string" && payload.templateName.trim()
+        ? payload.templateName.trim() : env.WHATSAPP_TEMPLATE_NAME,
+      template_variables: validation.hydratedVariables,
       status: "attempting",
       idempotency_key: messageKey,
       attempts: 1,
@@ -241,8 +385,9 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
   const created = await queued.json() as Array<{ id: string }>;
   if (!created.length) throw new Error("whatsapp_message_idempotency_conflict");
 
-  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
-  const components = Array.isArray(payload.templateComponents) ? payload.templateComponents : [];
+  const components = Array.isArray(payload.templateComponents) && payload.templateComponents.length > 0
+    ? payload.templateComponents
+    : validation.metaComponents;
   const templateName = typeof payload.templateName === "string" && payload.templateName.trim()
     ? payload.templateName.trim() : env.WHATSAPP_TEMPLATE_NAME;
   const apiVersion = env.WHATSAPP_API_VERSION.trim();
@@ -401,11 +546,13 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForSelector('[role="feed"]', { timeout: 15000 });
 
-    // Coleta links únicos e rola a lista até alcançar o limite ou ficar sem novos resultados.
+    // Coleta links únicos com paginação robusta, rolagem virtual e detecção de fim de lista
     const listingMap = new Map<string, Record<string, unknown>>();
     let stagnantRounds = 0;
     let previousCount = 0;
-    for (let round = 0; round < 35 && listingMap.size < Math.min(limit, 100); round++) {
+    const targetLimit = Math.min(limit, 100);
+
+    for (let round = 0; round < 45 && listingMap.size < targetLimit; round++) {
       const visibleListings = await page.evaluate(() => {
         const output: Array<Record<string, unknown>> = [];
         const seen = new Set<string>();
@@ -422,17 +569,40 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         });
         return output;
       });
+
       for (const listing of visibleListings) {
         const href = String(listing.url || "");
         if (href && !listingMap.has(href)) listingMap.set(href, listing);
-        if (listingMap.size >= Math.min(limit, 100)) break;
+        if (listingMap.size >= targetLimit) break;
       }
-      if (listingMap.size === previousCount) stagnantRounds++;
-      else stagnantRounds = 0;
+
+      // Verifica se o Google Maps exibiu aviso de término de lista
+      const isEndOfList = await page.evaluate(() => {
+        const text = document.body?.innerText || '';
+        return /você chegou ao final da lista|you've reached the end of the list|não há mais resultados/i.test(text);
+      });
+      if (isEndOfList && listingMap.size > 0) {
+        break;
+      }
+
+      if (listingMap.size === previousCount) {
+        stagnantRounds++;
+      } else {
+        stagnantRounds = 0;
+      }
       previousCount = listingMap.size;
-      if (stagnantRounds >= 3) break;
-      await page.locator('[role="feed"]').evaluate((feed) => { feed.scrollTop = feed.scrollHeight; }).catch(() => {});
-      await page.waitForTimeout(900);
+      if (stagnantRounds >= 5) break;
+
+      // Rolagem progressiva e acionamento de evento de wheel para forçar o carregamento dinâmico
+      await page.evaluate(() => {
+        const feed = document.querySelector('[role="feed"]') || document.querySelector('div.m6QErb[aria-label]');
+        if (feed) {
+          feed.scrollTop += 900;
+          setTimeout(() => { feed.scrollTop = feed.scrollHeight; }, 100);
+        }
+      }).catch(() => {});
+      await page.mouse.wheel(0, 1500).catch(() => {});
+      await page.waitForTimeout(stagnantRounds > 0 ? 1200 : 900);
     }
 
     const listings = Array.from(listingMap.values()).slice(0, Math.min(limit, 100));
@@ -542,7 +712,8 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   for (const raw of scrapedResults.slice(0, limit)) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) { rejected++; continue; }
     const candidate = raw as Record<string, unknown>;
-    const businessName = String(first(candidate, ["name", "businessName", "business_name", "companyName"]) ?? "").trim().slice(0, 240);
+    const rawBusinessName = String(first(candidate, ["name", "businessName", "business_name", "companyName"]) ?? "").trim();
+    const businessName = (cleanBusinessName(rawBusinessName) || rawBusinessName).slice(0, 240);
     const category = String(first(candidate, ["category", "businessCategory", "segment"]) ?? "").trim().slice(0, 120) || null;
     const website = first(candidate, ["website", "websiteUrl", "website_url", "url"]);
     const phone = first(candidate, ["phone", "phoneNumber", "phone_number", "whatsapp"]);
@@ -563,11 +734,13 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     if (!businessName || !dedupeKey) { rejected++; continue; }
 
     // Use shared qualification logic (cadastral + commercial)
-    const ratingValue = first(candidate, ["rating", "stars"]);
-    const rating = typeof ratingValue === "number" && ratingValue >= 0 && ratingValue <= 5 ? ratingValue : null;
-    const reviewCount = parseCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"]));
+    const rating = sanitizeRating(first(candidate, ["rating", "stars"]));
+    const reviewCount = sanitizeReviewCount(first(candidate, ["reviewsCount", "reviewCount", "reviews_count", "reviews"]));
     const openingHours = first(candidate, ["openingHours", "opening_hours", "hours"]);
-    const operatingStatus = first(candidate, ["operatingStatus", "business_status"]);
+    const operatingStatus = normalizeBusinessStatus(first(candidate, ["operatingStatus", "business_status"]) as string) || null;
+    const rawAddress = first(candidate, ["address", "formattedAddress", "formatted_address"]);
+    const address = typeof rawAddress === "string" ? normalizeAddress(rawAddress).slice(0, 1000) || null : null;
+    const images = sanitizePhotos(first(candidate, ["images", "photos"]));
 
     const cadastralInput = {
       businessName: businessName,
@@ -575,7 +748,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       websiteUrl: websiteNormalized,
       phone: phoneNormalized,
       email: first(candidate, ["email", "emailAddress", "email_address"]) as string | null,
-      address: first(candidate, ["address", "formattedAddress", "formatted_address"]) as string | null,
+      address: address,
       description: first(candidate, ["description", "businessDescription"]) as string | null,
       sourceUrl: sourceUrl,
       countryCode: country,
@@ -586,7 +759,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       rating: rating ?? undefined,
       reviewCount: reviewCount ?? undefined,
       operatingStatus: operatingStatus as string | null,
-      openingHours: openingHours as string | null,
+      openingHours: Array.isArray(openingHours) ? openingHours.join(', ') : (openingHours as string | null),
     };
 
     const cadastralResult = qualifyProspect(cadastralInput);
@@ -611,7 +784,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         phone: typeof phone === "string" ? phone.slice(0, 80) : null,
         normalized_phone: phoneNormalized,
         email: typeof first(candidate, ["email", "emailAddress", "email_address"]) === "string" ? String(first(candidate, ["email", "emailAddress", "email_address"])).slice(0, 320) : null,
-        address: typeof first(candidate, ["address", "formattedAddress", "formatted_address"]) === "string" ? String(first(candidate, ["address", "formattedAddress", "formatted_address"])).slice(0, 1000) : null,
+        address: address,
         city: String(first(candidate, ["city", "locality"]) ?? region.split(/\s+-\s+/)[0] ?? "").slice(0, 160) || null,
         region: String(first(candidate, ["region", "state", "province"]) ?? region.split(/\s+-\s+/)[1] ?? region ?? "").slice(0, 160) || null,
         country_code: country,
@@ -626,13 +799,21 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           rating: rating ?? null,
           reviewsCount: reviewCount,
           reviewCount: reviewCount,
+          commercial_score: commercialResult.commercialScore,
+          commercialScore: commercialResult.commercialScore,
+          commercial_level: commercialResult.commercialLevel,
+          commercialLevel: commercialResult.commercialLevel,
+          commercial_reasons: commercialResult.commercialReasons,
+          suggestedTemplate: commercialResult.suggestedTemplate,
+          demo_token: `demo-${dedupeKey.slice(7, 23)}`,
           placeId: first(candidate, ["placeId", "place_id"]) ?? null,
           featureId: first(candidate, ["featureId", "feature_id"]) ?? null,
           latitude: first(candidate, ["latitude", "lat"]) ?? null,
           longitude: first(candidate, ["longitude", "lng", "lon"]) ?? null,
-          images: Array.isArray(candidate.images) ? candidate.images.slice(0, 20) : [],
-          openingHours: Array.isArray(candidate.openingHours) ? candidate.openingHours.slice(0, 14) : [],
+          images: images,
+          openingHours: Array.isArray(openingHours) ? openingHours.slice(0, 14) : [],
           priceLevel: first(candidate, ["priceLevel", "price_level"]) ?? null,
+          operatingStatus: operatingStatus,
           editorialSummary: first(candidate, ["editorialSummary", "editorial_summary"]) ?? null,
           fieldStatus: candidate.fieldStatus && typeof candidate.fieldStatus === "object" ? candidate.fieldStatus : {},
           // Fields expected by frontend (ScrapingConsole.tsx)

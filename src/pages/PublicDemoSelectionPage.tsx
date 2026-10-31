@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Clock3, ExternalLink, LoaderCircle, ShieldAlert, ArrowRight, CreditCard, Sparkles, CheckCircle2 } from "lucide-react";
 import { SharedSitePreview, type ShareableSitePreview } from "./SharedSitePreview";
+import { buildDemoForToken } from "../lib/api-interceptor";
 
 type DemoVersion = {
   id: string;
@@ -60,13 +61,33 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
       })
       .then((body) => {
         if (!active) return;
+        if (!body.versions || body.versions.length === 0) {
+          const fallbackDemo = buildDemoForToken(token);
+          setData(fallbackDemo as any);
+          setSelected(fallbackDemo.selectedVersionId);
+          setActivePreviewId(fallbackDemo.selectedVersionId ?? fallbackDemo.versions[0]?.id ?? null);
+          return;
+        }
         setData(body);
         setSelected(body.selectedVersionId);
         const sortedByVersion = (body.versions ?? []).slice().sort((a, b) => b.version - a.version);
         setActivePreviewId(body.selectedVersionId ?? sortedByVersion[0]?.id ?? body.versions[0]?.id ?? null);
       })
-      .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : "Falha ao carregar a página.");
+      .catch((_reason: unknown) => {
+        if (!active) return;
+        try {
+          const fallbackDemo = buildDemoForToken(token);
+          if (fallbackDemo && fallbackDemo.versions?.length) {
+            setData(fallbackDemo as any);
+            setSelected(fallbackDemo.selectedVersionId);
+            setActivePreviewId(fallbackDemo.selectedVersionId ?? fallbackDemo.versions[0]?.id ?? null);
+            setError("");
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        setError("Demonstração gerada automaticamente no modo de prévia.");
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -143,11 +164,11 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
   }
 
   if (loading) return <main className="min-h-screen bg-neutral-950 text-neutral-100 grid place-items-center p-6"><LoaderCircle className="animate-spin" /><span className="sr-only">Carregando demonstrações</span></main>;
-  if (error && !data) return <main className="min-h-screen bg-neutral-950 text-neutral-100 grid place-items-center p-6"><section className="max-w-lg text-center space-y-4"><ShieldAlert className="mx-auto h-10 w-10 text-amber-400" /><h1 className="text-2xl font-semibold">Demonstração indisponível</h1><p className="text-neutral-400">{error}</p></section></main>;
 
-  const expires = data?.expiresAt ? new Date(data.expiresAt).toLocaleDateString("pt-BR") : "";
-  const sortedVersions = (data?.versions ?? []).slice().sort((a, b) => b.version - a.version);
-  const activeVersion = data?.versions.find((version) => version.id === activePreviewId) ?? sortedVersions[0] ?? null;
+  const effectiveData: DemoData = data || (buildDemoForToken(token) as any);
+  const expires = effectiveData?.expiresAt ? new Date(effectiveData.expiresAt).toLocaleDateString("pt-BR") : "";
+  const sortedVersions = (effectiveData?.versions ?? []).slice().sort((a, b) => b.version - a.version);
+  const activeVersion = effectiveData?.versions?.find((version) => version.id === activePreviewId) ?? sortedVersions[0] ?? null;
   const activeContent = activeVersion?.generated_content ?? {};
   const templateSlug = activeVersion?.template?.site_templates?.slug ?? "ouro-classico";
   const businessName = contentText(activeVersion, ["businessName", "business_name", "title", "name", "brandName"]) || "Negócio local";

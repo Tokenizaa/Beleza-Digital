@@ -13,6 +13,43 @@ export function cleanText(val: string | null | undefined): string {
     .trim();
 }
 
+export function cleanBusinessName(raw: string | null | undefined): string {
+  if (!raw) return '';
+  let cleaned = cleanText(raw);
+  // Remove "Google Maps - ", "Maps - ", "Resultados para - " prefixes
+  cleaned = cleaned.replace(/^(google maps|maps|resultados para)\s*[-–—:]\s*/i, '');
+  // Remove trailing review indicators or rating suffixes like "· 4.8 (120)"
+  cleaned = cleaned.replace(/[·•]\s*\d+[.,]\d+.*$/i, '');
+  // Remove emojis and symbols
+  cleaned = cleaned.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  return cleaned;
+}
+
+export function sanitizeRating(raw: unknown): number | null {
+  if (raw === null || raw === undefined) return null;
+  const num = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(',', '.'));
+  if (!Number.isFinite(num) || num < 0) return null;
+  return Math.min(5, Math.max(0, Math.round(num * 10) / 10));
+}
+
+export function sanitizeReviewCount(raw: unknown): number | null {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0) return raw;
+  const digits = String(raw).replace(/[.,](?=\d{3}\b)/g, '').replace(/\D/g, '');
+  const parsed = parseInt(digits, 10);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export function sanitizePhotos(images: unknown): string[] {
+  if (!Array.isArray(images)) return [];
+  const valid = images
+    .filter((img) => typeof img === 'string' && /^https?:\/\//i.test(img))
+    .map((img) => (img as string).trim())
+    .filter((img) => !img.includes('/favicon.') && !img.includes('.svg') && !img.includes('/icons/'));
+  return Array.from(new Set(valid)).slice(0, 15);
+}
+
 export function normalizeAddress(raw: string | null | undefined): string {
   if (!raw) return '';
   let cleaned = cleanText(raw);
