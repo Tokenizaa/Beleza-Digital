@@ -174,6 +174,27 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
     );
   };
 
+  const renderInstagramSection = () => {
+    const handle = (businessData.instagramHandle || '').replace(/^@/, '');
+    const instagramUrl = businessData.instagramUrl || (handle ? 'https://www.instagram.com/' + handle + '/' : '');
+    if (!instagramUrl) return null;
+    const style = galleryStyle[activeVariation];
+    return (
+      <section className={`border-y px-4 py-12 sm:px-8 ${style.shell}`}>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
+          <div>
+            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${style.label}`}>Instagram</p>
+            <h2 className={`mt-2 text-2xl sm:text-3xl ${style.heading}`}>Acompanhe nosso trabalho</h2>
+            <p className="mt-2 text-sm opacity-70">{businessData.instagramHandle || 'Veja novidades e trabalhos recentes'}</p>
+          </div>
+          <a href={instagramUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full border border-current/30 px-5 py-3 text-sm font-semibold transition hover:opacity-75">
+            <Instagram className="h-4 w-4" /> Ver perfil no Instagram <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      </section>
+    );
+  };
+
   const renderProductSection = () => {
     if (rawProducts.length === 0) return null;
     const style = productStyle[activeVariation];
@@ -332,6 +353,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           ))}
         </div>
       </section>
+      {renderInstagramSection()}
       {renderProductSection()}
     </div>
   );
@@ -473,6 +495,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           ))}
         </div>
       </section>
+      {renderInstagramSection()}
       {renderProductSection()}
     </div>
   );
@@ -753,6 +776,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
       {renderProductSection()}
       {renderGallerySection()}
+      {renderInstagramSection()}
+      {renderInstagramSection()}
+      {renderInstagramSection()}
     </div>
   );
 
@@ -766,7 +792,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
             Agendamento Online
           </span>
           <h2 className="text-2xl sm:text-3xl font-bold text-white">Escolha Seu Dia e Horário</h2>
-          <p className="text-xs text-neutral-400">Reserve em segundos com confirmação imediata.</p>
+          <p className="text-xs text-neutral-400">Veja como o agendamento poderá funcionar no site do estabelecimento.</p>
         </div>
 
         <div className="p-6 sm:p-8 rounded-3xl border border-neutral-800 bg-neutral-950/80 backdrop-blur-xl shadow-2xl space-y-6">
@@ -775,7 +801,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center text-emerald-400 mx-auto">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-white">Demonstração de Agendamento Confirmada!</h3>
+              <h3 className="text-xl font-bold text-white">Simulação de agendamento concluída</h3>
               <p className="text-xs text-neutral-400 max-w-md mx-auto">
                 Horário reservado para <strong>{new Date(bookingDate + "T00:00:00").toLocaleDateString("pt-BR")}</strong> às <strong>{bookingTime}</strong>
                 {bookingService ? ` (${bookingService})` : ''} na {businessData.name}.
@@ -843,7 +869,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                     <CalendarCheck className="w-4 h-4" /> Simular Agendamento
                   </button>
                   <p className="text-[11px] text-neutral-500 text-center mt-2">
-                    Simulação 100% funcional com integração de agenda White-Label.
+                    Prévia interativa. A disponibilidade real será configurada na ativação do site.
                   </p>
                 </div>
               </div>
@@ -861,7 +887,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800">
           <MapPin className="w-5 h-5 text-amber-400 mb-3" />
           <h3 className="font-bold text-sm text-white">Localização</h3>
-          <p className="text-xs text-neutral-400 mt-1">{businessData.address || `${businessData.city || 'Porto Alegre'} - ${businessData.state || 'RS'}`}</p>
+          <p className="text-xs text-neutral-400 mt-1">{businessData.address || [businessData.city, businessData.state].filter(Boolean).join(' - ') || 'Endereço não informado'}</p>
           {businessData.googleMapsUrl && (
             <a href={businessData.googleMapsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline mt-2">
               Ver no Google Maps <ExternalLink className="w-3 h-3" />
@@ -872,10 +898,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800">
           <Clock className="w-5 h-5 text-emerald-400 mb-3" />
           <h3 className="font-bold text-sm text-white">Horário de Atendimento</h3>
-          <p className="text-xs text-neutral-400 mt-1">{businessData.horario || 'Segunda a Sábado das 09h às 19h30'}</p>
-          <span className="inline-block mt-2 text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
-            Atendimento Ativo
-          </span>
+          <p className="text-xs text-neutral-400 mt-1">{businessData.horario || 'Consulte os horários pelo WhatsApp'}</p>
         </div>
 
         <div className="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800">
