@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
+import type { ServiceItem, ProductItem, MediaItem } from '../types';
 import { normalizeTemplateId, SiteBusinessData, SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId } from '../types/templates';
 import { SiteSEOMetadata } from '../components/SiteSEOMetadata';
 import {
@@ -48,6 +49,9 @@ export interface ShareableSitePreview {
   'faixa-de-preco'?: string;            // Faixa de preço
   horario?: string;                     // Horário de funcionamento
   qualification?: any;
+  services?: ServiceItem[];
+  products?: ProductItem[];
+  media?: MediaItem[];
 }
 
 const MAX_PAYLOAD_LENGTH = 16000;
@@ -153,6 +157,9 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
       'quantidade-de-avaliacoes': value['quantidade-de-avaliacoes'] || '128 avaliações',
       'faixa-de-preco': value['faixa-de-preco'] || '$$',
       horario: value.horario || 'Segunda a Sábado, 09h às 19h30',
+      services: Array.isArray(value.services) ? value.services.slice(0, 40) as ServiceItem[] : [],
+      products: Array.isArray(value.products) ? value.products.slice(0, 40) as ProductItem[] : [],
+      media: Array.isArray(value.media) ? value.media.slice(0, 60) as MediaItem[] : [],
     };
   } catch {
     return null;
@@ -227,6 +234,9 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
     'quantidade-de-avaliacoes': preview['quantidade-de-avaliacoes'],
     'faixa-de-preco': preview['faixa-de-preco'],
     horario: preview.horario,
+    services: preview.services ?? [],
+    products: preview.products ?? [],
+    media: preview.media ?? [],
   };
 
   // WhatsApp activation message
