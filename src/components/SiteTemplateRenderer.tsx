@@ -270,34 +270,6 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         </div>
       </section>
 
-      {/* Os 4 Rituais da Tradição */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-amber-900/30 font-sans">
-        <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
-          <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">Excelência & Mestria</span>
-          <h2 className="text-2xl sm:text-3xl font-serif text-amber-100 font-bold">Os Rituais da Casa</h2>
-          <p className="text-xs text-neutral-400">Cada atendimento é uma cerimônia de cuidado, precisão e bem-estar masculino.</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { icon: Scissors, title: 'Navalha Tradicional', desc: 'Acabamento minucioso com lâmina descartável e precisão milimétrica.' },
-            { icon: Flame, title: 'Toalha Quente & Ozônio', desc: 'Abertura dos poros, emoliência e hidratação profunda para barbear suave.' },
-            { icon: Award, title: 'Cosméticos Nobres', desc: 'Pomadas, óleos essenciais e loções de altíssimo padrão artesanal.' },
-            { icon: Coffee, title: 'Café & Cerveja Artesanal', desc: 'Ambiente aconchegante com bebidas cortesia preparadas na hora.' },
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div key={idx} className="p-5 rounded-2xl bg-[#14120e] border border-amber-800/30 hover:border-amber-500/50 transition">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-3">
-                  <Icon className="w-5 h-5" />
-                </div>
-                <h3 className="font-serif text-base font-bold text-amber-100">{item.title}</h3>
-                <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">{item.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {/* Menu Board Tradicional com Linhas Pontilhadas */}
       <section id="servicos" hidden={rawServices.length === 0} className="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-amber-900/30 font-sans">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
@@ -510,16 +482,16 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 // RENDERER 3: MINIMAL STUDIO (Clean Modern & Arejado • Platina & Ardósia)
   // ==========================================================================
   const renderMinimalStudio = () => (
-    <div className="bg-[#0b0f17] text-slate-100 font-sans font-light selection:bg-slate-300/20 selection:text-white">
+    <div className="bg-[#f8fafc] text-slate-900 font-sans font-light selection:bg-slate-300/20 selection:text-white">
       {/* Discreet Header */}
-      <div className="border-b border-slate-800/60 bg-[#0f1420] px-4 py-2 text-center text-xs tracking-wider text-slate-400 font-mono">
+      <div className="border-b border-slate-200 bg-white px-4 py-2 text-center text-xs tracking-wider text-slate-400 font-mono">
         espaço privativo • atendimento individual com hora marcada
       </div>
 
       {/* Hero Minimal Studio */}
-      <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden border-b border-slate-800/60 px-4 sm:px-8 py-20">
+      <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden border-b border-slate-200 px-4 sm:px-8 py-20">
         <div className="max-w-3xl mx-auto text-center space-y-6">
-          <span className="inline-block text-xs uppercase tracking-[0.25em] text-slate-400 border border-slate-700/80 px-3.5 py-1 rounded-full">
+          <span className="inline-block text-xs uppercase tracking-[0.25em] text-slate-600 border border-slate-300 px-3.5 py-1 rounded-full">
             {businessData.category || 'Studio de Estética & Visagismo'}
           </span>
 
@@ -527,7 +499,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
             {businessData.name}
           </h1>
 
-          <p className="text-base text-slate-400 max-w-xl mx-auto leading-relaxed font-normal">
+          <p className="text-base text-slate-600 max-w-xl mx-auto leading-relaxed font-normal">
             {businessData.description || 'Uma abordagem consciente e intimista do cuidado com a sua imagem pessoal.'}
           </p>
 
@@ -543,7 +515,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 href={whatsappUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full sm:w-auto px-6 py-3.5 rounded-full text-xs font-medium tracking-wide bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 transition"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full text-xs font-medium tracking-wide bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition"
               >
                 Conversar no WhatsApp
               </a>
@@ -552,48 +524,27 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         </div>
       </section>
 
-      {/* ESSENTIAL FIRST: 4 Pilares de Informação Clara */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-8 py-14 border-b border-slate-800/60">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { title: 'Hora Marcada', desc: 'Sessões individuais sem atraso ou sobreposição.', icon: Clock },
-            { title: 'Espaço Privativo', desc: 'Atendimento calmo em ambiente silencioso.', icon: ShieldCheck },
-            { title: 'Fórmulas Limpas', desc: 'Produtos botânicos e livres de químicas pesadas.', icon: Feather },
-            { title: 'Canal Direto', desc: 'Contato ágil com o profissional responsável.', icon: MessageCircle },
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div key={idx} className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/60">
-                <Icon className="w-4 h-4 text-slate-300 mb-2" />
-                <h3 className="text-sm font-semibold text-slate-200">{item.title}</h3>
-                <p className="text-xs text-slate-400 mt-1">{item.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {/* Tabela Minimalista de Serviços */}
-      <section id="servicos" className="max-w-4xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-slate-800/60">
+      <section id="servicos" hidden={rawServices.length === 0} className="max-w-4xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-slate-200">
         <div className="mb-10 text-center sm:text-left">
           <span className="text-xs uppercase tracking-widest text-slate-400">Atendimentos</span>
           <h2 className="text-2xl font-light text-slate-100 mt-1">Serviços & Procedimentos</h2>
         </div>
 
-        <div className="divide-y divide-slate-800/80">
+        <div className="divide-y divide-slate-200">
           {rawServices.map((service) => (
             <div key={service.id} className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group">
               <div className="space-y-1">
-                <h3 className="text-base font-normal text-slate-200 group-hover:text-white transition">{service.name}</h3>
-                <p className="text-xs text-slate-400 max-w-lg">{service.description}</p>
+                <h3 className="text-base font-normal text-slate-900 group-hover:text-slate-600 transition">{service.name}</h3>
+                <p className="text-xs text-slate-600 max-w-lg">{service.description}</p>
               </div>
               <div className="flex items-center gap-4 shrink-0">
                 <span className="text-xs text-slate-500 font-mono">{service.durationMinutes ? `${service.durationMinutes} min` : '50 min'}</span>
-                <span className="text-base font-medium text-slate-200">R$ {(service.price ?? 80).toFixed(2)}</span>
+                <span className="text-base font-medium text-slate-900">R$ {(service.price ?? 80).toFixed(2)}</span>
                 <a
                   href="#agendamento"
                   onClick={() => setBookingService(service.name)}
-                  className="px-3.5 py-1.5 rounded-full text-xs border border-slate-700 hover:border-slate-400 text-slate-300 hover:text-white transition"
+                  className="px-3.5 py-1.5 rounded-full text-xs border border-slate-300 hover:border-slate-500 text-slate-700 hover:text-slate-900 transition"
                 >
                   Agendar
                 </a>
@@ -602,8 +553,8 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           ))}
         </div>
       </section>
-      {renderGallerySection()}
       {renderProductSection()}
+      {renderGallerySection()}
     </div>
   );
 
@@ -665,34 +616,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         </div>
       </section>
 
-      {/* O Padrão Executivo */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-blue-900/40">
-        <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
-          <span className="text-xs uppercase tracking-widest text-blue-400 font-semibold">Previsibilidade & Conforto</span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">O Padrão Executivo</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {[
-            { icon: Clock, title: 'Pontualidade Britânica', desc: 'Início pontual garantido. Seu tempo é tratado com respeito absoluto.' },
-            { icon: Wifi, title: 'Infraestrutura Business', desc: 'Wi-Fi de 500MB, ambiente silencioso para chamadas e tomadas em todas as bancadas.' },
-            { icon: Coffee, title: 'Lounge Nespresso & Bar', desc: 'Café expresso selecionado, água com gás e destilados premium cortesia.' },
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div key={idx} className="p-6 rounded-2xl bg-[#0b142d] border border-blue-900/60 hover:border-blue-500/50 transition">
-                <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4">
-                  <Icon className="w-5 h-5" />
-                </div>
-                <h3 className="text-lg font-bold text-white">{item.title}</h3>
-                <p className="text-xs text-blue-200/70 mt-2 leading-relaxed">{item.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {/* Menu Executivo */}
-      <section id="servicos" className="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-blue-900/40">
+      {renderProductSection()}
+      <section id="servicos" hidden={rawServices.length === 0} className="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-blue-900/40">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className="text-xs uppercase tracking-widest text-blue-400 font-semibold">Tabela Corporativa</span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Serviços Corporativos</h2>
@@ -727,7 +653,6 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           ))}
         </div>
       </section>
-      {renderProductSection()}
       {renderGallerySection()}
     </div>
   );
@@ -790,35 +715,8 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         </div>
       </section>
 
-      {/* A Experiência no Lounge */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-b border-rose-950/80 font-sans">
-        <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
-          <span className="text-xs uppercase tracking-widest text-rose-400 font-semibold">Hospitalidade & Afeto</span>
-          <h2 className="text-2xl sm:text-3xl font-serif italic text-white font-normal">A Experiência no Lounge</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { icon: Wine, title: 'Welcome Drink', desc: 'Taça de espumante gelado ou infusão botânica floral de boas-vindas.' },
-            { icon: Sparkles, title: 'Consultoria de Visagismo', desc: 'Análise detalhada de harmonia facial antes de iniciar o procedimento.' },
-            { icon: Coffee, title: 'Atmosfera Acolhedora', desc: 'Aromaterapia suave, iluminação quente e playlist especialmente curada.' },
-            { icon: Feather, title: 'Rituais Prolongados', desc: 'Sem correria. Tempo generoso para que você se desconecte do mundo.' },
-          ].map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div key={idx} className="p-5 rounded-2xl bg-[#1b080d] border border-rose-950/80 hover:border-rose-500/50 transition">
-                <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-3">
-                  <Icon className="w-5 h-5" />
-                </div>
-                <h3 className="font-serif text-base font-bold text-white">{item.title}</h3>
-                <p className="text-xs text-rose-200/70 mt-1.5 leading-relaxed">{item.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {/* Rituais de Beleza */}
-      <section id="servicos" className="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-rose-950/80 font-sans">
+      <section id="servicos" hidden={rawServices.length === 0} className="max-w-5xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-b border-rose-950/80 font-sans">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className="text-xs uppercase tracking-widest text-rose-400 font-semibold">Menu Sensorial</span>
           <h2 className="text-2xl sm:text-3xl font-serif italic text-white font-normal">Rituais & Cuidados</h2>
@@ -879,7 +777,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               </div>
               <h3 className="text-xl font-bold text-white">Demonstração de Agendamento Confirmada!</h3>
               <p className="text-xs text-neutral-400 max-w-md mx-auto">
-                Horário reservado para <strong>{bookingDate}</strong> às <strong>{bookingTime}</strong>
+                Horário reservado para <strong>{new Date(bookingDate + "T00:00:00").toLocaleDateString("pt-BR")}</strong> às <strong>{bookingTime}</strong>
                 {bookingService ? ` (${bookingService})` : ''} na {businessData.name}.
               </p>
               <div className="pt-2">
@@ -935,20 +833,14 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
                   3. Selecione a Data
                 </label>
-                <input
-                  type="date"
-                  value={bookingDate}
-                  onChange={(e) => setBookingDate(e.target.value)}
-                  min={todayIso}
-                  className="w-full p-3 rounded-xl border border-neutral-700 bg-neutral-900 text-white text-xs outline-none focus:border-amber-500"
-                />
+                <MonthCalendar selectedDate={bookingDate} onSelectDate={setBookingDate} appointments={[]} minDate={todayIso} />
 
                 <div className="pt-4">
                   <button
                     onClick={() => setBookingConfirmed(true)}
                     className="w-full py-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 shadow-xl transition transform active:scale-95 flex items-center justify-center gap-2"
                   >
-                    <CalendarCheck className="w-4 h-4" /> Confirmar Demonstração de Reserva
+                    <CalendarCheck className="w-4 h-4" /> Simular Agendamento
                   </button>
                   <p className="text-[11px] text-neutral-500 text-center mt-2">
                     Simulação 100% funcional com integração de agenda White-Label.
