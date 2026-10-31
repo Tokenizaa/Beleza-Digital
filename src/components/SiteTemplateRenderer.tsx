@@ -267,7 +267,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </div>
 
           <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto leading-relaxed font-sans font-light">
-            {businessData.description || 'A nobreza do corte clássico e o ritual da toalha quente combinados à precisão e técnicas contemporâneas.'}
+            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 font-sans">
@@ -308,7 +308,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <div className="flex items-baseline justify-between sm:justify-start gap-4">
                   <h3 className="font-serif text-lg font-bold text-amber-100">{service.name}</h3>
                   <span className="text-xs text-amber-400/80 uppercase tracking-wider bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/30">
-                    {service.durationMinutes ? `${service.durationMinutes} min` : '45 min'}
+                    {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração sob consulta'}
                   </span>
                 </div>
                 <p className="text-xs text-neutral-400 font-light max-w-xl">{service.description}</p>
@@ -316,7 +316,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
               <div className="flex items-center justify-between sm:justify-end gap-5 border-t sm:border-t-0 pt-3 sm:pt-0 border-amber-900/20">
                 <span className="font-serif text-xl font-bold text-amber-300">
-                  R$ {(service.price ?? 65).toFixed(2)}
+                  {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
                 </span>
                 <a
                   href="#agendamento"
@@ -375,7 +375,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto leading-relaxed font-medium">
-            {businessData.description || 'Cultura de rua, técnica apurada de fade e visagismo urbano em alta definição.'}
+            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -423,9 +423,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-xl font-black text-emerald-400 font-mono">
-                    R$ {(service.price ?? 60).toFixed(2)}
+                    {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
                   </span>
-                  <p className="text-[10px] font-mono text-neutral-500 mt-1">{service.durationMinutes ? `${service.durationMinutes}m` : '40m'}</p>
+                  <p className="text-[10px] font-mono text-neutral-500 mt-1">{service.durationMinutes ? `${service.durationMinutes}m` : 'Sob consulta'}</p>
                 </div>
               </div>
 
@@ -470,7 +470,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           <p className="text-base text-slate-600 max-w-xl mx-auto leading-relaxed font-normal">
-            {businessData.description || 'Uma abordagem consciente e intimista do cuidado com a sua imagem pessoal.'}
+            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -509,8 +509,8 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <p className="text-xs text-slate-600 max-w-lg">{service.description}</p>
               </div>
               <div className="flex items-center gap-4 shrink-0">
-                <span className="text-xs text-slate-500 font-mono">{service.durationMinutes ? `${service.durationMinutes} min` : '50 min'}</span>
-                <span className="text-base font-medium text-slate-900">R$ {(service.price ?? 80).toFixed(2)}</span>
+                <span className="text-xs text-slate-500 font-mono">{service.durationMinutes ? `${service.durationMinutes} min` : 'Duração sob consulta'}</span>
+                <span className="text-base font-medium text-slate-900">{service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}</span>
                 <a
                   href="#agendamento"
                   onClick={() => setBookingService(service.name)}
@@ -563,7 +563,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-blue-200/80 max-w-2xl mx-auto leading-relaxed">
-            {businessData.description || 'Precisão, conforto e rigor com seus horários. O padrão de imagem pessoal que sua trajetória corporativa exige.'}
+            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -605,13 +605,13 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-bold text-base text-white">{service.name}</h3>
                   <span className="text-base font-extrabold text-blue-400 shrink-0">
-                    R$ {(service.price ?? 75).toFixed(2)}
+                    {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
                   </span>
                 </div>
                 <p className="text-xs text-blue-200/70 mt-2 leading-relaxed">{service.description}</p>
               </div>
               <div className="mt-4 pt-3 border-t border-blue-900/40 flex items-center justify-between">
-                <span className="text-[11px] text-blue-300/80 font-mono">Duração: {service.durationMinutes ? `${service.durationMinutes} min` : '35 min'}</span>
+                <span className="text-[11px] text-blue-300/80 font-mono">Duração: {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração sob consulta'}</span>
                 <a
                   href="#agendamento"
                   onClick={() => setBookingService(service.name)}
@@ -663,7 +663,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-rose-200/80 max-w-2xl mx-auto leading-relaxed font-sans font-light">
-            {businessData.description || 'Onde o tempo desacelera e sua melhor versão é revelada através de rituais dedicados e acolhedores.'}
+            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 font-sans">
@@ -704,7 +704,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-serif text-lg font-bold text-rose-100">{service.name}</h3>
                   <span className="text-lg font-bold text-rose-300 shrink-0 font-sans">
-                    R$ {(service.price ?? 90).toFixed(2)}
+                    {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
                   </span>
                 </div>
                 <p className="text-xs text-rose-200/70 mt-2 leading-relaxed">{service.description}</p>
@@ -776,7 +776,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   <option value="">Selecione um serviço...</option>
                   {rawServices.map((s) => (
                     <option key={s.id} value={s.name}>
-                      {s.name} - R$ {(s.price ?? 60).toFixed(2)}
+                      {s.name} - {s.price != null ? 'R$ ' + s.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
                     </option>
                   ))}
                 </select>
