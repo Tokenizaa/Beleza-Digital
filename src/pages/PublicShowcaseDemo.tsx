@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar } from 'lucide-react';
 import { SharedSitePreview, type ShareableSitePreview } from './SharedSitePreview';
+import { useStore } from '../data/store';
 
 const preview: ShareableSitePreview = {
   version: 1, businessName: 'Studio Modelo', category: 'Beleza & Estética',
@@ -12,12 +13,16 @@ const preview: ShareableSitePreview = {
   projectVersion: 1, generatedAt: new Date().toISOString(), status: 'OPERATIONAL'
 };
 
-export const PublicShowcaseDemo: React.FC = () => (
+export const PublicShowcaseDemo: React.FC = () => {
+  const { services, products, media } = useStore();
+  const showcasePreview: ShareableSitePreview = { ...preview, services, products, media };
+  return (
   <div className="min-h-screen bg-neutral-950">
-    <SharedSitePreview preview={preview} controlMode="sidebar" />
+    <SharedSitePreview preview={showcasePreview} controlMode="sidebar" />
     <button onClick={() => window.open('https://wa.me/5551999999999','_blank','noopener,noreferrer')}
       className="fixed bottom-5 right-5 z-[80] inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-4 font-bold text-neutral-950 shadow-2xl transition hover:bg-amber-400">
       <Calendar className="h-5 w-5"/> Agendar agora
     </button>
   </div>
-);
+  );
+};
