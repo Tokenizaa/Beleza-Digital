@@ -611,7 +611,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <p className="text-xs text-blue-200/70 mt-2 leading-relaxed">{service.description}</p>
               </div>
               <div className="mt-4 pt-3 border-t border-blue-900/40 flex items-center justify-between">
-                <span className="text-[11px] text-blue-300/80 font-mono">Duração: {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração sob consulta'}</span>
+                <span className="text-[11px] text-blue-300/80 font-mono">Duração: {service.durationMinutes ? `${service.durationMinutes} min` : 'sob consulta'}</span>
                 <a
                   href="#agendamento"
                   onClick={() => setBookingService(service.name)}
