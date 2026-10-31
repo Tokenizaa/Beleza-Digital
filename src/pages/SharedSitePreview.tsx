@@ -159,7 +159,7 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
   }
 }
 
-export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null }> = ({ preview: initialPreview }) => {
+export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null; controlMode?: 'header' | 'sidebar' }> = ({ preview: initialPreview, controlMode = 'header' }) => {
   // Benchmark fallback caso o preview seja nulo ou link tenha expirado
   const [customBusinessName, setCustomBusinessName] = useState('');
   const [customPhone, setCustomPhone] = useState('');
@@ -247,7 +247,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
       {/* ========================================================================= */}
       {/* 1. SELETOR E CABEÇALHO UNIFICADO DE ALTA CONVERSÃO                        */}
       {/* ========================================================================= */}
-      <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/95 px-3 py-2.5 backdrop-blur-md shadow-2xl">
+      {controlMode === 'header' && <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/95 px-3 py-2.5 backdrop-blur-md shadow-2xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           {/* Identificação do Negócio */}
           <div className="flex items-center gap-2.5">
@@ -325,7 +325,27 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
             </a>
           </div>
         </div>
-      </header>
+      </header>}
+
+      {controlMode === 'sidebar' && (
+        <aside className="fixed left-3 top-1/2 z-[70] -translate-y-1/2 rounded-2xl border border-neutral-700 bg-neutral-950/95 p-2 shadow-2xl backdrop-blur-md">
+          <div className="px-2 py-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Modelos</div>
+          <div className="space-y-1" role="tablist" aria-label="Escolher modelo">
+            {SITE_TEMPLATES_LIST.map((tpl) => {
+              const selected = activeVariation === tpl.id;
+              return <button key={tpl.id} onClick={() => setActiveVariation(tpl.id)} role="tab" aria-selected={selected}
+                title={`${tpl.name}: ${tpl.tagline}`}
+                className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-bold transition ${
+                  selected ? 'bg-amber-500 text-neutral-950 shadow-lg' : 'text-neutral-300 hover:bg-neutral-800'
+                }`}>
+                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: tpl.primaryColor }} />
+                <span className="hidden sm:inline">{tpl.shortName}</span>
+                <span className="sm:hidden">Modelo</span>
+              </button>;
+            })}
+          </div>
+        </aside>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. BANNER DE CAPTURA DE LEADS (Caso link expirou ou preview padrão)       */}
