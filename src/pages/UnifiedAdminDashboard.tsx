@@ -3,6 +3,7 @@ import { useStore } from '../data/store';
 import { AdminPage } from './AdminPage';
 import { SuperAdminPage } from './SuperAdminPage';
 import { LeadsDashboard } from './LeadsDashboard';
+import { ScrapingConsole } from './ScrapingConsole';
 import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
 import { SITE_TEMPLATES_LIST, SiteVariationId } from '../types/templates';
 import { AdminTab, SuperAdminTab } from '../types';
@@ -35,11 +36,11 @@ import {
   KeyRound,
   Eye,
   Store,
+  Database
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 export type UnifiedAdminSection =
-  // Módulo 1: Gestão do Salão
   | 'salao-dashboard'
   | 'salao-servicos'
   | 'salao-produtos'
@@ -47,38 +48,39 @@ export type UnifiedAdminSection =
   | 'salao-agendamentos'
   | 'salao-instagram'
   | 'salao-configuracoes'
-  // Módulo 2: Prospecção & Raspagem (CRM Alvanto)
   | 'prospeccao-hoje'
   | 'prospeccao-buscar'
   | 'prospeccao-crm'
   | 'prospeccao-automacao'
-  // Módulo 3: Rede White-Label & Super Admin
+  | 'prospeccao-scraping'
   | 'rede-saloes'
   | 'rede-novo'
   | 'rede-admins'
   | 'rede-auditoria'
   | 'rede-configuracoes'
-  // Módulo 4: Catálogo de Modelos
   | 'templates-catalogo';
+
+type ExcludeModule = 'salao' | 'prospeccao' | 'rede' | 'templates';
 
 interface UnifiedAdminDashboardProps {
   initialSection?: UnifiedAdminSection;
   onBackToApp?: () => void;
-  /** Quando verdadeiro, o painel já foi autorizado pelo wrapper de rota (Supabase) e salta o gate de login interno. */
   preAuthenticated?: boolean;
+  excludeModules?: ExcludeModule[];
 }
 
 export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   initialSection = 'salao-dashboard',
   onBackToApp,
   preAuthenticated = false,
+  excludeModules = [],
 }) => {
   const { establishment, allEstablishments, session, platformConfig, store } = useStore();
 
   const [activeSection, setActiveSection] = useState<UnifiedAdminSection>(initialSection);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [establishmentDropdownOpen, setEstablishmentDropdownOpen] = useState(false);
 
-  // Collapsible modules state in sidebar
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({
     salao: false,
     prospeccao: false,
@@ -86,11 +88,15 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
     templates: false,
   });
 
+  const excludedModules = new Set(excludeModules);
+  const isModuleExcluded = (moduleKey: string) => excludedModules.has(moduleKey as ExcludeModule);
+
+  const excludedModuleSet = new Set<string>(excludeModules.map(m => m));
+
   const toggleModuleCollapse = (modKey: string) => {
     setCollapsedModules((prev) => ({ ...prev, [modKey]: !prev[modKey] }));
   };
 
-  // Auth State
   const {
     isAuthenticated: storeIsAuthenticated,
     login,
@@ -99,40 +105,17 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
     userRole,
   } = useStore();
 
-  // Derived auth state: user is authorized if they have a session with appropriate role
-  const isAuthorized = userRole === 'super_admin' || userRole === 'establishment_admin';
-  // A rota PlatformAdminDashboard já validou um administrador global no servidor.
-  const isPlatformAdmin = preAuthenticated || userRole === 'super_admin';
-  const isImpersonatingEstablishment =
-    userRole === 'super_admin' && Boolean(session?.impersonatedBySuperAdmin);
-  const canManageEstablishment =
-    isImpersonatingEstablishment || (!preAuthenticated && userRole === 'establishment_admin');
-  const isPlatformWorkspace = isPlatformAdmin && !isImpersonatingEstablishment;
+  const isAuthorized =
+    userRole === 'super_admin' ||
+    userRole === 'establishment_admin';
 
   const [isAuthenticated, setIsAuthenticatedState] = useState<boolean>(
     preAuthenticated || storeIsAuthenticated || Boolean(isAuthorized)
   );
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Impede que uma seção anterior ou uma URL interna mantenha o papel no painel errado.
-  useEffect(() => {
-    if (isImpersonatingEstablishment && !activeSection.startsWith('salao-')) {
-      setActiveSection('salao-dashboard');
-      return;
-    }
-    if (isPlatformWorkspace && activeSection.startsWith('salao-')) {
-      setActiveSection('prospeccao-hoje');
-      return;
-    }
-    if (!isPlatformAdmin && userRole === 'establishment_admin' && !activeSection.startsWith('salao-')) {
-      setActiveSection('salao-dashboard');
-    }
-  }, [activeSection, isImpersonatingEstablishment, isPlatformWorkspace, isPlatformAdmin, userRole]);
-
-  // Template Showcase preview state
   const [selectedShowcaseTemplate, setSelectedShowcaseTemplate] = useState<SiteVariationId>('ouro-classico');
 
-  // Handle Login (via Supabase Auth quando configurado; sessão local da store como mecanismo da plataforma)
   const handleLogin = (isSuper: boolean) => {
     setAuthError(null);
     try {
@@ -151,11 +134,15 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   };
 
   const handleLogout = () => {
-    logout(); // encerra sessão da store e do Supabase (quando configurado)
+    logout();
     setIsAuthenticatedState(false);
   };
 
-  // Synchronize section changes from sub-components
+  const handleSelectEstablishment = (estId: string) => {
+    store.selectEstablishment(estId);
+    setEstablishmentDropdownOpen(false);
+  };
+
   const handleAdminPageTabChange = (tab: AdminTab) => {
     const map: Record<AdminTab, UnifiedAdminSection> = {
       dashboard: 'salao-dashboard',
@@ -191,7 +178,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
     if (map[tab]) setActiveSection(map[tab]!);
   };
 
-  // If not authenticated, render clean Unified Login screen
+  // Se não autenticado, renderiza tela de login unificada
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4">
@@ -251,15 +238,21 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
     );
   }
 
-  // ----------------------------------------------------
-  // RENDER MAIN CONTENT VIEW BASED ON ACTIVE SECTION
-  // ----------------------------------------------------
   const renderContent = () => {
-    // Módulo 1: Gestão do Salão
-    if (activeSection.startsWith('salao-')) {
-      if (!canManageEstablishment) {
-        return <div className="m-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">Acesso ao painel do estabelecimento não permitido para este perfil.</div>;
+    if (excludedModuleSet.size > 0) {
+      const sectionModule = activeSection.split('-')[0];
+      if (sectionModule && excludedModuleSet.has(sectionModule)) {
+        const fallback: UnifiedAdminSection =
+          !excludedModuleSet.has('prospeccao') ? 'prospeccao-hoje'
+          : !excludedModuleSet.has('salao') ? 'salao-dashboard'
+          : !excludedModuleSet.has('rede') ? 'rede-saloes'
+          : 'templates-catalogo';
+        setActiveSection(fallback);
+        return null;
       }
+    }
+
+    if (activeSection.startsWith('salao-')) {
       const tabMap: Record<string, AdminTab> = {
         'salao-dashboard': 'dashboard',
         'salao-servicos': 'servicos',
@@ -276,22 +269,21 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           initialTab={initialTab}
           embeddedInUnifiedAdmin={true}
           onTabChange={handleAdminPageTabChange}
-          onNavigateToSuperAdmin={() => setActiveSection('rede-saloes')}
           onBackToApp={onBackToApp}
         />
       );
     }
 
-    // Módulo 2: Prospecção & Raspagem de Leads (CRM & Prospecção Aprovado)
+    if (activeSection === 'prospeccao-scraping') {
+      return <ScrapingConsole />;
+    }
+
     if (
       activeSection === 'prospeccao-hoje' ||
       activeSection === 'prospeccao-buscar' ||
       activeSection === 'prospeccao-crm' ||
       activeSection === 'prospeccao-automacao'
     ) {
-      if (!isPlatformWorkspace) {
-        return <div className="m-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">Acesso restrito à administração da plataforma.</div>;
-      }
       const tabMap: Record<string, 'hoje' | 'buscar' | 'empresas'> = {
         'prospeccao-hoje': 'hoje',
         'prospeccao-buscar': 'buscar',
@@ -309,11 +301,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       );
     }
 
-    // Módulo 3: Rede White-Label & Super Admin
     if (activeSection.startsWith('rede-')) {
-      if (!isPlatformWorkspace) {
-        return <div className="m-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">Acesso restrito à administração da plataforma.</div>;
-      }
       const tabMap: Record<string, SuperAdminTab> = {
         'rede-saloes': 'establishments',
         'rede-novo': 'new-establishment',
@@ -338,18 +326,13 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       );
     }
 
-    // Módulo 4: Catálogo de Modelos (Templates)
     if (activeSection === 'templates-catalogo') {
-      if (!isPlatformWorkspace) {
-        return <div className="m-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-sm text-rose-200">Acesso restrito à administração da plataforma.</div>;
-      }
       const currentConfig =
         SITE_TEMPLATES_LIST.find((t) => t.id === selectedShowcaseTemplate) ||
         SITE_TEMPLATES_LIST[0];
 
       return (
         <div className="space-y-8 p-6 max-w-7xl mx-auto">
-          {/* Header */}
           <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div>
               <div className="flex items-center gap-2">
@@ -381,7 +364,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             </button>
           </div>
 
-          {/* 5 Templates Cards Picker */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {SITE_TEMPLATES_LIST.map((template, idx) => {
               const isSelected = selectedShowcaseTemplate === template.id;
@@ -426,13 +408,14 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             })}
           </div>
 
-          {/* Interactive Live Preview Box */}
           <div className="rounded-3xl border border-neutral-800 bg-neutral-950 overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-neutral-800 bg-neutral-900/80 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-rose-500/60" />
-                <span className="h-3 w-3 rounded-full bg-yellow-500/60" />
-                <span className="h-3 w-3 rounded-full bg-emerald-500/60" />
+                <div className="flex items-center gap-1">
+                  <span className="h-3 w-3 rounded-full bg-rose-500/60" />
+                  <span className="h-3 w-3 rounded-full bg-yellow-500/60" />
+                  <span className="h-3 w-3 rounded-full bg-emerald-500/60" />
+                </div>
                 <span className="text-xs text-neutral-400 ml-2 font-mono">
                   https://seusalao.com.br/demo?modelo={currentConfig.id}
                 </span>
@@ -471,16 +454,12 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row font-sans antialiased">
-      {/* ---------------------------------------------------- */}
-      {/* SIDEBAR NAVEGAÇÃO DIVIDIDA EM MÓDULOS E SUBMENUS     */}
-      {/* ---------------------------------------------------- */}
       <aside
         className={`fixed md:sticky top-0 left-0 z-40 h-screen w-72 bg-neutral-900 border-r border-neutral-800 flex flex-col justify-between shrink-0 transition-transform duration-200 ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         <div className="flex flex-col flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
-          {/* Logo & Platform Brand */}
           <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-neutral-950 font-black shadow-md">
@@ -504,203 +483,248 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             </button>
           </div>
 
-          {canManageEstablishment && (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Estabelecimento em contexto</label>
-              <p className="text-xs font-semibold text-white">{establishment.name}</p>
-              <p className="text-[10px] text-neutral-500">/{establishment.slug}</p>
-            </div>
-          )}
+          <div className="relative">
+            <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">
+              Salão Ativo
+            </label>
+            <button
+              type="button"
+              onClick={() => setEstablishmentDropdownOpen(!establishmentDropdownOpen)}
+              className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 hover:border-neutral-700 flex items-center justify-between text-left transition cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white truncate">
+                    {establishment.name}
+                  </p>
+                  <p className="text-[10px] text-neutral-400 truncate">
+                    /{establishment.slug}
+                  </p>
+                </div>
+              </div>
+              <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
+            </button>
 
-          {/* ---------------------------------------------------- */}
-          {/* MÓDULOS E SUBMENUS                                   */}
-          {/* ---------------------------------------------------- */}
+            {establishmentDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-950 border border-neutral-800 rounded-xl shadow-2xl p-1.5 z-50 max-h-56 overflow-y-auto space-y-1">
+                {allEstablishments.map((est) => (
+                  <button
+                    key={est.id}
+                    onClick={() => handleSelectEstablishment(est.id)}
+                    className={`w-full p-2 rounded-lg text-left text-xs flex items-center justify-between transition ${
+                      est.id === establishment.id
+                        ? 'bg-amber-500/10 text-amber-300 font-bold'
+                        : 'text-neutral-300 hover:bg-neutral-900'
+                    }`}
+                  >
+                    <span className="truncate">{est.name}</span>
+                    {est.id === establishment.id && (
+                      <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    )}
+                  </button>
+                ))}
+                <div className="pt-1.5 border-t border-neutral-800">
+                  <button
+                    onClick={() => {
+                      setActiveSection('rede-novo');
+                      setEstablishmentDropdownOpen(false);
+                    }}
+                    className="w-full p-2 rounded-lg text-left text-xs text-amber-400 hover:bg-neutral-900 flex items-center gap-1.5 font-bold"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Cadastrar Novo Salão</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <nav className="space-y-5">
-            {canManageEstablishment && (
+            {!isModuleExcluded('salao') && (
               <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => toggleModuleCollapse('salao')}
-                className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white uppercase tracking-wider cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <Scissors className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Gestão do Salão</span>
-                </div>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform ${
-                    collapsedModules.salao ? '-rotate-90' : ''
+                <button
+                  type="button"
+                  onClick={() => toggleModuleCollapse('salao')}
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white uppercase tracking-wider cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Scissors className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Gestão do Salão</span>
+                  </div>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      collapsedModules.salao ? '-rotate-90' : ''
+                    }`}
+                  />
+                </button>
+
+                {!collapsedModules.salao && (
+                  <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
+                    {[
+                      { id: 'salao-dashboard', label: 'Dashboard & Faturamento', icon: LayoutDashboard },
+                      { id: 'salao-servicos', label: 'Serviços & Preços', icon: Scissors },
+                      { id: 'salao-produtos', label: 'Produtos & Estoque', icon: ShoppingBag },
+                      { id: 'salao-galeria', label: 'Galeria & Vídeos', icon: Images },
+                      { id: 'salao-agendamentos', label: 'Agenda & Horários', icon: Calendar },
+                      { id: 'salao-instagram', label: 'Feed Instagram', icon: Instagram },
+                      { id: 'salao-configuracoes', label: 'Configurações do Salão', icon: Settings },
+                    ].map((sub) => {
+                      const Icon = sub.icon;
+                      const isActive = activeSection === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => {
+                            setActiveSection(sub.id as UnifiedAdminSection);
+                            setMobileSidebarOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
+                            isActive
+                              ? 'bg-amber-500 text-neutral-950 font-bold shadow-sm'
+                              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{sub.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!isModuleExcluded('prospeccao') && (
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => toggleModuleCollapse('prospeccao')}
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white uppercase tracking-wider cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Compass className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Prospecção & Raspagem</span>
+                  </div>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      collapsedModules.prospeccao ? '-rotate-90' : ''
+                    }`}
+                  />
+                </button>
+
+                {!collapsedModules.prospeccao && (
+                  <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
+                    {[
+                      { id: 'prospeccao-hoje', label: 'Painel do Dia (Hoje)', icon: Compass },
+                      { id: 'prospeccao-buscar', label: 'Nova Busca & Raspagem', icon: Search },
+                      { id: 'prospeccao-crm', label: 'Pipeline CRM & Empresas', icon: Users },
+                      { id: 'prospeccao-scraping', label: 'Console de Scraping', icon: Database },
+                    ].map((sub) => {
+                      const Icon = sub.icon;
+                      const isActive = activeSection === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => {
+                            setActiveSection(sub.id as UnifiedAdminSection);
+                            setMobileSidebarOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
+                            isActive
+                              ? 'bg-purple-600 text-white font-bold shadow-sm'
+                              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{sub.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!isModuleExcluded('rede') && (
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => toggleModuleCollapse('rede')}
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white uppercase tracking-wider cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Rede & Super Admin</span>
+                  </div>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      collapsedModules.rede ? '-rotate-90' : ''
+                    }`}
+                  />
+                </button>
+
+                {!collapsedModules.rede && (
+                  <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
+                    {[
+                      { id: 'rede-saloes', label: `Salões da Rede (${allEstablishments.length})`, icon: Building2 },
+                      { id: 'rede-novo', label: 'Cadastrar Novo Salão', icon: Plus },
+                      { id: 'rede-admins', label: 'Administradores Gerais', icon: ShieldCheck },
+                      { id: 'rede-auditoria', label: 'Auditoria & Logs', icon: Lock },
+                      { id: 'rede-configuracoes', label: 'Planos & Configurações', icon: Sliders },
+                    ].map((sub) => {
+                      const Icon = sub.icon;
+                      const isActive = activeSection === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => {
+                            setActiveSection(sub.id as UnifiedAdminSection);
+                            setMobileSidebarOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
+                            isActive
+                              ? 'bg-blue-600 text-white font-bold shadow-sm'
+                              : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{sub.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!isModuleExcluded('templates') && (
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection('templates-catalogo');
+                    setMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    activeSection === 'templates-catalogo'
+                      ? 'bg-amber-500 text-neutral-950 font-bold shadow-sm'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
                   }`}
-                />
-              </button>
-
-              {!collapsedModules.salao && (
-                <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
-                  {[
-                    { id: 'salao-dashboard', label: 'Dashboard & Faturamento', icon: LayoutDashboard },
-                    { id: 'salao-servicos', label: 'Serviços & Preços', icon: Scissors },
-                    { id: 'salao-produtos', label: 'Produtos & Estoque', icon: ShoppingBag },
-                    { id: 'salao-galeria', label: 'Galeria & Vídeos', icon: Images },
-                    { id: 'salao-agendamentos', label: 'Agenda & Horários', icon: Calendar },
-                    { id: 'salao-instagram', label: 'Feed Instagram', icon: Instagram },
-                    { id: 'salao-configuracoes', label: 'Configurações do Salão', icon: Settings },
-                  ].map((sub) => {
-                    const Icon = sub.icon;
-                    const isActive = activeSection === sub.id;
-                    return (
-                      <button
-                        key={sub.id}
-                        onClick={() => {
-                          setActiveSection(sub.id as UnifiedAdminSection);
-                          setMobileSidebarOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
-                          isActive
-                            ? 'bg-amber-500 text-neutral-950 font-bold shadow-sm'
-                            : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{sub.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>5 Modelos de Sites</span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-300">
+                    5
+                  </span>
+                </button>
               </div>
             )}
-
-            {isPlatformWorkspace && (
-              <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => toggleModuleCollapse('prospeccao')}
-                className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white uppercase tracking-wider cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <Compass className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Prospecção & Raspagem</span>
-                </div>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform ${
-                    collapsedModules.prospeccao ? '-rotate-90' : ''
-                  }`}
-                />
-              </button>
-
-              {!collapsedModules.prospeccao && (
-                <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
-                  {[
-                    { id: 'prospeccao-hoje', label: 'Painel do Dia (Hoje)', icon: Compass },
-                    { id: 'prospeccao-buscar', label: 'Nova Busca & Raspagem', icon: Search },
-                    { id: 'prospeccao-crm', label: 'Pipeline CRM & Empresas', icon: Users },
-                  ].map((sub) => {
-                    const Icon = sub.icon;
-                    const isActive = activeSection === sub.id;
-                    return (
-                      <button
-                        key={sub.id}
-                        onClick={() => {
-                          setActiveSection(sub.id as UnifiedAdminSection);
-                          setMobileSidebarOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
-                          isActive
-                            ? 'bg-purple-600 text-white font-bold shadow-sm'
-                            : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{sub.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              </div>
-            )}
-
-            {isPlatformWorkspace && (
-              <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => toggleModuleCollapse('rede')}
-                className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] font-bold text-neutral-400 hover:text-white uppercase tracking-wider cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Rede & Super Admin</span>
-                </div>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform ${
-                    collapsedModules.rede ? '-rotate-90' : ''
-                  }`}
-                />
-              </button>
-
-              {!collapsedModules.rede && (
-                <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
-                  {[
-                    { id: 'rede-saloes', label: `Salões da Rede (${allEstablishments.length})`, icon: Building2 },
-                    { id: 'rede-novo', label: 'Cadastrar Novo Salão', icon: Plus },
-                    { id: 'rede-admins', label: 'Administradores Gerais', icon: ShieldCheck },
-                    { id: 'rede-auditoria', label: 'Auditoria & Logs', icon: Lock },
-                    { id: 'rede-configuracoes', label: 'Planos & Configurações', icon: Sliders },
-                  ].map((sub) => {
-                    const Icon = sub.icon;
-                    const isActive = activeSection === sub.id;
-                    return (
-                      <button
-                        key={sub.id}
-                        onClick={() => {
-                          setActiveSection(sub.id as UnifiedAdminSection);
-                          setMobileSidebarOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
-                          isActive
-                            ? 'bg-blue-600 text-white font-bold shadow-sm'
-                            : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{sub.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              </div>
-            )}
-
-            {isPlatformWorkspace && (
-              <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveSection('templates-catalogo');
-                  setMobileSidebarOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  activeSection === 'templates-catalogo'
-                    ? 'bg-amber-500 text-neutral-950 font-bold shadow-sm'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  <span>5 Modelos de Sites</span>
-                </div>
-                <span className="text-[10px] font-bold bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-300">
-                  5
-                </span>
-              </button>
-              </div>
-            )}
-
           </nav>
         </div>
 
-        {/* SIDEBAR FOOTER */}
         <div className="p-4 border-t border-neutral-800 bg-neutral-950/60 space-y-2">
           {onBackToApp && (
             <button
@@ -722,7 +746,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
         </div>
       </aside>
 
-      {/* Backdrop for mobile sidebar */}
       {mobileSidebarOpen && (
         <div
           onClick={() => setMobileSidebarOpen(false)}
@@ -730,11 +753,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
         />
       )}
 
-      {/* ---------------------------------------------------- */}
-      {/* MAIN CONTENT WRAPPER                                 */}
-      {/* ---------------------------------------------------- */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Mobile Top Header */}
         <header className="h-16 border-b border-neutral-800 bg-neutral-950 px-4 flex items-center justify-between md:hidden sticky top-0 z-20">
           <button
             onClick={() => setMobileSidebarOpen(true)}
@@ -744,7 +763,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           </button>
 
           <span className="text-sm font-bold text-white truncate max-w-[200px]">
-            {isPlatformWorkspace ? platformConfig.platformName : establishment.name}
+            {establishment.name}
           </span>
 
           {onBackToApp ? (
@@ -759,7 +778,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           )}
         </header>
 
-        {/* Content area */}
         <main className="flex-1">
           {renderContent()}
         </main>

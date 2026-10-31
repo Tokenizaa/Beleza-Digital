@@ -10,8 +10,8 @@
  * - JSON-LD structured data (schema.org LocalBusiness)
  */
 import React, { useEffect } from 'react';
-import { generateAllMetadata, formatFieldsForDisplay } from '@/lib/seo/seo-utils';
-import type { ShareableSitePreview } from '@/pages/SharedSitePreview';
+import { generateAllMetadata, formatFieldsForDisplay } from '../lib/seo/seo-utils';
+import type { ShareableSitePreview } from '../pages/SharedSitePreview';
 
 interface SiteSEOMetadataProps {
   preview: ShareableSitePreview | null;
@@ -41,7 +41,7 @@ export const SiteSEOMetadata: React.FC<SiteSEOMetadataProps> = ({
     }
     
     // 2. Meta description
-    let descriptionMeta = document.querySelector('meta[name="description"]');
+    let descriptionMeta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
     if (!descriptionMeta) {
       descriptionMeta = document.createElement('meta');
       descriptionMeta.name = 'description';
@@ -61,10 +61,10 @@ export const SiteSEOMetadata: React.FC<SiteSEOMetadataProps> = ({
     ];
     
     ogProps.forEach(({ property, content }) => {
-      let ogMeta = document.querySelector(`meta[property="${property}"]`);
+      let ogMeta = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement | null;
       if (!ogMeta) {
         ogMeta = document.createElement('meta');
-        ogMeta.property = property;
+        ogMeta.setAttribute('property', property);
         document.head.appendChild(ogMeta);
       }
       ogMeta.content = content;
@@ -80,7 +80,7 @@ export const SiteSEOMetadata: React.FC<SiteSEOMetadataProps> = ({
     ];
     
     twitterProps.forEach(({ name, content }) => {
-      let twitterMeta = document.querySelector(`meta[name="${name}"]`);
+      let twitterMeta = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
       if (!twitterMeta) {
         twitterMeta = document.createElement('meta');
         twitterMeta.name = name;
@@ -91,7 +91,7 @@ export const SiteSEOMetadata: React.FC<SiteSEOMetadataProps> = ({
     
     // 5. JSON-LD structured data
     const existingJsonLd = document.querySelector('script[type="application/ld+json"]');
-    if (existingJsonLd) {
+    if (existingJsonLd && existingJsonLd.parentNode) {
       existingJsonLd.parentNode.removeChild(existingJsonLd);
     }
     
@@ -101,7 +101,7 @@ export const SiteSEOMetadata: React.FC<SiteSEOMetadataProps> = ({
     document.head.appendChild(jsonLdScript);
     
     // 6. Link canonical
-    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    let canonicalLink = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!canonicalLink) {
       canonicalLink = document.createElement('link');
       canonicalLink.rel = 'canonical';

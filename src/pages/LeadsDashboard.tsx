@@ -67,12 +67,16 @@ export interface LeadCompany {
   notes: string[];
   followUpDate?: string;
   createdAt: string;
-  // Novos campos alinhados com os 18 do provedor (para SEO/copy na proposta)
   status?: string;           // Status operacional
   note?: string;           // Nota / avaliação geral
   'quantidade-de-avaliacoes'?: string;  // Qtd de avaliações
   'faixa-de-preco'?: string;            // Faixa de preço
+  faixaDePreco?: string;
   horario?: string;        // Horário de funcionamento
+  planoComercial?: string;
+  dataEscolhaPlano?: string;
+  escolhidoPor?: string;
+  billing_period?: string | null;
 }
 
 export const TEMPLATE_NAMES: Record<string, string> = {
@@ -348,7 +352,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
   // Definir plano comercial
   const definirPlanoComercial = async () => {
-    if (!selectedPlano) return;
+    if (!selectedPlano || !selectedCompany) return;
     if (!supabase) {
       setIsDefiningPlan(false);
       return;
@@ -416,7 +420,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     const executionId = crypto.randomUUID();
     const startedAt = new Date().toISOString();
     setSearchExecution({
-      
+      executionId,
       status: 'running',
       startedAt,
       result: null,
@@ -450,18 +454,18 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
     const region = `${searchCity.trim()} - ${searchState.trim()}`;
     try {
-      const response = await fetch('/api/prospecting/local-scrape', {
+      const response = await fetch('/api/prospecting/run', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           segment: searchNiche.trim(),
           region,
           limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
           countryCode: 'BR',
-          
-          
+          executionId,
         }),
         signal: AbortSignal.timeout(60000),
       });
@@ -1044,10 +1048,15 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                     {searchOperation.error && (
                       <p className="text-red-400 text-[11px] mb-2">{searchOperation.error}</p>
                     )}
-                    {searchOperation.result && (
-                      <p className="text-[10px] text-red-300 text-[11px] mb-2">
-                        {searchOperation.error || 'Worker reportou tarefas bloqueadas. '}
-                        {searchOperation.result.blocked} tarefa(s) não puderam ser processadas.
+                    {searchOperation.result && searchOperation.result.blocked > 0 && (
+                      <p className="text-[11px] text-red-300 mb-2">
+                        {searchOperation.error || 'Worker reportou tarefas com restrição ou bloqueio: '}
+                        {searchOperation.result.blocked} tarefa(s) não puderam ser concluídas pela fonte de dados.
+                      </p>
+                    )}
+                    {searchOperation.result && searchOperation.result.blocked === 0 && searchOperation.result.found === 0 && (
+                      <p className="text-[11px] text-amber-300 mb-2">
+                        Nenhum novo estabelecimento retornado para esta combinação de nicho e localização.
                       </p>
                     )}
                     {searchOperation.result && (

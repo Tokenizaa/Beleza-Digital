@@ -1,0 +1,29 @@
+name = "barbearia-yeshua-prospecting-scheduler"
+main = "workers/prospecting-scheduler/src/index.ts"
+compatibility_date = "2026-10-20"
+workers_dev = true
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+PROSPECTING_BATCH_SIZE = "10"
+
+[browser]
+binding = "PROSPECTING_BROWSER"
+
+# Configure these as encrypted Worker secrets (wrangler secret put):
+# wrangler secret put SUPABASE_URL --config wrangler.prospecting-scheduler.toml
+# wrangler secret put SUPABASE_SERVICE_ROLE_KEY --config wrangler.prospecting-scheduler.toml
+
+# WhatsApp — Evolution API (futuro) ou manual por enquanto
+# wrangler secret put WHATSAPP_EVOLUTION_URL --config wrangler.prospecting-scheduler.toml
+# wrangler secret put WHATSAPP_EVOLUTION_API_KEY --config wrangler.prospecting-scheduler.toml
+# wrangler secret put WHATSAPP_EVOLUTION_INSTANCE --config wrangler.prospecting-scheduler.toml
+
+# Legacy Meta Cloud API (mantido para compatibilidade futura)
+# wrangler secret put WHATSAPP_ACCESS_TOKEN --config wrangler.prospecting-scheduler.toml
+# wrangler secret put WHATSAPP_PHONE_NUMBER_ID --config wrangler.prospecting-scheduler.toml
+# wrangler secret put WHATSAPP_TEMPLATE_NAME --config wrangler.prospecting-scheduler.toml
+# wrangler secret put WHATSAPP_API_VERSION --config wrangler.prospecting-scheduler.toml

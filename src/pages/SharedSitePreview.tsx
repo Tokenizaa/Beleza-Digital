@@ -27,12 +27,12 @@ export interface ShareableSitePreview {
   googleMapsUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  // Novos campos alinhados com os 18 do provedor
   status?: string;           // Status operacional (active/inactive/suspended)
   note?: string;           // Nota / avaliação geral
   'quantidade-de-avaliacoes'?: string;  // Qtd de avaliações
   'faixa-de-preco'?: string;            // Faixa de preço
   horario?: string;        // Horário de funcionamento
+  qualification?: any;
 }
 
 const MAX_PAYLOAD_LENGTH = 16000;
@@ -147,8 +147,8 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
 
 export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null }> = ({ preview }) => {
   // Injeta metadados SEO automaticamente quando há preview
-  const templateName = preview.templateName || 'Modelo Oficial';
-  const logoUrl = preview.logoUrl;
+  const templateName = preview?.templateName || 'Modelo Oficial';
+  const logoUrl = preview?.logoUrl ?? undefined;
   
   SiteSEOMetadata({ preview, templateName, logoUrl });
   
@@ -182,7 +182,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
     phone: preview.phone,
     whatsapp: preview.whatsapp ?? preview.phone,
     address: preview.address,
-    city: preview.city || undefined,
+    city: preview.city || 'Localidade não informada',
     state: preview.state ?? undefined,
     logoUrl: preview.logoUrl ?? undefined,
     coverUrl: preview.coverUrl ?? undefined,
@@ -197,6 +197,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
+      <SiteSEOMetadata preview={preview} templateName={preview.templateName} logoUrl={preview.logoUrl ?? undefined} />
       {/* Top Banner differentiating proposal demo from published site */}
       <header className="sticky top-0 z-50 border-b border-amber-500/30 bg-neutral-950/95 px-4 py-2.5 text-xs text-amber-300 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">

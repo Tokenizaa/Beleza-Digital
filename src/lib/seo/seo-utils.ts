@@ -4,7 +4,7 @@
  * Integração com os 18 campos do provedor e o ShareableSitePreview
  */
 
-import type { ShareableSitePreview } from '@/pages/SharedSitePreview';
+import type { ShareableSitePreview } from '../../pages/SharedSitePreview';
 import { getFieldCopy, isMapField, isGalleryField } from './copy-templates';
 
 /**

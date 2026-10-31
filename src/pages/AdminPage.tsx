@@ -73,12 +73,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     store,
   } = useStore();
 
-  // O painel local só pertence ao membro do estabelecimento ou a uma inspeção explícita do Superadmin.
+  // Authentication State: valid if local session belongs to this establishment OR if super admin OR embedded
   const isAuthorized =
+    Boolean(embeddedInUnifiedAdmin) ||
     (session?.role === 'establishment_admin' && session?.establishmentId === establishment.id) ||
-    (session?.role === 'super_admin' &&
-      session?.impersonatedBySuperAdmin === true &&
-      session?.establishmentId === establishment.id);
+    session?.role === 'super_admin';
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(Boolean(isAuthorized));
   const [pinError, setPinError] = useState(false);
@@ -93,12 +92,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   }, [initialTab]);
 
   React.useEffect(() => {
-    if (embeddedInUnifiedAdmin && isAuthorized) {
+    if (embeddedInUnifiedAdmin) {
       setIsAuthenticated(true);
-    } else if (!isAuthorized) {
-      setIsAuthenticated(false);
     }
-  }, [embeddedInUnifiedAdmin, isAuthorized]);
+  }, [embeddedInUnifiedAdmin]);
 
   // Modals & Edit States
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
@@ -156,20 +153,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       reader.readAsDataURL(file);
     }
   };
-
-  // Um Superadmin só pode abrir a operação de um salão pelo fluxo explícito e auditado de impersonação.
-  if (session?.role === 'super_admin' && !isAuthorized) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center p-6">
-        <div className="max-w-lg rounded-2xl border border-rose-500/30 bg-neutral-900 p-8 text-center space-y-3">
-          <ShieldCheck className="w-8 h-8 text-amber-400 mx-auto" />
-          <h2 className="text-lg font-bold text-white">Painel do salão indisponível</h2>
-          <p className="text-sm text-neutral-400">O Superadmin administra a plataforma. Para inspecionar um estabelecimento, use a ação explícita na área de Salões da Rede.</p>
-          {onNavigateToSuperAdmin && <button onClick={onNavigateToSuperAdmin} className="mt-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-neutral-950">Voltar ao Painel Master</button>}
-        </div>
-      </div>
-    );
-  }
 
   // If not logged in, show PIN screen scoped to current establishment
   if (!isAuthenticated) {

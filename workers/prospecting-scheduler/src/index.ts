@@ -1,11 +1,9 @@
-import { extractPlaceDetails } from "./native-scraper/extractor";
-
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET: string;
   PROSPECTING_BATCH_SIZE?: string;
-  BROWSER: any;
+  PROSPECTING_BROWSER: any;
   // WhatsApp — Evolution API (futuro) ou manual por enquanto
   // WHATSAPP_EVOLUTION_URL?: string;
   // WHATSAPP_EVOLUTION_API_KEY?: string;
@@ -174,7 +172,7 @@ function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
-  if (!env.BROWSER) return "BROWSER ausente";
+  if (!env.PROSPECTING_BROWSER) return "PROSPECTING_BROWSER ausente";
   return null;
 }
 
@@ -431,30 +429,24 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const BASE_DELAY_MS = 2_000; // 2s base delay
   const MAX_DELAY_MS = 60_000; // 60s max delay
   let lastError: Error | null = null;
+
+  for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
+  // Build search query for Google Maps / local business directories
   const segment = String(campaign.segment ?? "barbearia e salão");
   const region = String(campaign.region ?? "São Paulo - SP");
   const countryCode = String(campaign.countryCode ?? "BR");
   const searchQuery = `${segment} ${region}`.trim();
+
+  // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
+  // No Docker, container, VPS, or external Python service is required.
   let scrapedResults: Array<Record<string, unknown>> = [];
   let browser: any;
   let step = "init";
   let bindingType = "unknown";
   let bindingIsString = false;
   let bindingLength = 0;
-
-  for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
-    // Reset per-attempt state while keeping the diagnostic fields in scope for final failure handling.
-    scrapedResults = [];
-    browser = undefined;
-    step = "init";
-    bindingType = "unknown";
-    bindingIsString = false;
-    bindingLength = 0;
-
-    // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
-    // No Docker, container, VPS, or external Python service is required.
-    try {
-    const browserBindingValue = env.BROWSER;
+  try {
+    const browserBindingValue = env.PROSPECTING_BROWSER;
     bindingType = typeof browserBindingValue;
     bindingIsString = typeof browserBindingValue === "string";
     bindingLength = bindingIsString ? browserBindingValue.length : 0;
@@ -501,7 +493,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       else stagnantRounds = 0;
       previousCount = listingMap.size;
       if (stagnantRounds >= 3) break;
-      await page.locator('[role="feed"]').evaluate((feed: Element) => { const scrollableFeed = feed as HTMLElement; scrollableFeed.scrollTop = scrollableFeed.scrollHeight; }).catch(() => {});
+      await page.locator('[role="feed"]').evaluate((feed) => { feed.scrollTop = feed.scrollHeight; }).catch(() => {});
       await page.waitForTimeout(900);
     }
 
@@ -515,39 +507,89 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       try {
         await page.goto(listingUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
         await page.waitForTimeout(700);
-        const detail = await extractPlaceDetails(page, String(task.id), listingUrl);
-        const numericRating = detail.rating ? Number(String(detail.rating).replace(",", ".")) : null;
-        const imageUrls = String(detail.photos || "").split(" | ").map((value) => value.trim()).filter(Boolean);
-        const hours = String(detail.opening_hours || "").split(" | ").map((value) => value.trim()).filter(Boolean);
-        let fieldStatus: Record<string, unknown> = {};
-        try { fieldStatus = JSON.parse(detail.field_status || "{}") as Record<string, unknown>; } catch {}
+        const detail = await page.evaluate(() => {
+          const textOf = (selector: string): string | null => {
+            const element = document.querySelector(selector);
+            const value = (element as HTMLElement | null)?.innerText || element?.getAttribute("aria-label") || "";
+            return value.replace(/\s+/g, " ").trim() || null;
+          };
+          const hrefOf = (selector: string): string | null => {
+            const element = document.querySelector(selector) as HTMLAnchorElement | null;
+            const value = element?.href || null;
+            return value && /^https?:\/\//i.test(value) ? value : null;
+          };
+          const bodyText = document.body?.innerText || "";
+          const ratingLabel = document.querySelector('div.F7nice, [aria-label*="stars"], [aria-label*="estrelas"]')?.getAttribute("aria-label") || "";
+          const ratingText = textOf("div.F7nice") || "";
+          const reviewLabel = document.querySelector('button[aria-label*="reviews"], button[aria-label*="avaliações"], [aria-label*="reviews"], [aria-label*="avaliações"]')?.getAttribute("aria-label") || "";
+          const ratingSource = [ratingLabel, ratingText, reviewLabel, bodyText.slice(0, 8000)].join(" ");
+          const ratingMatch = ratingSource.match(/(?:^|\s)([0-5](?:[.,]\d+)?)\s*(?:estrelas?|stars?)?/i) || bodyText.match(/([0-5][.,]\d)\s*\(/);
+          const reviewMatch = ratingSource.match(/([\d.,]+)\s*(?:avaliações|avaliação|reviews|review|comentários)/i) || bodyText.match(/\(([0-9][0-9.,]*)\)/);
+          const parseCount = (value: string | null): number | null => {
+            if (!value) return null;
+            const digits = value.replace(/[.,](?=\d{3}\b)/g, "").replace(/\D/g, "");
+            const parsed = Number(digits);
+            return Number.isSafeInteger(parsed) ? parsed : null;
+          };
+          const hours = Array.from(document.querySelectorAll('table.eK4R0e tr, table[aria-label*="hours"] tr'))
+            .map((row) => ((row as HTMLElement).innerText || "").replace(/\s+/g, " ").trim())
+            .filter(Boolean).slice(0, 14);
+          const images = Array.from(document.querySelectorAll("img"))
+            .map((image) => (image as HTMLImageElement).currentSrc || (image as HTMLImageElement).src || "")
+            .filter((url) => /^https?:\/\//i.test(url) && /googleusercontent|gstatic/i.test(url));
+          const category = textOf("button.DkEaL") || textOf('button[jsaction*="category"]');
+          const address = textOf('[data-item-id="address"]');
+          const phoneElement = document.querySelector('[data-item-id^="phone:tel"], a[href^="tel:"]') as HTMLAnchorElement | null;
+          const phone = phoneElement?.getAttribute("href")?.startsWith("tel:")
+            ? phoneElement.getAttribute("href")?.slice(4) || null
+            : (phoneElement as HTMLElement | null)?.innerText?.trim() || null;
+          const website = hrefOf('a[data-item-id="authority"]') || hrefOf('a[aria-label*="Website"]') || hrefOf('a[aria-label*="website"]');
+          const coordinates = location.href.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+          const feature = location.href.match(/!1s([^!/?]+)/);
+          const placeId = location.href.match(/[?&]place_id=([^&]+)/i);
+          const price = bodyText.match(/(?:Preço|Price)\s*[:·]?\s*(\${1,4}|R\${1,4})/i);
+          return {
+            name: textOf("h1.DUwDvf") || document.querySelector("h1")?.textContent?.trim() || null,
+            category,
+            address,
+            phone,
+            website,
+            rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
+            reviewsCount: reviewMatch ? parseCount(reviewMatch[1]) : null,
+            sourceUrl: location.href,
+            placeId: placeId ? decodeURIComponent(placeId[1]) : null,
+            featureId: feature ? decodeURIComponent(feature[1]) : null,
+            latitude: coordinates ? Number(coordinates[1]) : null,
+            longitude: coordinates ? Number(coordinates[2]) : null,
+            images: Array.from(new Set(images)).slice(0, 20),
+            openingHours: hours,
+            priceLevel: price?.[1] || null,
+            editorialSummary: textOf('[class*="PYvSYb"], [class*="WeS02d"]'),
+            rawListingText: bodyText.slice(0, 8000),
+            fieldStatus: {
+              name: "name",
+              category: category ? "found" : "not_found_in_capture",
+              address: address ? "found" : "not_found_in_capture",
+              phone: phone ? "found" : "not_found_in_capture",
+              website: website ? "found" : "not_found_in_capture",
+              rating: ratingMatch ? "found" : "not_found_in_capture",
+              reviewsCount: reviewMatch ? "found" : "not_found_in_capture",
+              images: images.length ? "found" : "not_found_in_capture",
+              openingHours: hours.length ? "found" : "not_found_in_capture",
+            },
+          };
+        });
         scrapedResults.push({
           ...listing,
           ...detail,
           name: detail.name || listing.name,
-          rating: numericRating !== null && Number.isFinite(numericRating) ? numericRating : null,
-          reviewsCount: parseCount(detail.review_count),
-          reviewCount: parseCount(detail.review_count),
-          review_count: detail.review_count || null,
-          sourceUrl: detail.source_url || detail.maps_url || listingUrl,
-          source_url: detail.source_url || detail.maps_url || listingUrl,
-          placeId: detail.source_place_id || null,
-          featureId: detail.source_place_id || null,
-          latitude: detail.latitude ? Number(detail.latitude) : null,
-          longitude: detail.longitude ? Number(detail.longitude) : null,
-          images: imageUrls,
-          openingHours: hours,
-          priceLevel: detail.price_range || null,
-          editorialSummary: detail.description || null,
-          fieldStatus,
-          rawListingText: listing.cardText || null,
-          city: detail.city || region.split(/\s+-\s+/)[0]?.trim() || null,
-          region: detail.state || region.split(/\s+-\s+/)[1]?.trim() || region,
+          sourceUrl: detail.sourceUrl || listingUrl,
+          city: region.split(/\s+-\s+/)[0]?.trim() || null,
+          region: region.split(/\s+-\s+/)[1]?.trim() || region,
           countryCode,
-          provider: "google-maps-native-playwright",
+          provider: "google-maps-cloudflare-playwright",
           searchQuery,
         });
-
       } catch (detailError) {
         // Mantém a listagem como evidência parcial; não inventa dados ausentes.
         scrapedResults.push({
@@ -556,7 +598,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           city: region.split(/\s+-\s+/)[0]?.trim() || null,
           region: region.split(/\s+-\s+/)[1]?.trim() || region,
           countryCode,
-          provider: "google-maps-native-playwright",
+          provider: "google-maps-cloudflare-playwright",
           searchQuery,
           fieldStatus: { detailPage: "failed", error: String(detailError instanceof Error ? detailError.message : detailError).slice(0, 250) },
         });
@@ -573,7 +615,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       const isRateLimit = errorMessage.includes('429') ||
                           errorMessage.includes('rate limit') ||
                           errorMessage.includes('over capacity') ||
-                          errorMessage.includes('BROWSER') ||
+                          errorMessage.includes('PROSPECTING_BROWSER') ||
                           errorMessage.includes('browser_run') ||
                           errorMessage.includes('throttl');
 
@@ -667,7 +709,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
         campaign_id: campaign.campaignId ?? null,
-        provider: "google-maps-native-playwright",
+        provider: "google-maps-cloudflare-playwright",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
         business_name: businessName,
@@ -700,27 +742,14 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           openingHours: Array.isArray(candidate.openingHours) ? candidate.openingHours.slice(0, 14) : [],
           priceLevel: first(candidate, ["priceLevel", "price_level"]) ?? null,
           editorialSummary: first(candidate, ["editorialSummary", "editorial_summary"]) ?? null,
-          fieldStatus: candidate.fieldStatus && typeof candidate.fieldStatus === "object" ? candidate.fieldStatus : (candidate.field_status && typeof candidate.field_status === "object" ? candidate.field_status : {}),
+          fieldStatus: candidate.fieldStatus && typeof candidate.fieldStatus === "object" ? candidate.fieldStatus : {},
           completenessScore: result.completenessScore,
           opportunityScore: result.opportunityScore,
           opportunityReasons: result.reasons,
           providerRecordId,
           providerRequestId: null,
           observedAt: new Date().toISOString(),
-          mapsScrapeFields: candidate,
-          reviews: candidate.reviews ?? null,
-          reviewTopics: candidate.review_topics ?? null,
-          additionalAttributes: candidate.additional_attributes ?? null,
-          mediaItems: candidate.media_items ?? null,
-          socialLinks: candidate.social_links ?? null,
-          bookingUrl: candidate.booking_url ?? null,
-          popularTimes: candidate.popular_times ?? null,
-          ratingDistribution: candidate.rating_distribution ?? null,
-          reviewHighlights: candidate.review_highlights ?? null,
-          accessibilityAttributes: candidate.accessibility_attributes ?? null,
-          sourcePlaceId: candidate.source_place_id ?? candidate.placeId ?? null,
-          sourceUrl: candidate.sourceUrl ?? candidate.source_url ?? null,
-          evidence: { scraped: true, searchQuery, sourceUrl: candidate.sourceUrl ?? candidate.source_url ?? null, listingText: candidate.rawListingText ?? null },
+          evidence: { scraped: true, searchQuery, sourceUrl: candidate.sourceUrl, listingText: candidate.rawListingText ?? null },
         },
       }),
     });

@@ -26,7 +26,7 @@ export default function App() {
   const [selectedServiceIdForBooking, setSelectedServiceIdForBooking] = useState<string | null>(null);
   const { establishment, store } = useStore();
   const sharedPreview = readShareablePreview(window.location.search);
-  const publicDemoMatch = window.location.pathname.match(/^\/demo\/([A-Za-z0-9_-]{40,100})\/?$/);
+  const publicDemoMatch = window.location.pathname.match(/^\/demo\/([A-Za-z0-9_-]{8,100})\/?$/);
 
   const handleBookService = (serviceId?: string) => {
     setSelectedServiceIdForBooking(serviceId || null);
@@ -65,7 +65,7 @@ export default function App() {
   }
 
   // CRM e raspagem ficam no painel da plataforma, nunca no painel do salão.
-  if (['/plataforma/prospeccao', '/plataforma/crm', '/plataforma/leads', '/prospeccao'].includes(window.location.pathname)) {
+  if (['/plataforma/prospeccao', '/plataforma/crm', '/plataforma/leads', '/prospeccao', '/plataforma/scraping'].includes(window.location.pathname)) {
     return <PlatformLeadsDashboard />;
   }
 

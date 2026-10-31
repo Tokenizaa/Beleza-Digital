@@ -4,7 +4,7 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  const { leadId, plano, billingPeriod, paymentMode } = req.body;
+  const { leadId, plano, billingPeriod, paymentMode } = req.query;
 
   // Validations
   if (!leadId) {

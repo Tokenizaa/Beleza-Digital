@@ -90,6 +90,7 @@ export interface ServiceItem {
   name: string;
   description: string;
   price?: number | null;
+  priceRange?: string;
   durationMinutes?: number | null;
   category: string;
   imageUrl?: string;
