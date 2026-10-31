@@ -1,112 +1,60 @@
-import React, { useState } from 'react';
-import { PageView } from '../types';
-import { useStore } from '../data/store';
-import { SharedSitePreview, type ShareableSitePreview } from './SharedSitePreview';
-import { SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId, normalizeTemplateId } from '../types/templates';
-import {
-  Sparkles,
-  Palette,
-  CheckCircle2,
-  MapPin,
-  Star,
-  Phone,
-  MessageCircle,
-  ExternalLink,
-  ShieldCheck,
-  Building2,
-  ArrowRight,
-  Zap,
-  TrendingUp,
-  Clock,
-  Layers,
-  ChevronRight
-} from 'lucide-react';
+import React from 'react';
+import { ArrowRight, CheckCircle2, Clock3, Eye, Globe2, Sparkles, Zap } from 'lucide-react';
 
-interface HomePageProps {
-  setCurrentPage?: (page: PageView) => void;
-  onBookService?: (serviceId?: string) => void;
-}
-
-export const HomePage: React.FC<HomePageProps> = ({
-  setCurrentPage,
-  onBookService,
-}) => {
-  const { company } = useStore();
-
-  // Dados ilustrativos do estabelecimento benchmark (Studio Yeshua & Estética Nobre)
-  const illustrativePreview: ShareableSitePreview = {
-    version: 1,
-    businessName: company?.name || 'Studio Yeshua & Estética Nobre',
-    category: 'Salão de Beleza & Estética Avançada',
-    tagline: company?.tagline || 'Cortes de Precisão, Barba Tradicional & Bem-Estar',
-    description:
-      company?.description ||
-      'Espaço de referência em Porto Alegre, especializado em corte de precisão, mechas iluminadas, barboterapia imperial, tratamentos profundos e bem-estar.',
-    phone: company?.phone || '(51) 99345-6789',
-    whatsapp: (company?.whatsapp || '5551993456789').replace(/\D/g, ''),
-    email: company?.email || 'contato@belezadigital.com.br',
-    address: company?.address || 'Av. Ipiranga, 6681 - Partenon, Porto Alegre - RS',
-    city: company?.city || 'Porto Alegre',
-    state: company?.state || 'RS',
-    websiteUrl: '',
-    templateId: 'ouro-classico',
-    templateName: 'Ouro & Âmbar Clássico',
-    projectVersion: 1,
-    generatedAt: new Date().toISOString(),
-    status: 'OPERATIONAL',
-    note: '4.9 ⭐ no Google Maps',
-    'quantidade-de-avaliacoes': '128 avaliações públicas',
-    'faixa-de-preco': '$$',
-    horario: 'Segunda a Sábado, 09h às 19h30',
-  };
-
+export const HomePage: React.FC = () => {
+  const goDemo = () => { window.location.href = '/demo'; };
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
-      {/* ========================================================================= */}
-      {/* BANNER INSTITUCIONAL SUPERIOR: APRESENTAÇÃO DO PROJETO & CONTRATAÇÃO      */}
-      {/* ========================================================================= */}
-      <section className="bg-gradient-to-r from-neutral-950 via-neutral-900 to-amber-950/40 border-b border-amber-500/30 px-4 py-4 sm:py-5">
-        <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
+      <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/95">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+          <a href="/" className="font-bold tracking-tight text-lg">Beleza Digital</a>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-lg shrink-0">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="rounded bg-amber-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-neutral-950">
-                  Plataforma Oficial
-                </span>
-                <span className="text-xs font-bold text-neutral-300">
-                  BelezaDigital · Presença & Agendamento 24h
-                </span>
-              </div>
-              <p className="text-sm font-semibold text-white mt-0.5">
-                Demonstração ao vivo dos 5 modelos de site para salões e barbearias
-              </p>
-            </div>
+            <a href="/plataforma/acesso?mode=login" className="hidden sm:inline text-sm text-neutral-300 hover:text-white">Entrar</a>
+            <button onClick={goDemo} className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-neutral-950 hover:bg-amber-400">Quero ver meu site</button>
           </div>
+        </div>
+      </header>
 
-          <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
-            <a
-              href="/plataforma/acesso?mode=login"
-              className="px-3.5 py-1.5 rounded-lg border border-neutral-700 bg-neutral-900/80 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-neutral-800 transition"
-            >
-              Já sou Cliente / Login
-            </a>
-            <a
-              href="/plataforma/acesso?mode=signup"
-              className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold shadow-md shadow-amber-500/20 transition flex items-center gap-1.5"
-            >
-              Contratar Projeto <ArrowRight className="w-3.5 h-3.5" />
-            </a>
+      <section className="mx-auto max-w-6xl px-5 py-20 sm:py-28">
+        <div className="max-w-3xl">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300"><Sparkles className="h-4 w-4"/> Presença digital para negócios de beleza</div>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">Seu negócio merece um site que transforma visitas em agendamentos.</h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-neutral-400">O Beleza Digital cria uma presença profissional para barbearias, salões e estética, com identidade, serviços e caminhos claros para o cliente agendar.</p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <button onClick={goDemo} className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-3.5 font-bold text-neutral-950 hover:bg-amber-400">Quero ver meu site <ArrowRight className="h-5 w-5"/></button>
+            <a href="#planos" className="inline-flex items-center justify-center rounded-xl border border-neutral-700 px-6 py-3.5 font-semibold hover:bg-neutral-900">Ver planos</a>
           </div>
         </div>
       </section>
 
-      {/* ========================================================================= */}
-      {/* PÁGINA DE DEMONSTRAÇÃO E CAPTURA COMPLETA (COM DADOS ILUSTRATIVOS)       */}
-      {/* ========================================================================= */}
-      <SharedSitePreview preview={illustrativePreview} />
-    </div>
+      <section className="border-y border-neutral-800 bg-neutral-900/40">
+        <div className="mx-auto grid max-w-6xl gap-8 px-5 py-16 md:grid-cols-3">
+          {[['1. Mostre seu negócio',Globe2,'Um site profissional com seus serviços e sua identidade.'],['2. Personalize o modelo',Eye,'Escolha uma base e adapte o visual ao seu segmento.'],['3. Receba agendamentos',Zap,'CTAs e botão flutuante levam o cliente à ação.']].map(([title,Icon,desc]) => {
+            const I=Icon as any; return <div key={title as string}><I className="mb-4 h-7 w-7 text-amber-400"/><h2 className="font-bold">{title as string}</h2><p className="mt-2 text-sm leading-relaxed text-neutral-400">{desc as string}</p></div>
+          })}
+        </div>
+      </section>
+
+      <section id="planos" className="mx-auto max-w-6xl px-5 py-20">
+        <div className="max-w-2xl"><p className="text-sm font-bold uppercase tracking-wider text-amber-400">Planos</p><h2 className="mt-3 text-3xl font-bold">Escolha a presença digital certa para começar.</h2><p className="mt-3 text-neutral-400">Sem complicar: escolha o plano, veja o modelo e avance para colocar seu negócio online.</p></div>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {[
+            ['Essencial','Para começar com presença profissional','Site responsivo','Serviços e contato'],
+            ['Profissional','Mais foco em conversão e agendamentos','Tudo do Essencial','Fluxos de agendamento','Personalização ampliada'],
+            ['Premium','Uma experiência digital completa','Tudo do Profissional','Prioridade de personalização','Estrutura avançada']
+          ].map((plan,i)=><article key={plan[0]} className={'rounded-2xl border p-6 '+(i===1?'border-amber-500 bg-amber-500/5':'border-neutral-800 bg-neutral-900/50')}>
+            {i===1&&<div className="mb-4 text-xs font-bold text-amber-400">MAIS ESCOLHIDO</div>}
+            <h3 className="text-xl font-bold">{plan[0]}</h3><p className="mt-2 text-sm text-neutral-400">{plan[1]}</p>
+            <ul className="mt-6 space-y-3 text-sm text-neutral-300">{plan.slice(2).map(x=><li key={x} className="flex gap-2"><CheckCircle2 className="h-4 w-4 shrink-0 text-amber-400"/>{x}</li>)}</ul>
+            <button onClick={goDemo} className="mt-8 w-full rounded-xl bg-neutral-100 px-4 py-3 font-bold text-neutral-950 hover:bg-white">Quero ver meu site</button>
+          </article>)}
+        </div>
+      </section>
+
+      <section className="border-t border-neutral-800 px-5 py-20 text-center">
+        <Clock3 className="mx-auto h-8 w-8 text-amber-400"/><h2 className="mt-4 text-3xl font-bold">Veja como seu negócio pode ficar.</h2><p className="mx-auto mt-3 max-w-xl text-neutral-400">Abra a demonstração, alterne entre as variações e veja o modelo base funcionando.</p>
+        <button onClick={goDemo} className="mt-7 rounded-xl bg-amber-500 px-7 py-3.5 font-bold text-neutral-950 hover:bg-amber-400">Quero ver meu site</button>
+      </section>
+    </main>
   );
 };
