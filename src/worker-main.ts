@@ -9,7 +9,6 @@
  */
 
 // Import database configuration (supabase client setup)
-import { configureDatabaseEnv } from './server/db';
 
 // Import API route handlers from src/api/
 // These are adapted to work with Cloudflare Worker fetch handler signature.
@@ -19,6 +18,8 @@ import { configureDatabaseEnv } from './server/db';
 import { onRequestPost as capturePost } from './api/capture';
 import { onRequestPost as scraperPost } from './api/test-runner';
 import { onRequest as webhookPost } from './api/whatsapp';
+import { onRequest as demoRequest } from '../functions/api/demos/[token]';
+import { onRequestPost as startContractPost } from '../functions/api/onboarding/start-contract';
 
 // Adapt Pages Functions handlers to work with Cloudflare Worker fetch signature.
 // Pages Functions: onRequestPost({ request })
@@ -53,6 +54,19 @@ const handlerWebhookPost = adaptHandler(webhookPost);
 function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | Promise<Response> {
   const path = url.pathname;
 
+  // Public demo: token is resolved only against its hashed public link.
+  const demoMatch = path.match(/^\/api\/demos\/([^/]+)$/);
+  if (demoMatch) {
+    let token: string;
+    try { token = decodeURIComponent(demoMatch[1]); }
+    catch { return new Response(JSON.stringify({ error: 'demo_not_found' }), { status: 404, headers: { 'Content-Type': 'application/json' } }); }
+    return demoRequest({ request, env, params: { token } });
+  }
+
+  if (path === '/api/onboarding/start-contract') {
+    return adaptHandler(startContractPost)(request, env, ctx);
+  }
+
   // /api/capture - URL metadata extraction
   if (path === '/api/capture') {
     return handlerCapturePost(request, env, ctx);
@@ -74,8 +88,7 @@ function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | 
     return handleProspectingApi(request, env, ctx, subPath);
   }
 
-  // Default: should not reach here (SPA fallback handles it)
-  return new Response('Not found', { status: 404 });
+  return new Response(JSON.stringify({ error: 'api_route_not_found' }), { status: 404, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 }
 
 /**
@@ -150,27 +163,8 @@ export default {
       return routeToApi(request, env, ctx, url);
     }
 
-    // 2. Handle client-side routes via 302 redirect to /index.html
-    // The platform automatically serves ./dist/index.html for routes that
-    // don't match specific files. The 302 redirect causes the browser to
-    // request /index.html, which the platform serves. React Router then
-    // handles client-side routing, preserving the original URL as the base.
-    //
-    // We handle /demo specifically to enable the demo page flow. The demo
-    // page uses React Router with hardcoded demo tokens from the frontend
-    // (api-interceptor.ts: demo-poa-yeshua, demo-poa-mestre, etc.).
-    // Without this redirect, accessing /demo returns Error 1101.
-    if (path === '/demo' || path.startsWith('/demo/')) {
-      // 302 redirect to /index.html - platform serves ./dist/index.html
-      // React Router handles client-side routing from there
-      return Response.redirect(new URL('/index.html', request.url), 302);
-    }
-
-    // 3. SPA fallback for all other client-side routes
-    // The platform does NOT find a matching file in ./dist for client routes
-    // (e.g., /, /plataforma, /establishment/xyz, etc.)
-    // The Worker runs and returns a 302 redirect to /index.html
-    // React Router handles client-side routing from there
-    return Response.redirect(new URL('/index.html', request.url), 302);
+    // Static files and client-side routes are served by Cloudflare Static Assets.
+    // The Worker is configured to run first only for /api/*.
+    return env.ASSETS.fetch(request);
   }
 };
