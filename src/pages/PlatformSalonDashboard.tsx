@@ -17,10 +17,12 @@ export function PlatformSalonDashboard() {
 
     let active = true;
     let resolving = false;
+    let denying = false;
     const client = supabase;
 
     const deny = (reason: string) => {
-      if (!active) return;
+      if (!active || denying) return;
+      denying = true;
       store.logout();
       window.location.replace(`/plataforma/acesso?mode=login&reason=${encodeURIComponent(reason)}`);
     };
