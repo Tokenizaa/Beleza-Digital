@@ -40,5 +40,11 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate five templates with Playwright
+        run: npx playwright test --config=playwright.templates.config.ts
+
       - name: Validate Cloudflare Worker bundle
         run: npx wrangler deploy --dry-run --config wrangler.jsonc
