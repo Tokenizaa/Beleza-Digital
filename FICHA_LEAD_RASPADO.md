@@ -1,5 +1,7 @@
 # Ficha do Lead Raspado — Documentação
 
+> **Atualização de marco zero (2026-10-31):** este documento descreve o contrato pretendido/legado da ficha, não deve ser interpretado como confirmação de que todos os campos estão implementados no extractor atual. A matriz de realidade, os campos efetivamente extraídos, o fluxo de persistência e as pendências estão em [MARCO_ZERO_CONTRATO_SCRAPER_TEMPLATES.md](docs/MARCO_ZERO_CONTRATO_SCRAPER_TEMPLATES.md). O extractor atual não coleta automaticamente serviços, produtos, avaliações individuais, vídeos, redes sociais, logo ou URL de agendamento.
+
 Este documento explica onde fica, o que contém e como coletar a **ficha do lead raspado** (estabelecimento descoberto via Google Maps) no projeto Beleza_Digital.
 
 ---
