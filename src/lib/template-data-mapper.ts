@@ -215,9 +215,9 @@ export function mapDataForTemplate(
     status: source.status ?? null,
     openingHours: source.opening_hours ?? undefined,
     fieldStatus: source.fieldStatus ?? {},
-    collectedAt: source.collectedAt,
-    rating: source.rating ?? undefined,
-    reviewCount: source.review_count ?? undefined,
+    collectedAt: source.collectedAt ?? undefined,
+    rating: source.rating ?? null,
+    reviewCount: source.review_count ?? null,
     originalProvider: source.provider || 'google-maps-cloudflare-playwright',
   };
 
