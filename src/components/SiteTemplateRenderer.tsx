@@ -241,11 +241,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       {/* Hero Ouro Clássico */}
       <section className="relative min-h-[82vh] flex items-center justify-center overflow-hidden border-b border-amber-900/40 px-4 sm:px-8 py-20">
         <div className="absolute inset-0 z-0 opacity-25">
-          <img
-            src={businessData.coverUrl || 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1400&q=80'}
-            alt="Ambiente Clássico"
-            className="w-full h-full object-cover filter contrast-125 sepia-[0.25]"
-          />
+          {businessData.coverUrl && (
+            <img src={businessData.coverUrl} alt="Imagem do estabelecimento" className="w-full h-full object-cover filter contrast-125 sepia-[0.25]" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e0d0b] via-[#0e0d0b]/80 to-[#0e0d0b]/95" />
         </div>
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
@@ -253,7 +251,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-amber-500/40 bg-amber-950/60 text-amber-300 text-xs font-sans uppercase tracking-widest backdrop-blur-md">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>{businessData.category || 'Beleza & Estética'}</span>
+            <span>{businessData.category || 'Categoria não informada'}</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-amber-100 font-serif">
@@ -267,7 +265,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </div>
 
           <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto leading-relaxed font-sans font-light">
-            {businessData.description || businessData.tagline || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
+            {businessData.description || businessData.tagline || 'Descrição não informada. Consulte diretamente o estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 font-sans">
@@ -355,11 +353,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       {/* Hero Preto Esmeralda */}
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden border-b border-neutral-800 px-4 sm:px-8 py-20">
         <div className="absolute inset-0 z-0 opacity-20">
-          <img
-            src={businessData.coverUrl || 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1400&q=80'}
-            alt="Street Studio"
-            className="w-full h-full object-cover filter grayscale contrast-150"
-          />
+          {businessData.coverUrl && (
+            <img src={businessData.coverUrl} alt="Imagem do estabelecimento" className="w-full h-full object-cover filter grayscale contrast-150" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#050706] via-[#050706]/70 to-[#050706]/90" />
         </div>
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/20 rounded-full blur-[100px] pointer-events-none" />
@@ -375,7 +371,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto leading-relaxed font-medium">
-            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
+            {businessData.description || 'Descrição não informada. Consulte diretamente o estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -462,7 +458,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden border-b border-slate-200 px-4 sm:px-8 py-20">
         <div className="max-w-3xl mx-auto text-center space-y-6">
           <span className="inline-block text-xs uppercase tracking-[0.25em] text-slate-600 border border-slate-300 px-3.5 py-1 rounded-full">
-            {businessData.category || 'Beleza & Estética'}
+            {businessData.category || 'Categoria não informada'}
           </span>
 
           <h1 className="text-4xl sm:text-6xl font-extralight tracking-tight text-slate-100">
@@ -470,7 +466,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           <p className="text-base text-slate-600 max-w-xl mx-auto leading-relaxed font-normal">
-            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
+            {businessData.description || 'Descrição não informada. Consulte diretamente o estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -543,11 +539,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       {/* Hero Safira Executivo */}
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden border-b border-blue-900/50 px-4 sm:px-8 py-20">
         <div className="absolute inset-0 z-0 opacity-20">
-          <img
-            src={businessData.coverUrl || 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1400&q=80'}
-            alt="Executive Lounge"
-            className="w-full h-full object-cover filter contrast-125"
-          />
+          {businessData.coverUrl && (
+            <img src={businessData.coverUrl} alt="Imagem do estabelecimento" className="w-full h-full object-cover filter contrast-125" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#070d1e] via-[#070d1e]/80 to-[#070d1e]/95" />
         </div>
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/15 rounded-full blur-[110px] pointer-events-none" />
@@ -563,7 +557,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-blue-200/80 max-w-2xl mx-auto leading-relaxed">
-            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
+            {businessData.description || 'Descrição não informada. Consulte diretamente o estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -643,11 +637,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       {/* Hero Rubi Lounge */}
       <section className="relative min-h-[82vh] flex items-center justify-center overflow-hidden border-b border-rose-950/80 px-4 sm:px-8 py-20">
         <div className="absolute inset-0 z-0 opacity-25">
-          <img
-            src={businessData.coverUrl || 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=1400&q=80'}
-            alt="Velvet Lounge"
-            className="w-full h-full object-cover filter contrast-125"
-          />
+          {businessData.coverUrl && (
+            <img src={businessData.coverUrl} alt="Imagem do estabelecimento" className="w-full h-full object-cover filter contrast-125" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#140609] via-[#140609]/80 to-[#140609]/95" />
         </div>
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] bg-rose-500/15 rounded-full blur-[120px] pointer-events-none" />
@@ -655,7 +647,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-rose-500/40 bg-rose-950/80 text-rose-300 text-xs font-sans tracking-wide">
             <Heart className="w-3.5 h-3.5 text-rose-400" />
-            <span>{businessData.category || 'Beleza & Estética'}</span>
+            <span>{businessData.category || 'Categoria não informada'}</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-normal italic tracking-tight text-white font-serif">
@@ -663,7 +655,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           <p className="text-base sm:text-lg text-rose-200/80 max-w-2xl mx-auto leading-relaxed font-sans font-light">
-            {businessData.description || 'Conheça os serviços, informações e formas de contato deste estabelecimento.'}
+            {businessData.description || 'Descrição não informada. Consulte diretamente o estabelecimento.'}
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 font-sans">
@@ -845,13 +837,13 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800">
           <Clock className="w-5 h-5 text-emerald-400 mb-3" />
           <h3 className="font-bold text-sm text-white">Horário de Atendimento</h3>
-          <p className="text-xs text-neutral-400 mt-1">{businessData.horario || 'Consulte os horários pelo WhatsApp'}</p>
+          <p className="text-xs text-neutral-400 mt-1">{businessData.horario || 'Horário não informado'}</p>
         </div>
 
         <div className="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800">
           <Phone className="w-5 h-5 text-blue-400 mb-3" />
           <h3 className="font-bold text-sm text-white">Contato & Reservas</h3>
-          <p className="text-xs text-neutral-400 mt-1">{businessData.phone || '(51) 99345-6789'}</p>
+          <p className="text-xs text-neutral-400 mt-1">{businessData.phone || 'Telefone não informado'}</p>
           {whatsappClean && (
             <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:underline mt-2">
               Chamar no WhatsApp <ChevronRight className="w-3 h-3" />
