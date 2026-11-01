@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Check, Clock3, ExternalLink, LoaderCircle, ShieldAlert, ArrowRight, CreditCard, Sparkles, CheckCircle2 } from "lucide-react";
 import { SharedSitePreview, type ShareableSitePreview } from "./SharedSitePreview";
-import { buildDemoForToken } from "../lib/api-interceptor";
 import type { ServiceItem, ProductItem, MediaItem, MediaCategory } from "../types";
 
 type DemoVersion = {
@@ -167,10 +166,7 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
       .then((body) => {
         if (!active) return;
         if (!body.versions || body.versions.length === 0) {
-          const fallbackDemo = buildDemoForToken(token);
-          setData(fallbackDemo as any);
-          setSelected(fallbackDemo.selectedVersionId);
-          setActivePreviewId(fallbackDemo.selectedVersionId ?? fallbackDemo.versions[0]?.id ?? null);
+          setError("Esta demonstração ainda não possui versões geradas a partir dos dados coletados.");
           return;
         }
         setData(body);
@@ -178,21 +174,9 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
         const sortedByVersion = (body.versions ?? []).slice().sort((a, b) => b.version - a.version);
         setActivePreviewId(body.selectedVersionId ?? sortedByVersion[0]?.id ?? body.versions[0]?.id ?? null);
       })
-      .catch((_reason: unknown) => {
+      .catch((reason: unknown) => {
         if (!active) return;
-        try {
-          const fallbackDemo = buildDemoForToken(token);
-          if (fallbackDemo && fallbackDemo.versions?.length) {
-            setData(fallbackDemo as any);
-            setSelected(fallbackDemo.selectedVersionId);
-            setActivePreviewId(fallbackDemo.selectedVersionId ?? fallbackDemo.versions[0]?.id ?? null);
-            setError("");
-            return;
-          }
-        } catch {
-          // ignore
-        }
-        setError("Demonstração gerada automaticamente no modo de prévia.");
+        setError(reason instanceof Error ? reason.message : "Não foi possível carregar esta demonstração. Tente novamente mais tarde.");
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -270,7 +254,9 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
 
   if (loading) return <main className="min-h-screen bg-neutral-950 text-neutral-100 grid place-items-center p-6"><LoaderCircle className="animate-spin" /><span className="sr-only">Carregando demonstrações</span></main>;
 
-  const effectiveData: DemoData = data || (buildDemoForToken(token) as any);
+  if (!data) return <main className="min-h-screen bg-neutral-950 text-neutral-100 grid place-items-center p-6"><div className="max-w-lg text-center"><ShieldAlert className="mx-auto mb-4 h-10 w-10 text-amber-400" /><h1 className="text-xl font-semibold">Demonstração indisponível</h1><p className="mt-3 text-sm text-neutral-400">{error || "Não existem versões reais disponíveis para este link."}</p></div></main>;
+
+  const effectiveData: DemoData = data;
   const expires = effectiveData?.expiresAt ? new Date(effectiveData.expiresAt).toLocaleDateString("pt-BR") : "";
   const sortedVersions = (effectiveData?.versions ?? []).slice().sort((a, b) => b.version - a.version);
   const activeVersion = effectiveData?.versions?.find((version) => version.id === activePreviewId) ?? sortedVersions[0] ?? null;
