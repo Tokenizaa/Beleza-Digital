@@ -122,6 +122,9 @@ export interface NormalizedScrapedPlace {
   services_attributes: UnknownRecord[];
   media_items: UnknownRecord[];
   bookingUrl: string | null;
+  instagramUrl: string | null;
+  instagramHandle: string | null;
+  logoUrl: string | null;
   googleMapsUrl: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -146,6 +149,10 @@ export function normalizeScrapedPlace(input: unknown): NormalizedScrapedPlace {
   const longitude = numberValue(firstValue(source.longitude, evidence.longitude));
   const mapsUrl = stringValue(firstValue(source.maps_url, source.source_url, source.sourceUrl, evidence.maps_url, evidence.source_url));
   const website = stringValue(firstValue(source.website_url, source.website, evidence.website_url));
+  const socialLinks = parseStructured(source.social_links);
+  const socialEntries = Array.isArray(socialLinks) ? socialLinks : typeof socialLinks === 'string' ? socialLinks.split(/[|,\\n]/) : [];
+  const instagramUrl = socialEntries.map((entry) => typeof entry === 'string' ? entry.trim() : stringValue(firstValue(record(entry).url, record(entry).href)) || '').find((url) => /instagram\\.com\\//i.test(url)) || null;
+  const instagramHandle = instagramUrl ? instagramUrl.match(/instagram\\.com\\/([^/?#]+)/i)?.[1] || null : null;
   const openingHours = normalizeHours(firstValue(source.opening_hours, source.openingHours, evidence.opening_hours, evidence.openingHours));
 
   return {
@@ -167,6 +174,9 @@ export function normalizeScrapedPlace(input: unknown): NormalizedScrapedPlace {
     services_attributes: services,
     media_items: media,
     bookingUrl: stringValue(firstValue(source.booking_url, source.bookingUrl, evidence.booking_url)),
+    instagramUrl,
+    instagramHandle,
+    logoUrl: stringValue(firstValue(source.logo_url, source.logoUrl, evidence.logo_url)),
     googleMapsUrl: mapsUrl,
     latitude,
     longitude,
