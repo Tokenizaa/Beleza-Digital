@@ -262,37 +262,43 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
   const activeVersion = effectiveData?.versions?.find((version) => version.id === activePreviewId) ?? sortedVersions[0] ?? null;
   const activeContent = activeVersion?.generated_content ?? {};
   const templateSlug = activeVersion?.template?.site_templates?.slug ?? "ouro-classico";
-  const businessName = contentText(activeVersion, ["businessName", "business_name", "title", "name", "brandName"]) || "Negócio local";
+  const contact = asRecord(activeContent.contact);
+  const businessName = contentText(activeVersion, ["businessName", "business_name", "title", "name", "brandName"]) || "Estabelecimento";
   const category = contentText(activeVersion, ["category", "business_category", "segment"]);
-  const phone = contentText(activeVersion, ["phone", "normalized_phone", "phone_number"]);
-  const address = [contentText(activeVersion, ["address", "formatted_address"]), contentText(activeVersion, ["city", "locality"]), contentText(activeVersion, ["region", "state", "province"])].filter(Boolean).join(" · ");
+  const phone = contentText(activeVersion, ["phone", "normalized_phone", "phone_number"]) || firstText(contact, ["phone"]);
+  const address = [
+    contentText(activeVersion, ["address", "formatted_address"]) || firstText(contact, ["address"]),
+    contentText(activeVersion, ["city", "locality"]) || firstText(contact, ["city"]),
+    contentText(activeVersion, ["region", "state", "province"]) || firstText(contact, ["region"]),
+  ].filter(Boolean).join(" · ");
   const preview: ShareableSitePreview | null = activeVersion ? {
     version: 1,
     businessName,
     category,
     description: contentText(activeVersion, ["description", "about", "subtitle", "summary"]),
     phone,
-    email: contentText(activeVersion, ["email", "email_address"]),
+    email: contentText(activeVersion, ["email", "email_address"]) || firstText(contact, ["email"]),
     address,
     websiteUrl: contentText(activeVersion, ["website", "website_url", "url"]),
-    instagramHandle: contentText(activeVersion, ["instagramHandle", "instagram_handle"]) || "@seuperfil", 
-    instagramUrl: contentText(activeVersion, ["instagramUrl", "instagram_url"]) || "https://www.instagram.com/",
+    instagramHandle: contentText(activeVersion, ["instagramHandle", "instagram_handle"]),
+    instagramUrl: contentText(activeVersion, ["instagramUrl", "instagram_url"]),
+    googleMapsUrl: text(activeContent.googleMapsUrl) || text(activeContent.sourceUrl),
+    latitude: numberOrNull(activeContent.latitude),
+    longitude: numberOrNull(activeContent.longitude),
     templateId: TEMPLATE_ID_BY_SLUG[templateSlug] ?? "ouro-classico",
     templateName: activeVersion.template?.site_templates?.name || "Modelo inicial",
     projectVersion: activeVersion.version,
     generatedAt: text(activeContent.generatedAt) || new Date().toISOString(),
     isSampleContent: !contentArray(activeVersion, ["services", "services_attributes"]).length || !contentArray(activeVersion, ["products", "featured_products"]).length || !contentArray(activeVersion, ["media", "media_items", "portfolio", "photos", "videos"]).length || !contentText(activeVersion, ["instagramUrl", "instagram_url"]),
-    // Novos campos alinhados com os 18 do provedor
     status: contentText(activeVersion, ["status", "estado", "status_operacional"]),
-    note: contentText(activeVersion, ["note", "observacao", "avaliacao_geral"]),
-    'quantidade-de-avaliacoes': contentText(activeVersion, ["quantidade_de_avaliacoes", "reviews_count", "qtd_avaliacoes"]),
-    'faixa-de-preco': contentText(activeVersion, ["faixa_de_preco", "price_range", "faixa_preco"]),
-    horario: contentText(activeVersion, ["horario", "horario_funcionamento", "horario_atendimento"]),
+    note: contentText(activeVersion, ["note", "observacao", "avaliacao_geral"]) || (numberOrNull(activeContent.rating) !== null ? String(numberOrNull(activeContent.rating)) + "/5 no Google Maps" : ""),
+    ["quantidade-de-avaliacoes"]: contentText(activeVersion, ["quantidade_de_avaliacoes", "reviews_count", "qtd_avaliacoes"]) || (numberOrNull(activeContent.reviewCount) !== null ? String(numberOrNull(activeContent.reviewCount)) : ""),
+    ["faixa-de-preco"]: contentText(activeVersion, ["faixa_de_preco", "price_range", "faixa_preco"]) || text(activeContent.priceRange),
+    horario: contentText(activeVersion, ["horario", "horario_funcionamento", "horario_atendimento"]) || text(activeContent.openingHours),
     services: demoServices(activeVersion),
     products: demoProducts(activeVersion),
     media: demoMedia(activeVersion),
   } : null;
-
   const hasSelection = selected !== null || data?.selectedVersionId !== null;
   const versionToContract = selected || data?.selectedVersionId || null;
   const previewMatchesSelection = Boolean(versionToContract && activeVersion?.id === versionToContract);
