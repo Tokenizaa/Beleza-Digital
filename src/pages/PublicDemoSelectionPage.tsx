@@ -269,7 +269,7 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
     templateName: activeVersion.template?.site_templates?.name || "Modelo inicial",
     projectVersion: activeVersion.version,
     generatedAt: text(activeContent.generatedAt) || new Date().toISOString(),
-    isSampleContent: !contentArray(activeVersion, ["services", "services_attributes"]).length || !contentArray(activeVersion, ["products", "featured_products"]).length || !contentArray(activeVersion, ["media", "media_items", "portfolio", "photos", "videos"]).length || !contentText(activeVersion, ["instagramUrl", "instagram_url"]),
+    isSampleContent: false,
     status: contentText(activeVersion, ["status", "estado", "status_operacional"]),
     note: contentText(activeVersion, ["note", "observacao", "avaliacao_geral"]) || (numberOrNull(activeContent.rating) !== null ? String(numberOrNull(activeContent.rating)) + "/5 no Google Maps" : ""),
     ["quantidade-de-avaliacoes"]: contentText(activeVersion, ["quantidade_de_avaliacoes", "reviews_count", "qtd_avaliacoes"]) || (numberOrNull(activeContent.reviewCount) !== null ? String(numberOrNull(activeContent.reviewCount)) : ""),
