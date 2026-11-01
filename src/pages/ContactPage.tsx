@@ -1,4 +1,5 @@
 import React from 'react';
+import { MapEmbed } from '../components/MapEmbed';
 import { useStore } from '../data/store';
 import {
   MapPin,
@@ -167,15 +168,15 @@ export const ContactPage: React.FC = () => {
           </a>
         </div>
 
-        <div className="w-full h-96 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-950 relative">
-          <iframe
-            title={"Localização de " + company.name}
-            src={"https://maps.google.com/maps?q=" + mapsQuery + "&t=&z=16&ie=UTF8&iwloc=&output=embed"}
-            className="w-full h-full border-0 filter invert contrast-90 hue-rotate-180 brightness-95"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-        </div>
+        <MapEmbed
+          name={company.name}
+          address={company.address}
+          city={company.cityState}
+          latitude={company.latitude}
+          longitude={company.longitude}
+          mapsUrl={company.googleMapsUrl}
+          className="h-96"
+        />
       </div>
 
       )}

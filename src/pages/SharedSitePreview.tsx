@@ -226,7 +226,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
     phone: preview.phone,
     whatsapp: preview.whatsapp ?? preview.phone,
     address: preview.address,
-    city: preview.city || 'Localidade não informada',
+    city: preview.city || '',
     state: preview.state ?? undefined,
     logoUrl: preview.logoUrl ?? undefined,
     coverUrl: preview.coverUrl ?? undefined,
