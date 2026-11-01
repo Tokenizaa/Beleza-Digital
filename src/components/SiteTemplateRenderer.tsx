@@ -307,6 +307,14 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               key={service.id}
               className="p-5 rounded-xl bg-[#14120e] border border-amber-900/30 hover:border-amber-500/50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
+              {service.imageUrl && (
+                <img
+                  src={service.imageUrl}
+                  alt={service.name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover shrink-0 border border-amber-900/40"
+                  loading="lazy"
+                />
+              )}
               <div className="space-y-1 flex-1">
                 <div className="flex items-baseline justify-between sm:justify-start gap-4">
                   <h3 className="font-serif text-lg font-bold text-amber-100">{service.name}</h3>
@@ -415,7 +423,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               className="p-6 rounded-xl bg-[#090d0b] border border-neutral-800 hover:border-emerald-500/60 transition group relative overflow-hidden"
             >
               <div className="flex items-start justify-between gap-4">
-                <div>
+                {service.imageUrl && (
+                  <img
+                    src={service.imageUrl}
+                    alt={service.name}
+                    className="w-16 h-16 rounded-lg object-cover shrink-0 border border-emerald-900/50"
+                    loading="lazy"
+                  />
+                )}
+                <div className="flex-1">
                   <span className="font-mono text-[10px] text-emerald-400 font-bold">0{index + 1} // {service.category}</span>
                   <h3 className="text-lg font-black uppercase text-white group-hover:text-emerald-300 transition mt-1">
                     {service.name}
@@ -505,7 +521,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="divide-y divide-slate-200">
           {rawServices.map((service) => (
             <div key={service.id} className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group">
-              <div className="space-y-1">
+              {service.imageUrl && (
+                <img
+                  src={service.imageUrl}
+                  alt={service.name}
+                  className="w-14 h-14 rounded-full object-cover shrink-0 border border-slate-300"
+                  loading="lazy"
+                />
+              )}
+              <div className="space-y-1 flex-1">
                 <h3 className="text-base font-normal text-slate-900 group-hover:text-slate-600 transition">{service.name}</h3>
                 <p className="text-xs text-slate-600 max-w-lg">{service.description}</p>
               </div>
@@ -600,14 +624,24 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               key={service.id}
               className="p-5 rounded-xl bg-[#0b142d] border border-blue-950 hover:border-blue-500/50 transition flex flex-col justify-between"
             >
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-bold text-base text-white">{service.name}</h3>
-                  <span className="text-base font-extrabold text-blue-400 shrink-0">
-                    {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
-                  </span>
+              <div className="flex gap-4">
+                {service.imageUrl && (
+                  <img
+                    src={service.imageUrl}
+                    alt={service.name}
+                    className="w-16 h-16 rounded-lg object-cover shrink-0 border border-blue-900/50"
+                    loading="lazy"
+                  />
+                )}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-bold text-base text-white">{service.name}</h3>
+                    <span className="text-base font-extrabold text-blue-400 shrink-0">
+                      {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-200/70 mt-2 leading-relaxed">{service.description}</p>
                 </div>
-                <p className="text-xs text-blue-200/70 mt-2 leading-relaxed">{service.description}</p>
               </div>
               <div className="mt-4 pt-3 border-t border-blue-900/40 flex items-center justify-between">
                 <span className="text-[11px] text-blue-300/80 font-mono">Duração: {service.durationMinutes ? `${service.durationMinutes} min` : 'sob consulta'}</span>
@@ -697,14 +731,24 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               key={service.id}
               className="p-6 rounded-2xl bg-[#1c080e] border border-rose-950 hover:border-rose-500/50 transition flex flex-col justify-between"
             >
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-serif text-lg font-bold text-rose-100">{service.name}</h3>
-                  <span className="text-lg font-bold text-rose-300 shrink-0 font-sans">
-                    {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
-                  </span>
+              <div className="flex gap-4">
+                {service.imageUrl && (
+                  <img
+                    src={service.imageUrl}
+                    alt={service.name}
+                    className="w-16 h-16 rounded-xl object-cover shrink-0 border border-rose-950"
+                    loading="lazy"
+                  />
+                )}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-serif text-lg font-bold text-rose-100">{service.name}</h3>
+                    <span className="text-lg font-bold text-rose-300 shrink-0 font-sans">
+                      {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-200/70 mt-2 leading-relaxed">{service.description}</p>
                 </div>
-                <p className="text-xs text-rose-200/70 mt-2 leading-relaxed">{service.description}</p>
               </div>
               <div className="mt-5 pt-3 border-t border-rose-950/80 flex items-center justify-between">
                 <span className="text-[11px] text-rose-400/80 font-sans">Tempo: {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração não informada'}</span>

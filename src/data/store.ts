@@ -6,6 +6,9 @@ import {
   ProductItem,
   MediaItem,
   Appointment,
+  ClientItem,
+  ClientHistory,
+  ProfileProvenance,
   InstagramEmbedItem,
   AuthSession,
   AuditLogEntry,
@@ -13,6 +16,8 @@ import {
   UserRole,
 } from '../types';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { establishmentRepository } from './establishmentRepository';
+import { normalizePhone, hashPhoneSync } from '../lib/phone-utils';
 import {
   INITIAL_ESTABLISHMENT_YESHUA,
   INITIAL_ESTABLISHMENT_DEMO,
@@ -33,6 +38,7 @@ const STORAGE_KEYS = {
   PRODUCTS: 'wl_products_v2',
   MEDIA: 'wl_media_v2',
   APPOINTMENTS: 'wl_appointments_v2',
+  CLIENTS: 'wl_clients_v2',
   INSTAGRAM_EMBEDS: 'wl_instagram_embeds_v2',
   AUDIT_LOGS: 'wl_audit_logs_v2',
   PLATFORM_CONFIG: 'wl_platform_config_v2',
@@ -84,6 +90,23 @@ function saveToStorage<T>(key: string, data: T) {
 // -------------------------------------------------------------
 // IN-MEMORY MULTITENANT STATE WITH AUTOMATIC MIGRATION
 // -------------------------------------------------------------
+
+function isUuid(value?: string | null): boolean {
+  if (!value || typeof value !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function canPersistToSupabase(tenantId?: string): boolean {
+  if (!isSupabaseConfigured || !tenantId || !isUuid(tenantId)) return false;
+  const token = currentSession?.token;
+  if (!token || token.startsWith('token-est-') || token.startsWith('test-token-')) return false;
+  return true;
+}
+
+function createOperationalId(prefix: string): string {
+  if (isSupabaseConfigured && typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 function normalizeLegacyTemplate(establishment: Establishment): Establishment {
   if (establishment.id === 'est-yeshua' && establishment.name === 'Barbearia & Estética Yeshua') {
@@ -252,6 +275,10 @@ let allAppointments: Appointment[] = (() => {
   return loaded;
 })();
 
+let allClients: ClientItem[] = (() => {
+  return loadFromStorage<ClientItem[]>(STORAGE_KEYS.CLIENTS, []);
+})();
+
 let allInstagramEmbeds: InstagramEmbedItem[] = (() => {
   const loaded = loadFromStorage<InstagramEmbedItem[]>(STORAGE_KEYS.INSTAGRAM_EMBEDS, []);
   const filtered = loaded.filter((item) => !/barbearia_estetica_yeshua|imperiobarberclub/i.test(item.url || ''));
@@ -296,6 +323,9 @@ if (platformConfig.platformName === 'Yeshua White Label Network') {
 // the login flow. The fallback to synthetic sessions is intentional for demo mode,
 // but gates MUST be consistent across all admin pages.
 let currentSession: AuthSession | null = (() => {
+  // A sessão sintética só pode existir no modo de demonstração sem Supabase ou em testes automatizados.
+  // Em produção no navegador, a identidade vem exclusivamente do Supabase Auth + membership.
+  if (isSupabaseConfigured && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') return null;
   try {
     const sessionStr = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
     if (!sessionStr) return null;
@@ -311,6 +341,79 @@ let currentSession: AuthSession | null = (() => {
 
 export const store = {
   // --- Multitenant Establishment Management ---
+
+  /**
+   * Hidrata o contexto operacional com uma sessão Supabase já autenticada e
+   * uma membership consultada sob RLS. Não persiste tokens nem tenant em storage.
+   */
+  hydrateSupabaseSession(input: {
+    accessToken: string;
+    userName?: string;
+    establishment: Record<string, unknown>;
+    membershipRole: 'owner' | 'admin' | 'editor' | 'viewer';
+    services?: ServiceItem[];
+    products?: ProductItem[];
+    media?: MediaItem[];
+    appointments?: Appointment[];
+    clients?: ClientItem[];
+  }): void {
+    const row = input.establishment;
+    const contact = (row.contact && typeof row.contact === 'object' ? row.contact : {}) as Record<string, unknown>;
+    const brand = (row.brand_settings && typeof row.brand_settings === 'object' ? row.brand_settings : {}) as Record<string, unknown>;
+    const name = String(row.name || 'Estabelecimento');
+    const establishmentId = String(row.id || '');
+    if (!establishmentId) throw new Error('Membership sem estabelecimento válido.');
+
+    const establishment: Establishment = {
+      id: establishmentId,
+      slug: String(row.slug || ''),
+      name,
+      status: row.status === 'active' ? 'active' : 'inactive',
+      whatsapp: String(contact.whatsapp || contact.phone || ''),
+      whatsappClean: String(contact.whatsapp_clean || contact.whatsappClean || contact.phone_clean || ''),
+      phone: String(contact.phone || ''),
+      email: String(contact.email || ''),
+      address: String(contact.address || ''),
+      city: String(contact.city || ''),
+      state: String(contact.state || ''),
+      cityState: String(contact.city_state || contact.cityState || ''),
+      googleMapsUrl: String(contact.google_maps_url || contact.googleMapsUrl || ''),
+      latitude: typeof contact.latitude === 'number' ? contact.latitude : undefined,
+      longitude: typeof contact.longitude === 'number' ? contact.longitude : undefined,
+      logoUrl: typeof row.logo_url === 'string' ? row.logo_url : typeof row.logoUrl === 'string' ? row.logoUrl : undefined,
+      primaryColor: typeof row.primary_color === 'string' ? row.primary_color : typeof row.primaryColor === 'string' ? row.primaryColor : undefined,
+      secondaryColor: typeof row.secondary_color === 'string' ? row.secondary_color : typeof row.secondaryColor === 'string' ? row.secondaryColor : undefined,
+      tagline: typeof brand.tagline === 'string' ? brand.tagline : typeof row.tagline === 'string' ? row.tagline : undefined,
+      description: typeof brand.description === 'string' ? brand.description : typeof row.description === 'string' ? row.description : undefined,
+      instagramHandle: typeof contact.instagram_handle === 'string' ? contact.instagram_handle : undefined,
+      instagramUrl: typeof contact.instagram_url === 'string' ? contact.instagram_url : undefined,
+      adminName: input.userName || String(contact.owner_name || ''),
+      adminEmail: String(contact.owner_email || ''),
+      createdAt: String(row.created_at || new Date().toISOString()),
+      updatedAt: String(row.updated_at || new Date().toISOString()),
+    };
+
+    allEstablishments = [establishment];
+    activeTenantId = establishmentId;
+    allServices = input.services || [];
+    allProducts = input.products || [];
+    allMedia = input.media || [];
+    if (input.appointments) allAppointments = input.appointments;
+    if (input.clients) allClients = input.clients;
+    currentSession = {
+      role: input.membershipRole === 'viewer' ? 'client' : 'establishment_admin',
+      establishmentId,
+      establishmentName: name,
+      userName: input.userName || String(contact.owner_name || 'Administrador'),
+      token: input.accessToken,
+      createdAt: Date.now(),
+    };
+    try {
+      sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_TENANT_ID);
+    } catch {}
+    notify();
+  },
 
   /** Verifica se a sessão atual tem permissão para gravar. */
   requireWriteAuth(): { ok: true } | { ok: false; message: string } {
@@ -337,7 +440,10 @@ export const store = {
     if (currentSession.role === 'super_admin') {
       return { ok: true };
     }
-    if (currentSession.role === 'establishment_admin' && currentSession.establishmentId === tenantId) {
+    if (
+      (currentSession.role === 'establishment_admin' || currentSession.role === 'client') &&
+      currentSession.establishmentId === tenantId
+    ) {
       return { ok: true };
     }
     return { ok: false, message: 'Acesso negado a dados de outro estabelecimento.' };
@@ -465,14 +571,28 @@ export const store = {
     if (index === -1) return false;
 
     const current = allEstablishments[index];
+    const existingOverrides = (((current as unknown as Record<string, unknown>).manual_overrides || {}) as Record<string, boolean>);
+    const updatedOverrides = { ...existingOverrides };
+    for (const key of Object.keys(updates)) {
+      updatedOverrides[key] = true;
+    }
+
     const updated: Establishment = {
       ...current,
       ...updates,
+      ...({ manual_overrides: updatedOverrides } as unknown as Partial<Establishment>),
       updatedAt: new Date().toISOString(),
     };
 
     allEstablishments = allEstablishments.map((e) => (e.id === id ? updated : e));
-    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+    if (canPersistToSupabase(id)) {
+      void establishmentRepository.updateProfile(id, updates).then((saved) => {
+        allEstablishments = allEstablishments.map((item) => item.id === id ? saved : item);
+        notify();
+      }).catch((error) => console.error('Falha ao persistir perfil do estabelecimento:', error));
+    } else {
+      saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+    }
 
     this.addAuditLog({
       action: 'ESTABLISHMENT_UPDATED',
@@ -646,11 +766,14 @@ export const store = {
     const tenantId = targetEstablishmentId || activeTenantId;
     const newService: ServiceItem = {
       ...service,
-      id: `srv-${Date.now()}`,
+      id: createOperationalId('srv'),
       establishmentId: tenantId,
     };
     allServices = [newService, ...allServices];
-    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveService(tenantId, newService).then((saved) => {
+      allServices = allServices.map((item) => item.id === newService.id ? saved : item); notify();
+    }).catch((error) => console.error('Falha ao salvar serviço:', error));
+    else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
     return newService;
   },
@@ -663,10 +786,12 @@ export const store = {
     const tenantId = item.establishmentId || 'est-yeshua';
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
-    allServices = allServices.map((s) =>
-      s.id === id ? { ...s, ...updates } : s
-    );
-    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    const updated = { ...item, ...updates };
+    allServices = allServices.map((s) => s.id === id ? updated : s);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveService(tenantId, updated).then((saved) => {
+      allServices = allServices.map((entry) => entry.id === id ? saved : entry); notify();
+    }).catch((error) => console.error('Falha ao atualizar serviço:', error));
+    else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
@@ -679,7 +804,8 @@ export const store = {
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
     allServices = allServices.filter((s) => s.id !== id);
-    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.deleteService(tenantId, id).catch((error) => console.error('Falha ao excluir serviço:', error));
+    else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
@@ -691,10 +817,10 @@ export const store = {
     const tenantId = item.establishmentId || 'est-yeshua';
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
-    allServices = allServices.map((s) =>
-      s.id === id ? { ...s, featured: !s.featured } : s
-    );
-    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    const updated = { ...item, featured: !item.featured };
+    allServices = allServices.map((s) => s.id === id ? updated : s);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveService(tenantId, updated).catch((error) => console.error('Falha ao destacar serviço:', error));
+    else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
@@ -706,11 +832,14 @@ export const store = {
     const tenantId = targetEstablishmentId || activeTenantId;
     const newProduct: ProductItem = {
       ...product,
-      id: `prod-${Date.now()}`,
+      id: createOperationalId('prod'),
       establishmentId: tenantId,
     };
     allProducts = [newProduct, ...allProducts];
-    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveProduct(tenantId, newProduct).then((saved) => {
+      allProducts = allProducts.map((item) => item.id === newProduct.id ? saved : item); notify();
+    }).catch((error) => console.error('Falha ao salvar produto:', error));
+    else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
     return newProduct;
   },
@@ -723,10 +852,12 @@ export const store = {
     const tenantId = item.establishmentId || 'est-yeshua';
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
-    allProducts = allProducts.map((p) =>
-      p.id === id ? { ...p, ...updates } : p
-    );
-    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    const updated = { ...item, ...updates };
+    allProducts = allProducts.map((p) => p.id === id ? updated : p);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveProduct(tenantId, updated).then((saved) => {
+      allProducts = allProducts.map((entry) => entry.id === id ? saved : entry); notify();
+    }).catch((error) => console.error('Falha ao atualizar produto:', error));
+    else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
@@ -739,7 +870,8 @@ export const store = {
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
     allProducts = allProducts.filter((p) => p.id !== id);
-    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.deleteProduct(tenantId, id).catch((error) => console.error('Falha ao excluir produto:', error));
+    else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
@@ -751,10 +883,10 @@ export const store = {
     const tenantId = item.establishmentId || 'est-yeshua';
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
-    allProducts = allProducts.map((p) =>
-      p.id === id ? { ...p, featured: !p.featured } : p
-    );
-    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    const updated = { ...item, featured: !item.featured };
+    allProducts = allProducts.map((p) => p.id === id ? updated : p);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveProduct(tenantId, updated).catch((error) => console.error('Falha ao destacar produto:', error));
+    else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
@@ -766,28 +898,66 @@ export const store = {
     const tenantId = targetEstablishmentId || activeTenantId;
     const newMedia: MediaItem = {
       ...media,
-      id: `med-${Date.now()}`,
+      id: createOperationalId('med'),
       establishmentId: tenantId,
       dateAdded: new Date().toISOString().split('T')[0],
     };
     allMedia = [newMedia, ...allMedia];
-    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveMedia(tenantId, newMedia).then((saved) => {
+      allMedia = allMedia.map((item) => item.id === newMedia.id ? saved : item); notify();
+    }).catch((error) => console.error('Falha ao salvar mídia:', error));
+    else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
     return newMedia;
   },
 
   updateMedia(id: string, updates: Partial<MediaItem>) {
-    allMedia = allMedia.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
-    );
-    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
+    const item = allMedia.find((entry) => entry.id === id);
+    if (!item) return;
+    const tenantId = item.establishmentId || activeTenantId;
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+    const updated = { ...item, ...updates };
+    allMedia = allMedia.map((entry) => entry.id === id ? updated : entry);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveMedia(tenantId, updated).then((saved) => {
+      allMedia = allMedia.map((entry) => entry.id === id ? saved : entry); notify();
+    }).catch((error) => console.error('Falha ao atualizar mídia:', error));
+    else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
   },
 
   deleteMedia(id: string) {
-    allMedia = allMedia.filter((item) => item.id !== id);
-    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
+    const item = allMedia.find((entry) => entry.id === id);
+    if (!item) return;
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const tenantId = item.establishmentId || activeTenantId;
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+    allMedia = allMedia.filter((entry) => entry.id !== id);
+    if (canPersistToSupabase(tenantId)) void establishmentRepository.deleteMedia(tenantId, id).catch((error) => console.error('Falha ao excluir mídia:', error));
+    else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
+  },
+
+  recordPublicAppointment(
+    appointment: Omit<Appointment, 'id' | 'createdAt'>,
+    targetEstablishmentId?: string
+  ): Appointment {
+    const tenantId = targetEstablishmentId || appointment.establishmentId || activeTenantId;
+    const newAppt: Appointment = {
+      ...appointment,
+      id: createOperationalId('apt'),
+      establishmentId: tenantId,
+      createdAt: new Date().toISOString(),
+    };
+    allAppointments = [newAppt, ...allAppointments];
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    this.syncClientFromAppointment(newAppt, tenantId);
+    notify();
+    return newAppt;
   },
 
   addAppointment(
@@ -801,12 +971,20 @@ export const store = {
     if (!access.ok) throw new Error(access.message);
     const newAppt: Appointment = {
       ...appointment,
-      id: `apt-${Date.now()}`,
+      id: createOperationalId('apt'),
       establishmentId: tenantId,
       createdAt: new Date().toISOString(),
     };
     allAppointments = [newAppt, ...allAppointments];
-    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    if (canPersistToSupabase(tenantId)) {
+      void establishmentRepository.saveAppointment(tenantId, newAppt).then((saved) => {
+        allAppointments = allAppointments.map((item) => (item.id === newAppt.id ? saved : item));
+        notify();
+      }).catch((error) => console.error('Falha ao salvar agendamento no Supabase:', error));
+    } else {
+      saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    }
+    this.syncClientFromAppointment(newAppt, tenantId);
     notify();
     return newAppt;
   },
@@ -815,16 +993,44 @@ export const store = {
     id: string,
     status: 'pendente' | 'confirmado' | 'cancelado' | 'concluido'
   ) {
+    const appt = allAppointments.find((a) => a.id === id);
+    if (!appt) return;
+    const tenantId = appt.establishmentId || activeTenantId;
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+
     allAppointments = allAppointments.map((item) =>
       item.id === id ? { ...item, status } : item
     );
-    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    if (canPersistToSupabase(tenantId)) {
+      void establishmentRepository.updateAppointmentStatus(tenantId, id, status).catch((error) => {
+        console.error('Falha ao atualizar status do agendamento:', error);
+      });
+    } else {
+      saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    }
     notify();
   },
 
   deleteAppointment(id: string) {
+    const appt = allAppointments.find((a) => a.id === id);
+    if (!appt) return;
+    const tenantId = appt.establishmentId || activeTenantId;
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+
     allAppointments = allAppointments.filter((item) => item.id !== id);
-    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    if (canPersistToSupabase(tenantId)) {
+      void establishmentRepository.deleteAppointment(tenantId, id).catch((error) => {
+        console.error('Falha ao excluir agendamento:', error);
+      });
+    } else {
+      saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    }
     notify();
   },
 
@@ -836,8 +1042,244 @@ export const store = {
         (item.establishmentId || 'est-yeshua') === tenantId &&
         item.date === date &&
         item.time === time &&
-        item.status === 'confirmado'
+        (item.status === 'confirmado' || item.status === 'pendente')
     );
+  },
+
+  // --- Clients CRM and Operational History Scoped to Tenant ---
+
+  getClients(targetEstablishmentId?: string): ClientItem[] {
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) return [];
+    const tenantId = targetEstablishmentId || activeTenantId;
+    return allClients.filter((c) => c.establishmentId === tenantId);
+  },
+
+  getClientByPhone(phone: string, targetEstablishmentId?: string): ClientItem | undefined {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    const normalized = normalizePhone(phone);
+    if (!normalized) return undefined;
+    const phoneHash = hashPhoneSync(phone);
+    return allClients.find(
+      (c) =>
+        c.establishmentId === tenantId &&
+        (c.phoneHash === phoneHash || c.normalizedPhone === normalized || c.phone === phone)
+    );
+  },
+
+  saveClient(
+    clientData: { id?: string; name: string; phone: string; email?: string; notes?: string },
+    targetEstablishmentId?: string
+  ): ClientItem {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const tenantId = targetEstablishmentId || activeTenantId;
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+
+    const normalized = normalizePhone(clientData.phone);
+    if (!normalized) throw new Error('Telefone inválido para cadastro do cliente.');
+    const phoneHash = hashPhoneSync(clientData.phone);
+    if (!phoneHash) throw new Error('Falha ao gerar hash do telefone.');
+
+    const existingIndex = allClients.findIndex(
+      (c) => c.establishmentId === tenantId && c.phoneHash === phoneHash
+    );
+
+    const nowIso = new Date().toISOString();
+    let savedClient: ClientItem;
+
+    if (existingIndex >= 0) {
+      const existing = allClients[existingIndex];
+      savedClient = {
+        ...existing,
+        name: clientData.name.trim() || existing.name,
+        email: clientData.email !== undefined ? clientData.email : existing.email,
+        notes: clientData.notes !== undefined ? clientData.notes : existing.notes,
+        updatedAt: nowIso,
+      };
+      allClients = allClients.map((c, i) => (i === existingIndex ? savedClient : c));
+    } else {
+      savedClient = {
+        id: clientData.id || createOperationalId('cli'),
+        establishmentId: tenantId,
+        name: clientData.name.trim(),
+        phone: clientData.phone.trim(),
+        normalizedPhone: normalized,
+        phoneHash,
+        email: clientData.email?.trim() || undefined,
+        notes: clientData.notes?.trim() || undefined,
+        totalVisits: 0,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      allClients = [savedClient, ...allClients];
+    }
+
+    if (canPersistToSupabase(tenantId)) {
+      void establishmentRepository.saveClient(tenantId, clientData).then((persisted) => {
+        allClients = allClients.map((c) => (c.phoneHash === phoneHash && c.establishmentId === tenantId ? persisted : c));
+        notify();
+      }).catch((error) => console.error('Falha ao salvar cliente no Supabase:', error));
+    } else {
+      saveToStorage(STORAGE_KEYS.CLIENTS, allClients);
+    }
+
+    notify();
+    return savedClient;
+  },
+
+  deleteClient(id: string) {
+    const client = allClients.find((c) => c.id === id);
+    if (!client) return;
+    const tenantId = client.establishmentId || activeTenantId;
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+
+    allClients = allClients.filter((c) => c.id !== id);
+    if (canPersistToSupabase(tenantId)) {
+      void establishmentRepository.deleteClient(tenantId, id).catch((error) => {
+        console.error('Falha ao remover cliente:', error);
+      });
+    } else {
+      saveToStorage(STORAGE_KEYS.CLIENTS, allClients);
+    }
+    notify();
+  },
+
+  getClientHistory(idOrPhone: string, targetEstablishmentId?: string): ClientHistory {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    const norm = normalizePhone(idOrPhone);
+    const phoneHash = hashPhoneSync(idOrPhone);
+    const client = allClients.find(
+      (c) =>
+        c.establishmentId === tenantId &&
+        (c.id === idOrPhone || (norm && c.normalizedPhone === norm) || (phoneHash && c.phoneHash === phoneHash))
+    );
+    if (!client) {
+      throw new Error('Cliente não encontrado neste estabelecimento.');
+    }
+    const appts = allAppointments.filter(
+      (a) =>
+        (a.establishmentId || 'est-yeshua') === tenantId &&
+        (normalizePhone(a.clientPhone) === client.normalizedPhone || a.clientPhone === client.phone)
+    );
+    return { client, appointments: appts };
+  },
+
+  syncClientFromAppointment(appt: Appointment, tenantId: string) {
+    const norm = normalizePhone(appt.clientPhone);
+    if (!norm) return;
+    const phoneHash = hashPhoneSync(appt.clientPhone);
+    if (!phoneHash) return;
+
+    const existingIndex = allClients.findIndex(
+      (c) => c.establishmentId === tenantId && c.phoneHash === phoneHash
+    );
+
+    const nowIso = new Date().toISOString();
+    if (existingIndex >= 0) {
+      const existing = allClients[existingIndex];
+      const updated: ClientItem = {
+        ...existing,
+        name: appt.clientName || existing.name,
+        totalVisits: existing.totalVisits + 1,
+        lastVisitAt: `${appt.date}T${appt.time}:00Z`,
+        updatedAt: nowIso,
+      };
+      allClients[existingIndex] = updated;
+    } else {
+      const newClient: ClientItem = {
+        id: createOperationalId('cli'),
+        establishmentId: tenantId,
+        name: appt.clientName,
+        phone: appt.clientPhone,
+        normalizedPhone: norm,
+        phoneHash,
+        totalVisits: 1,
+        lastVisitAt: `${appt.date}T${appt.time}:00Z`,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      allClients = [newClient, ...allClients];
+    }
+    saveToStorage(STORAGE_KEYS.CLIENTS, allClients);
+  },
+
+  // --- Profile Provenance & Reimportation Workflow (Fase 2) ---
+
+  async reimportProfile(
+    incomingData: Partial<Establishment>,
+    targetEstablishmentId?: string
+  ): Promise<{ profile: Establishment; preservedFields: string[]; updatedFields: string[] }> {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const tenantId = targetEstablishmentId || activeTenantId;
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+
+    if (canPersistToSupabase(tenantId)) {
+      const result = await establishmentRepository.reimportProfile(tenantId, incomingData);
+      allEstablishments = allEstablishments.map((e) => (e.id === tenantId ? result.profile : e));
+      notify();
+      return result;
+    }
+
+    const current = allEstablishments.find((e) => e.id === tenantId);
+    if (!current) throw new Error('Estabelecimento não encontrado.');
+
+    // Simula manual_overrides persistidos no objeto do estabelecimento
+    const manualOverrides = ((current as unknown as Record<string, unknown>).manual_overrides || {}) as Record<string, unknown>;
+    const preservedFields: string[] = [];
+    const updatedFields: string[] = [];
+    const fieldsToApply: Partial<Establishment> = {};
+
+    for (const key of Object.keys(incomingData) as Array<keyof Establishment>) {
+      if (incomingData[key] === undefined) continue;
+      if (manualOverrides[key]) {
+        preservedFields.push(key);
+      } else {
+        fieldsToApply[key] = incomingData[key] as never;
+        updatedFields.push(key);
+      }
+    }
+
+    const updatedProfile: Establishment = {
+      ...current,
+      ...fieldsToApply,
+      updatedAt: new Date().toISOString(),
+    };
+
+    allEstablishments = allEstablishments.map((e) => (e.id === tenantId ? updatedProfile : e));
+    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+    notify();
+
+    return {
+      profile: updatedProfile,
+      preservedFields,
+      updatedFields,
+    };
+  },
+
+  async getProfileProvenance(targetEstablishmentId?: string): Promise<ProfileProvenance> {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+
+    if (canPersistToSupabase(tenantId)) {
+      return establishmentRepository.getProfileProvenance(tenantId);
+    }
+
+    const current = allEstablishments.find((e) => e.id === tenantId);
+    if (!current) throw new Error('Estabelecimento não encontrado.');
+    return {
+      establishmentId: tenantId,
+      importedProfile: {},
+      manualOverrides: {},
+      effectiveProfile: current,
+    };
   },
 
   getConfirmedTimesForDate(date: string, targetEstablishmentId?: string): string[] {
@@ -1092,6 +1534,9 @@ export const store = {
   },
 
   loginLocalAdmin(_pin: string, requestedEstablishmentId?: string): { success: boolean; session?: AuthSession; message?: string } {
+    if (isSupabaseConfigured && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+      return { success: false, message: 'Autentique-se pelo Supabase Auth para acessar um estabelecimento.' };
+    }
     // Determine the target establishment ID:
     // - If explicitly requested, use that
     // - Otherwise, fall back to the current session's establishmentId (if any),
@@ -1140,6 +1585,9 @@ export const store = {
   },
 
   loginSuperAdmin(): { success: boolean; session?: AuthSession; message?: string } {
+    if (isSupabaseConfigured && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+      return { success: false, message: 'Acesso administrativo deve ser validado pelo Supabase Auth.' };
+    }
     const session: AuthSession = {
       role: 'super_admin',
       userName: 'Super Administrador Geral',
@@ -1379,6 +1827,7 @@ export function useStore() {
     products: store.getProducts(),
     media: store.getMedia(),
     appointments: store.getAppointments(),
+    clients: store.getClients(),
     instagramEmbeds: store.getInstagramEmbeds(),
 
     // Global Multitenant Entities
