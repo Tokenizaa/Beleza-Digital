@@ -148,10 +148,7 @@ export default function App() {
         return <ContactPage />;
       default:
         return (
-          <HomePage
-            setCurrentPage={setCurrentPage}
-            onBookService={handleBookService}
-          />
+          <HomePage />
         );
     }
   };
