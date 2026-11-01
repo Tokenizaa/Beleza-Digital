@@ -237,9 +237,9 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
   };
 
   // WhatsApp activation message
-  const whatsappNumber = (preview.whatsapp || preview.phone || '5551993456789').replace(/\D/g, '');
+  const whatsappNumber = (preview.whatsapp || preview.phone || '').replace(/\D/g, '');
   const activationPitch = `Olá! Vi a demonstração interativa do site para *${preview.businessName}* no modelo *${currentTemplate.name}* e gostaria de ativar com domínio próprio e agendamento online!`;
-  const whatsappActivationUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(activationPitch)}`;
+  const whatsappActivationUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(activationPitch)}` : '';
 
   const handleGenerateLocalPreview = (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,7 +315,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
             </button>
 
             <a
-              href={whatsappActivationUrl}
+              href={whatsappActivationUrl || undefined} aria-disabled={!whatsappNumber}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/20 transition"
@@ -427,7 +427,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <a
-            href={whatsappActivationUrl}
+            href={whatsappActivationUrl || undefined} aria-disabled={!whatsappNumber}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-500 flex items-center gap-1"
@@ -468,20 +468,20 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
                 <span className="text-neutral-500 block text-[10px] uppercase font-bold">Reputação Maps</span>
                 <span className="text-amber-300 font-bold flex items-center gap-1 mt-0.5">
-                  <Star className="w-3.5 h-3.5 fill-amber-400" /> {preview.note || '4.9 ⭐'}
+                  <Star className="w-3.5 h-3.5 fill-amber-400" /> {preview.note || 'Não informado'}
                 </span>
                 <span className="text-[10px] text-neutral-400 block mt-0.5">
-                  {preview['quantidade-de-avaliacoes'] || '128 avaliações públicas'}
+                  {preview['quantidade-de-avaliacoes'] || 'Quantidade não informada'}
                 </span>
               </div>
 
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
                 <span className="text-neutral-500 block text-[10px] uppercase font-bold">Status da Operação</span>
                 <span className="text-emerald-400 font-bold flex items-center gap-1 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Aberto / Operacional
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {preview.status || 'Status não informado'}
                 </span>
                 <span className="text-[10px] text-neutral-400 block mt-0.5">
-                  {preview.horario || 'Seg a Sáb 09h às 19h30'}
+                  {preview.horario || 'Horário não informado'}
                 </span>
               </div>
 
@@ -496,14 +496,14 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
               <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3 col-span-2">
                 <span className="text-neutral-500 block text-[10px] uppercase font-bold">Oportunidade Comercial</span>
                 <p className="text-neutral-300 text-[11px] mt-1 leading-relaxed">
-                  Estabelecimento com forte demanda no Google Maps. A ativação deste site profissional elimina dependência exclusiva de agendamento manual no direct e gera novos agendamentos 24h por dia.
+                  Esta área demonstra como a plataforma pode apresentar informações e oportunidades do estabelecimento. Os dados reais dependem da coleta e da validação do responsável.
                 </p>
               </div>
             </div>
 
             <div className="pt-2 flex items-center justify-between gap-3 border-t border-neutral-800">
               <a
-                href={whatsappActivationUrl}
+                href={whatsappActivationUrl || undefined} aria-disabled={!whatsappNumber}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 text-center py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center justify-center gap-2"
