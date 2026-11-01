@@ -135,7 +135,9 @@ async function handleProspectingApi(
  *    - If yes, it serves the file and the Worker never runs
  *    - If no, the Worker runs
  * 2. API routes (/api/) are handled by this script
- * 3. All other requests (client-side routes) get SPA fallback via index.html
+ * 3. Client-side routes (including /demo) are handled via 302 redirect
+ *    to /index.html, which the platform serves from ./dist automatically.
+ *    React Router handles client-side routing using the original URL as base.
  */
 export default {
   async fetch(request: Request, env: any, ctx: any): Promise<Response> {
@@ -148,34 +150,27 @@ export default {
       return routeToApi(request, env, ctx, url);
     }
 
-    // 2. SPA fallback for client-side routing
+    // 2. Handle client-side routes via 302 redirect to /index.html
+    // The platform automatically serves ./dist/index.html for routes that
+    // don't match specific files. The 302 redirect causes the browser to
+    // request /index.html, which the platform serves. React Router then
+    // handles client-side routing, preserving the original URL as the base.
+    //
+    // We handle /demo specifically to enable the demo page flow. The demo
+    // page uses React Router with hardcoded demo tokens from the frontend
+    // (api-interceptor.ts: demo-poa-yeshua, demo-poa-mestre, etc.).
+    // Without this redirect, accessing /demo returns Error 1101.
+    if (path === '/demo' || path.startsWith('/demo/')) {
+      // 302 redirect to /index.html - platform serves ./dist/index.html
+      // React Router handles client-side routing from there
+      return Response.redirect(new URL('/index.html', request.url), 302);
+    }
+
+    // 3. SPA fallback for all other client-side routes
     // The platform does NOT find a matching file in ./dist for client routes
     // (e.g., /, /plataforma, /establishment/xyz, etc.)
-    // The Worker runs and serves index.html so React Router can handle routing
-    // Importantly: we do NOT use a 302 redirect, which would change the URL in
-    // the browser address bar. Instead, we fetch index.html from the platform's
-    // root directory and return its response, preserving the original URL that
-    // the user typed or linked to.
-    //
-    // The platform automatically serves actual assets (css, js, images) from ./dist
-    // when the request path maps to a file there. For client-side routes, the Worker
-    // runs and returns index.html, and React Router handles the routing client-side,
-    // using the original URL as the base.
-    //
-    // Key: we fetch /index.html from the root (using request.url.origin) so that
-    // the platform serves ./dist/index.html automatically. The fetch runs in the
-    // Worker context but does NOT change the browser's address bar, so the original
-    // URL is preserved when React Router takes over client-side routing.
-    
-    // Fetch index.html from the platform-served root assets.
-    // Using request.url.origin ensures we always get the root /index.html,
-    // regardless of the current path. The platform serves ./dist/index.html
-    // automatically, and the browser keeps the original URL since fetch()
-    // does not change the address bar.
-    const indexHtmlResponse = await fetch(new URL('/index.html', request.url.origin), {
-      headers: request.headers,
-    });
-    
-    return indexHtmlResponse;
+    // The Worker runs and returns a 302 redirect to /index.html
+    // React Router handles client-side routing from there
+    return Response.redirect(new URL('/index.html', request.url), 302);
   }
 };
