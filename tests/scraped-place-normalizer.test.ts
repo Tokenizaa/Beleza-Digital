@@ -58,6 +58,25 @@ assert.equal(nested.services_attributes[0].name, 'Hidratação');
 assert.equal(nested.services_attributes[0].price, 90);
 assert.equal(nested.opening_hours, 'Segunda: 09:00–18:00');
 
+const promotedProspect = normalizeScrapedPlace({
+  business_name: 'Prospect promovido',
+  phone: '(51) 98888-0000',
+  source_url: 'https://maps.google.com/?cid=789',
+  source_captured_at: '2026-10-31T13:00:00.000Z',
+  provider: 'google-maps-cloudflare-playwright',
+  raw_evidence: {
+    rating: 4.6,
+    reviewCount: 42,
+    images: ['https://img.example/promoted.jpg'],
+    openingHours: ['Segunda 09:00–18:00'],
+    fieldStatus: { images: 'found' },
+  },
+});
+assert.equal(promotedProspect.provider, 'google-maps-cloudflare-playwright');
+assert.equal(promotedProspect.collectedAt, '2026-10-31T13:00:00.000Z');
+assert.equal(promotedProspect.photos[0], 'https://img.example/promoted.jpg');
+assert.equal(promotedProspect.fieldStatus.images, 'found');
+
 const incomplete = normalizeScrapedPlace({ name: 'Ficha incompleta' });
 assert.equal(incomplete.businessName, 'Ficha incompleta');
 assert.equal(incomplete.phone, null);
@@ -95,4 +114,4 @@ for (const template of Object.values(SITE_TEMPLATES)) {
   assert.equal(generated.openingHours, 'Segunda a sábado, 09h às 18h');
 }
 
-console.log('scraped-place-normalizer: 8 assertions + 5 templates aprovados');
+console.log('scraped-place-normalizer: contrato de coleta, promoção e 5 templates aprovados');
