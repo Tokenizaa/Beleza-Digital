@@ -1,11 +1,14 @@
 name = "beleza-digital"
+main = "src/worker-main.ts"
 compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "2d4055497d544c6fa05443c9112c4ca0"
 preview_id = "2302eb8ab8434c509915e02659f76ad2"
-
-# Para deploy via CLI: wrangler pages deploy dist
-# OU: npm run deploy
-# OU: wrangler deploy --assets=./dist  (se configurado como assets)
