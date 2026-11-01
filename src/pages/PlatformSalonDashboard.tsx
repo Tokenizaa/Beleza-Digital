@@ -75,11 +75,22 @@ export function PlatformSalonDashboard() {
           return;
         }
 
+        const establishmentId = String(establishment.id);
+        const [profile, services, products, media] = await Promise.all([
+          establishmentRepository.getProfile(establishmentId),
+          establishmentRepository.listServices(establishmentId),
+          establishmentRepository.listProducts(establishmentId),
+          establishmentRepository.listMedia(establishmentId),
+        ]);
+        if (!active) return;
         store.hydrateSupabaseSession({
           accessToken: session.access_token,
           userName: session.user.user_metadata?.owner_name || session.user.email || 'Administrador',
-          establishment,
+          establishment: { ...establishment, ...profile },
           membershipRole: membership.role as 'owner' | 'admin' | 'editor' | 'viewer',
+          services,
+          products,
+          media,
         });
         if (active) setAccess('authorized');
       } catch (error) {
