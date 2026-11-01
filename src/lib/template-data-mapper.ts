@@ -35,6 +35,14 @@ export interface MapScrapeData {
   opening_hours: string | null; // pode ser string ou array dependendo da fonte
   services_attributes: any[] | null;
   media_items: any[] | null;
+  bookingUrl?: string | null;
+  googleMapsUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  priceRange?: string | null;
+  status?: string | null;
+  collectedAt?: string | null;
+  fieldStatus?: Record<string, unknown>;
 }
 
 // Interface padronizada para o conteúdo gerado por template.
@@ -74,6 +82,14 @@ export interface TemplateGeneratedContent {
     durationMinutes?: number | null;
   }>;
   media_items?: any[];
+  bookingUrl?: string | null;
+  googleMapsUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  priceRange?: string | null;
+  status?: string | null;
+  openingHours?: string | null;
+  fieldStatus?: Record<string, unknown>;
 
   // Dados específicos por tipo de template (opcionais)
   // - services: serviços compartilhados por todos os templates
@@ -139,6 +155,14 @@ export function mapDataForTemplate(
     opening_hours: normalized.opening_hours,
     services_attributes: normalized.services_attributes,
     media_items: normalized.media_items,
+    bookingUrl: normalized.bookingUrl,
+    googleMapsUrl: normalized.googleMapsUrl,
+    latitude: normalized.latitude,
+    longitude: normalized.longitude,
+    priceRange: normalized.priceRange,
+    status: normalized.status,
+    collectedAt: normalized.collectedAt,
+    fieldStatus: normalized.fieldStatus,
   };
 
   // Dados básicos sempre presentes em todos os templates
@@ -169,6 +193,15 @@ export function mapDataForTemplate(
         durationMinutes: svc.duration ?? svc.durationMinutes ?? null,
       })),
     media_items: source.media_items || [],
+    bookingUrl: source.bookingUrl ?? null,
+    googleMapsUrl: source.googleMapsUrl ?? source.sourceUrl,
+    latitude: source.latitude ?? null,
+    longitude: source.longitude ?? null,
+    priceRange: source.priceRange ?? null,
+    status: source.status ?? null,
+    openingHours: source.opening_hours,
+    fieldStatus: source.fieldStatus ?? {},
+    collectedAt: source.collectedAt,
     rating: source.rating,
     reviewCount: source.review_count,
     originalProvider: 'mapscrape',
