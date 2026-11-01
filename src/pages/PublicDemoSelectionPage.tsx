@@ -283,6 +283,7 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
     instagramHandle: contentText(activeVersion, ["instagramHandle", "instagram_handle"]),
     instagramUrl: contentText(activeVersion, ["instagramUrl", "instagram_url"]),
     googleMapsUrl: text(activeContent.googleMapsUrl) || text(activeContent.sourceUrl),
+    logoUrl: text(activeContent.logoUrl),
     latitude: numberOrNull(activeContent.latitude),
     longitude: numberOrNull(activeContent.longitude),
     templateId: TEMPLATE_ID_BY_SLUG[templateSlug] ?? "ouro-classico",
