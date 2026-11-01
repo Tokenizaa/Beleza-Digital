@@ -13,6 +13,7 @@ import {
   UserRole,
 } from '../types';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { establishmentRepository } from './establishmentRepository';
 import {
   INITIAL_ESTABLISHMENT_YESHUA,
   INITIAL_ESTABLISHMENT_DEMO,
@@ -324,6 +325,9 @@ export const store = {
     userName?: string;
     establishment: Record<string, unknown>;
     membershipRole: 'owner' | 'admin' | 'editor' | 'viewer';
+    services?: ServiceItem[];
+    products?: ProductItem[];
+    media?: MediaItem[];
   }): void {
     const row = input.establishment;
     const contact = (row.contact && typeof row.contact === 'object' ? row.contact : {}) as Record<string, unknown>;
@@ -363,6 +367,9 @@ export const store = {
 
     allEstablishments = [establishment];
     activeTenantId = establishmentId;
+    allServices = input.services || [];
+    allProducts = input.products || [];
+    allMedia = input.media || [];
     currentSession = {
       role: input.membershipRole === 'viewer' ? 'client' : 'establishment_admin',
       establishmentId,
@@ -403,7 +410,10 @@ export const store = {
     if (currentSession.role === 'super_admin') {
       return { ok: true };
     }
-    if (currentSession.role === 'establishment_admin' && currentSession.establishmentId === tenantId) {
+    if (
+      (currentSession.role === 'establishment_admin' || currentSession.role === 'client') &&
+      currentSession.establishmentId === tenantId
+    ) {
       return { ok: true };
     }
     return { ok: false, message: 'Acesso negado a dados de outro estabelecimento.' };
@@ -538,7 +548,14 @@ export const store = {
     };
 
     allEstablishments = allEstablishments.map((e) => (e.id === id ? updated : e));
-    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+    if (isSupabaseConfigured) {
+      void establishmentRepository.updateProfile(id, updates).then((saved) => {
+        allEstablishments = allEstablishments.map((item) => item.id === id ? saved : item);
+        notify();
+      }).catch((error) => console.error('Falha ao persistir perfil do estabelecimento:', error));
+    } else {
+      saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+    }
 
     this.addAuditLog({
       action: 'ESTABLISHMENT_UPDATED',
@@ -716,7 +733,10 @@ export const store = {
       establishmentId: tenantId,
     };
     allServices = [newService, ...allServices];
-    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    if (isSupabaseConfigured) void establishmentRepository.saveService(tenantId, newService).then((saved) => {
+      allServices = allServices.map((item) => item.id === newService.id ? saved : item); notify();
+    }).catch((error) => console.error('Falha ao salvar serviço:', error));
+    else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
     return newService;
   },
@@ -729,10 +749,12 @@ export const store = {
     const tenantId = item.establishmentId || 'est-yeshua';
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
-    allServices = allServices.map((s) =>
-      s.id === id ? { ...s, ...updates } : s
-    );
-    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    const updated = { ...item, ...updates };
+    allServices = allServices.map((s) => s.id === id ? updated : s);
+    if (isSupabaseConfigured) void establishmentRepository.saveService(tenantId, updated).then((saved) => {
+      allServices = allServices.map((entry) => entry.id === id ? saved : entry); notify();
+    }).catch((error) => console.error('Falha ao atualizar serviço:', error));
+    else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
@@ -745,7 +767,8 @@ export const store = {
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
     allServices = allServices.filter((s) => s.id !== id);
-    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    if (isSupabaseConfigured) void establishmentRepository.deleteService(tenantId, id).catch((error) => console.error('Falha ao excluir serviço:', error));
+    else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
@@ -776,7 +799,10 @@ export const store = {
       establishmentId: tenantId,
     };
     allProducts = [newProduct, ...allProducts];
-    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    if (isSupabaseConfigured) void establishmentRepository.saveProduct(tenantId, newProduct).then((saved) => {
+      allProducts = allProducts.map((item) => item.id === newProduct.id ? saved : item); notify();
+    }).catch((error) => console.error('Falha ao salvar produto:', error));
+    else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
     return newProduct;
   },
@@ -789,10 +815,12 @@ export const store = {
     const tenantId = item.establishmentId || 'est-yeshua';
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
-    allProducts = allProducts.map((p) =>
-      p.id === id ? { ...p, ...updates } : p
-    );
-    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    const updated = { ...item, ...updates };
+    allProducts = allProducts.map((p) => p.id === id ? updated : p);
+    if (isSupabaseConfigured) void establishmentRepository.saveProduct(tenantId, updated).then((saved) => {
+      allProducts = allProducts.map((entry) => entry.id === id ? saved : entry); notify();
+    }).catch((error) => console.error('Falha ao atualizar produto:', error));
+    else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
@@ -805,7 +833,8 @@ export const store = {
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
     allProducts = allProducts.filter((p) => p.id !== id);
-    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    if (isSupabaseConfigured) void establishmentRepository.deleteProduct(tenantId, id).catch((error) => console.error('Falha ao excluir produto:', error));
+    else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
@@ -837,22 +866,39 @@ export const store = {
       dateAdded: new Date().toISOString().split('T')[0],
     };
     allMedia = [newMedia, ...allMedia];
-    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
+    if (isSupabaseConfigured) void establishmentRepository.saveMedia(tenantId, newMedia).then((saved) => {
+      allMedia = allMedia.map((item) => item.id === newMedia.id ? saved : item); notify();
+    }).catch((error) => console.error('Falha ao salvar mídia:', error));
+    else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
     return newMedia;
   },
 
   updateMedia(id: string, updates: Partial<MediaItem>) {
-    allMedia = allMedia.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
-    );
-    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
+    const item = allMedia.find((entry) => entry.id === id);
+    if (!item) return;
+    const tenantId = item.establishmentId;
+    const auth = this.requireWriteAuth();
+    const access = this.requireTenantAccess(tenantId);
+    if (!auth.ok || !access.ok) throw new Error(!auth.ok ? auth.message : access.message);
+    const updated = { ...item, ...updates };
+    allMedia = allMedia.map((entry) => entry.id === id ? updated : entry);
+    if (isSupabaseConfigured) void establishmentRepository.saveMedia(tenantId, updated).then((saved) => {
+      allMedia = allMedia.map((entry) => entry.id === id ? saved : entry); notify();
+    }).catch((error) => console.error('Falha ao atualizar mídia:', error));
+    else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
   },
 
   deleteMedia(id: string) {
-    allMedia = allMedia.filter((item) => item.id !== id);
-    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
+    const item = allMedia.find((entry) => entry.id === id);
+    if (!item) return;
+    const auth = this.requireWriteAuth();
+    const access = this.requireTenantAccess(item.establishmentId);
+    if (!auth.ok || !access.ok) throw new Error(!auth.ok ? auth.message : access.message);
+    allMedia = allMedia.filter((entry) => entry.id !== id);
+    if (isSupabaseConfigured) void establishmentRepository.deleteMedia(item.establishmentId, id).catch((error) => console.error('Falha ao excluir mídia:', error));
+    else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
   },
 
