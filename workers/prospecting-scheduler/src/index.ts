@@ -985,6 +985,7 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   const sourceRecord = {
     ...prospect,
     raw_evidence: rawEvidence,
+    provider: capturedData.provider,
     social_links: rawEvidence.socialLinks ?? rawEvidence.social_links,
   };
 
