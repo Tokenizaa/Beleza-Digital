@@ -1,57 +1,123 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { store } from '../data/store';
 import { UnifiedAdminDashboard } from './UnifiedAdminDashboard';
 
+type AccessState = 'checking' | 'authorized' | 'denied';
+
 export function PlatformSalonDashboard() {
-  const [authorized, setAuthorized] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [access, setAccess] = useState<AccessState>('checking');
+  const [checkingMessage, setCheckingMessage] = useState('Verificando acesso ao estabelecimento…');
 
   useEffect(() => {
     if (!supabase) {
       window.location.replace('/plataforma/acesso?mode=login');
       return;
     }
+
     let active = true;
+    let resolving = false;
     const client = supabase;
-    const verify = async () => {
-      const { data: { session } } = await client.auth.getSession();
-      if (!session) {
-        if (active) window.location.replace('/plataforma/acesso?mode=login');
-        return;
-      }
-      const { data: admin, error } = await client.from('platform_admins')
-        .select('user_id').eq('user_id', session.user.id).maybeSingle();
+
+    const deny = (reason: string) => {
       if (!active) return;
-      if (error) {
-        setChecking(false);
-        return;
-      }
-      // Se o usuário está cadastrado como platform_admin, vai para o painel mestre.
-      // Caso contrário (establishment_admin), abre o painel do salão.
-      if (admin) {
-        window.location.replace('/plataforma/admin');
-        return;
-      }
-      setAuthorized(true);
-      setChecking(false);
+      store.logout();
+      window.location.replace(`/plataforma/acesso?mode=login&reason=${encodeURIComponent(reason)}`);
     };
+
+    const verify = async () => {
+      if (resolving) return;
+      resolving = true;
+      try {
+        const { data: { session }, error: sessionError } = await client.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!session) {
+          deny('session-required');
+          return;
+        }
+
+        const { data: admin, error: adminError } = await client
+          .from('platform_admins')
+          .select('user_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        if (adminError) throw adminError;
+        if (!active) return;
+        if (admin) {
+          window.location.replace('/plataforma/admin');
+          return;
+        }
+
+        const { data: memberships, error: membershipError } = await client
+          .from('establishment_memberships')
+          .select('establishment_id, role, establishments(id, slug, name, status, logo_url, primary_color, secondary_color, contact, brand_settings, created_at, updated_at)')
+          .eq('user_id', session.user.id);
+        if (membershipError) throw membershipError;
+
+        const membership = (memberships || []).find((item) =>
+          ['owner', 'admin', 'editor', 'viewer'].includes(item.role)
+        );
+        if (!membership) {
+          deny('membership-required');
+          return;
+        }
+
+        const related = membership.establishments as unknown;
+        const establishment = (Array.isArray(related) ? related[0] : related) as Record<string, unknown> | null;
+        if (!establishment || establishment.id !== membership.establishment_id) {
+          deny('establishment-unavailable');
+          return;
+        }
+        if (establishment.status === 'inactive' || establishment.status === 'archived') {
+          deny('establishment-inactive');
+          return;
+        }
+
+        store.hydrateSupabaseSession({
+          accessToken: session.access_token,
+          userName: session.user.user_metadata?.owner_name || session.user.email || 'Administrador',
+          establishment,
+          membershipRole: membership.role as 'owner' | 'admin' | 'editor' | 'viewer',
+        });
+        if (active) setAccess('authorized');
+      } catch (error) {
+        console.error('Falha ao validar acesso ao estabelecimento:', error);
+        if (active) {
+          setCheckingMessage('Não foi possível validar sua associação ao estabelecimento.');
+          setAccess('denied');
+        }
+      } finally {
+        resolving = false;
+      }
+    };
+
     void verify();
-    const { data: listener } = client.auth.onAuthStateChange(() => { void verify(); });
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        deny('session-required');
+        return;
+      }
+      void verify();
+    });
+
     return () => {
       active = false;
       listener.subscription.unsubscribe();
     };
   }, []);
 
-  if (checking || !authorized) {
-    return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">Verificando acesso ao salão…</main>;
+  if (access !== 'authorized') {
+    return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">{access === 'denied' ? checkingMessage : 'Verificando acesso ao estabelecimento…'}</main>;
   }
-  // Renderiza o painel unificado com sidebar única (gestão do salão).
-  // Apenas módulo de Gestão do Salão (salao-*) está disponível; prospecção/rede são excluídas.
+
   return <UnifiedAdminDashboard
     initialSection="salao-dashboard"
     preAuthenticated
     excludeModules={['prospeccao', 'rede', 'templates']}
-    onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign('/'); }}
+    onBackToApp={async () => {
+      await supabase?.auth.signOut({ scope: 'local' });
+      store.logout();
+      window.location.assign('/');
+    }}
   />;
 }
