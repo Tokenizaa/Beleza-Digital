@@ -363,7 +363,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-md border border-emerald-500/50 bg-emerald-950/70 text-emerald-300 font-mono text-xs uppercase tracking-widest">
             <Zap className="w-3.5 h-3.5 text-emerald-400" />
-            <span>FADE • FREESTYLE • STREETWEAR</span>
+            <span>MODELO URBANO • ALTO CONTRASTE</span>
           </div>
 
           <h1 className="text-5xl sm:text-7xl font-black uppercase tracking-tighter text-white">
@@ -549,7 +549,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-blue-500/40 bg-blue-950/80 text-blue-300 text-xs font-bold uppercase tracking-wider">
             <Building2 className="w-3.5 h-3.5 text-blue-400" />
-            <span>EXECUTIVE GROOMING CLUB</span>
+            <span>MODELO SAFIRA • VISUAL EXECUTIVO</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white">
