@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { store } from '../data/store';
+import { establishmentRepository } from '../data/establishmentRepository';
 import { UnifiedAdminDashboard } from './UnifiedAdminDashboard';
 
 type AccessState = 'checking' | 'authorized' | 'denied';
