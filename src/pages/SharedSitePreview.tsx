@@ -174,7 +174,7 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
   }
 }
 
-export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null; controlMode?: 'header' | 'sidebar' }> = ({ preview: initialPreview, controlMode = 'header' }) => {
+export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null; controlMode?: 'header' | 'sidebar'; showSampleNotice?: boolean }> = ({ preview: initialPreview, controlMode = 'header', showSampleNotice = true }) => {
   // Benchmark fallback caso o preview seja nulo ou link tenha expirado
   const [customBusinessName, setCustomBusinessName] = useState('');
   const [customPhone, setCustomPhone] = useState('');
@@ -226,7 +226,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
     phone: preview.phone,
     whatsapp: preview.whatsapp ?? preview.phone,
     address: preview.address,
-    city: preview.city || 'Localidade não informada',
+    city: preview.city || '',
     state: preview.state ?? undefined,
     logoUrl: preview.logoUrl ?? undefined,
     coverUrl: preview.coverUrl ?? undefined,
@@ -411,7 +411,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
       {/* ========================================================================= */}
       {/* 3. RENDERIZADOR DO TEMPLATE VISUAL SELECIONADO (Sem colisão de barra)      */}
       {/* ========================================================================= */}
-      {preview.isSampleContent && (
+      {preview.isSampleContent && showSampleNotice && (
         <div className="mx-auto w-full max-w-7xl border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-900">
           Algumas áreas usam conteúdo ilustrativo quando a coleta não fornece informações suficientes. Os dados identificados como reais vêm da ficha coletada e devem ser conferidos pelo estabelecimento.
         </div>

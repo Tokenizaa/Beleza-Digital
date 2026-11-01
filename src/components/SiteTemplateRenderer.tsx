@@ -39,6 +39,7 @@ import { MonthCalendar } from './MonthCalendar';
 import { MediaModal } from './MediaModal';
 import { ProductDetailModal } from './ProductDetailModal';
 import { BusinessFacts } from './BusinessFacts';
+import { MapEmbed } from './MapEmbed';
 import { ServiceItem, ProductItem, MediaItem } from '../types';
 import { SiteTemplateConfig, SITE_TEMPLATES, SITE_TEMPLATES_LIST } from '../types/templates';
 
@@ -823,42 +824,76 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
     );
   };
 
-  // Localização & Contato
+  // Localização & Contato: exibe apenas informações fornecidas pela fonte.
+  const hasAddress = Boolean(businessData.address?.trim());
+  const hasCity = Boolean([businessData.city, businessData.state].filter(Boolean).join(' ').trim());
+  const hasCoordinates = Number.isFinite(businessData.latitude) && Number.isFinite(businessData.longitude);
+  const hasLocation = hasAddress || hasCity || hasCoordinates;
+  const hasHours = Boolean(businessData.horario?.trim());
+  const hasContact = Boolean(businessData.phone?.trim() || whatsappClean);
+
   const renderContactFooter = () => (
-    <section id="contato" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 border-t border-neutral-800/80">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800">
-          <MapPin className="w-5 h-5 text-amber-400 mb-3" />
-          <h3 className="font-bold text-sm text-white">Localização</h3>
-          <p className="text-xs text-neutral-400 mt-1">{businessData.address || [businessData.city, businessData.state].filter(Boolean).join(' - ') || 'Endereço não informado'}</p>
-          {businessData.googleMapsUrl && (
-            <a href={businessData.googleMapsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-amber-400 hover:underline mt-2">
-              Ver no Google Maps <ExternalLink className="w-3 h-3" />
-            </a>
+    <section id="contato" className="mx-auto max-w-6xl border-t border-neutral-800/80 px-4 py-16 sm:px-8">
+      {(hasLocation || hasHours || hasContact) && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {hasLocation && (
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
+              <MapPin className="mb-3 h-5 w-5 text-amber-400" />
+              <h3 className="text-sm font-bold text-white">Localização</h3>
+              {hasAddress && <p className="mt-1 text-xs text-neutral-300">{businessData.address}</p>}
+              {hasCity && <p className="mt-1 text-xs text-neutral-400">{[businessData.city, businessData.state].filter(Boolean).join(' - ')}</p>}
+              {businessData.googleMapsUrl && (
+                <a href={businessData.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
+                  Ver no Google Maps <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+          )}
+
+          {hasHours && (
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
+              <Clock className="mb-3 h-5 w-5 text-emerald-400" />
+              <h3 className="text-sm font-bold text-white">Horário de Atendimento</h3>
+              <p className="mt-1 whitespace-pre-line text-xs text-neutral-400">{businessData.horario}</p>
+            </div>
+          )}
+
+          {hasContact && (
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
+              <Phone className="mb-3 h-5 w-5 text-blue-400" />
+              <h3 className="text-sm font-bold text-white">Contato & Reservas</h3>
+              {businessData.phone?.trim() && <p className="mt-1 text-xs text-neutral-400">{businessData.phone}</p>}
+              {whatsappClean && (
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-emerald-400 hover:underline">
+                  Chamar no WhatsApp <ChevronRight className="h-3 w-3" />
+                </a>
+              )}
+            </div>
           )}
         </div>
+      )}
 
-        <div className="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800">
-          <Clock className="w-5 h-5 text-emerald-400 mb-3" />
-          <h3 className="font-bold text-sm text-white">Horário de Atendimento</h3>
-          <p className="text-xs text-neutral-400 mt-1">{businessData.horario || 'Horário não informado'}</p>
+      {hasLocation && (
+        <div className="mt-8 rounded-3xl border border-neutral-800 bg-neutral-900/70 p-4 sm:p-6">
+          <div className="mb-4">
+            <h3 className="text-xl font-bold text-white">Mapa de Localização</h3>
+            <p className="mt-1 text-xs text-neutral-400">Localização baseada no endereço ou nas coordenadas informadas.</p>
+          </div>
+          <MapEmbed
+            name={businessData.name}
+            address={businessData.address}
+            city={businessData.city}
+            state={businessData.state}
+            latitude={businessData.latitude}
+            longitude={businessData.longitude}
+            mapsUrl={businessData.googleMapsUrl}
+          />
         </div>
+      )}
 
-        <div className="p-6 rounded-2xl bg-neutral-900/60 border border-neutral-800">
-          <Phone className="w-5 h-5 text-blue-400 mb-3" />
-          <h3 className="font-bold text-sm text-white">Contato & Reservas</h3>
-          <p className="text-xs text-neutral-400 mt-1">{businessData.phone || 'Telefone não informado'}</p>
-          {whatsappClean && (
-            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:underline mt-2">
-              Chamar no WhatsApp <ChevronRight className="w-3 h-3" />
-            </a>
-          )}
-        </div>
-      </div>
-
-      <footer className="mt-14 pt-8 border-t border-neutral-800/80 text-center text-xs text-neutral-500">
+      <footer className="mt-14 border-t border-neutral-800/80 pt-8 text-center text-xs text-neutral-500">
         <p>© {new Date().getFullYear()} {businessData.name}. Todos os direitos reservados.</p>
-        <p className="text-[11px] text-neutral-500 mt-1">Plataforma White-Label de Alta Conversão BelezaDigital</p>
+        <p className="mt-1 text-[11px] text-neutral-500">Plataforma White-Label Beleza Digital</p>
       </footer>
     </section>
   );

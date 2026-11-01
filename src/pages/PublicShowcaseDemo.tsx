@@ -1,4 +1,5 @@
 import React from 'react';
+import { LayoutDashboard } from 'lucide-react';
 import { SharedSitePreview, type ShareableSitePreview } from './SharedSitePreview';
 
 /**
@@ -260,11 +261,14 @@ const DEMO_PREVIEW: ShareableSitePreview = {
 
 export const PublicShowcaseDemo: React.FC = () => (
   <div className="min-h-screen bg-neutral-950">
-    <div className="fixed inset-x-0 top-0 z-[100] bg-amber-400 px-4 py-2 text-center text-xs font-bold text-neutral-950 shadow-lg">
-      DEMONSTRAÇÃO ILUSTRATIVA — empresa, contatos, avaliações, preços e serviços são dados fictícios para apresentar os modelos.
-    </div>
-    <div className="pt-8">
-      <SharedSitePreview preview={DEMO_PREVIEW} controlMode="sidebar" />
-    </div>
+    <a
+      href="/plataforma/acesso?mode=login"
+      aria-label="Entrar no painel da plataforma"
+      className="fixed right-4 top-4 z-[90] inline-flex items-center gap-2 rounded-full border border-neutral-700/80 bg-neutral-950/90 px-4 py-2.5 text-xs font-semibold text-neutral-100 shadow-lg backdrop-blur transition hover:border-amber-400/70 hover:bg-neutral-900"
+    >
+      <LayoutDashboard className="h-4 w-4 text-amber-400" />
+      Entrar no painel
+    </a>
+    <SharedSitePreview preview={DEMO_PREVIEW} controlMode="sidebar" showSampleNotice={false} />
   </div>
 );
