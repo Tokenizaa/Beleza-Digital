@@ -115,8 +115,8 @@ export const establishmentRepository = {
     const { data: existing, error: readError } = await client().from('establishments')
       .select('contact,brand_settings').eq('id', establishmentId).single();
     fail(readError, 'Não foi possível carregar os dados atuais do perfil.');
-    const contact = asRecord(existing.contact);
-    const brand = asRecord(existing.brand_settings);
+    const contact = asRecord(existing?.contact);
+    const brand = asRecord(existing?.brand_settings);
     const contactPatch: Row = {
       ...contact,
       ...(updates.whatsapp !== undefined ? { whatsapp: next.whatsapp } : {}),
