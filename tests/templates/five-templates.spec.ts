@@ -11,6 +11,9 @@ const templates = [
 test('demonstração pública percorre os cinco modelos e mantém recursos comerciais', async ({ page }) => {
   await page.goto('/demo');
   await expect(page.getByRole('heading', { name: 'Studio Aurora' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Entrar no painel da plataforma' })).toHaveAttribute('href', '/plataforma/acesso?mode=login');
+  await expect(page.getByText(/DEMONSTRAÇÃO ILUSTRATIVA — empresa/i)).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText('Demonstração Oficial ao Vivo');
 
   for (const template of templates) {
     const tab = page.getByRole('tab', { name: template });
