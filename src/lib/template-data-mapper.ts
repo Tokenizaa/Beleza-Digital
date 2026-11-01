@@ -231,22 +231,26 @@ export function mapDataForTemplate(
 }
 
 // Função auxiliar que retorna o conteúdo específico baseado no focus do template
+// Garante que os serviços sempre estejam presentes, adicionando-os se necessário
 function getFocusSpecificContent(
   focus: string,
   data: MapScrapeData
 ): Record<string, any> {
+  // Base: sempre extrair serviços dos services_attributes disponíveis
+  const baseServices = (data.services_attributes || []).filter((svc: any) => Boolean(svc?.service_name || svc?.name));
+
   switch (focus) {
     case 'services': {
       // Ouro Clássico - foco em serviços oferecidos
-      const services = (data.services_attributes || []).filter((svc: any) => Boolean(svc?.service_name || svc?.name));
+      const services = baseServices.map((svc: any) => ({
+        name: svc.service_name || svc.name,
+        description: svc.description || svc.desc || '',
+        price: svc.price ?? null,
+        durationMinutes: svc.duration ?? null,
+      }));
 
       return {
-        services: services.map((svc: any) => ({
-          name: svc.service_name || svc.name,
-          description: svc.description || svc.desc || '',
-          price: svc.price ?? null,
-          durationMinutes: svc.duration ?? null,
-        })),
+        services,
         description: data.description || '',
       };
     }
@@ -256,6 +260,13 @@ function getFocusSpecificContent(
       const portfolioItems = (data.media_items || []).filter((item: any) => Boolean(item?.image_url || item?.imageUrl || item?.url));
 
       return {
+        // Manter serviços base mesmo com foco em portfólio
+        services: baseServices.length > 0 ? baseServices.map((svc: any) => ({
+          name: svc.service_name || svc.name,
+          description: svc.description || svc.desc || '',
+          price: svc.price ?? null,
+          durationMinutes: svc.duration ?? null,
+        })) : [],
         portfolio: portfolioItems.map((item: any) => ({
           name: item.service_name || item.name || 'Mídia',
           description: item.description || '',
@@ -270,6 +281,13 @@ function getFocusSpecificContent(
     case 'essential': {
       // Minimal Studio - foco em informações essenciais
       return {
+        // Manter serviços base mesmo com foco essencial
+        services: baseServices.length > 0 ? baseServices.map((svc: any) => ({
+          name: svc.service_name || svc.name,
+          description: svc.description || svc.desc || '',
+          price: svc.price ?? null,
+          durationMinutes: svc.duration ?? null,
+        })) : [],
         essential: {
           highlights: data.opening_hours ? [data.opening_hours] : [],
           standoutFeatures: [
@@ -286,6 +304,13 @@ function getFocusSpecificContent(
     case 'corporativo': {
       // Safira Executivo - foco corporativo
       return {
+        // Manter serviços base mesmo com foco corporativo
+        services: baseServices.length > 0 ? baseServices.map((svc: any) => ({
+          name: svc.service_name || svc.name,
+          description: svc.description || svc.desc || '',
+          price: svc.price ?? null,
+          durationMinutes: svc.duration ?? null,
+        })) : [],
         corporativo: {
           establishmentType: data.category || '',
           specialty: data.category || '',
@@ -307,6 +332,13 @@ function getFocusSpecificContent(
       // iluminação, música, aromas, acabamentos nem outras características
       // sensoriais que não estejam disponíveis na fonte.
       return {
+        // Manter serviços base mesmo com foco experience
+        services: baseServices.length > 0 ? baseServices.map((svc: any) => ({
+          name: svc.service_name || svc.name,
+          description: svc.description || svc.desc || '',
+          price: svc.price ?? null,
+          durationMinutes: svc.duration ?? null,
+        })) : [],
         experience: {
           atmosphere: '',
           sensoryDetails: [],
@@ -321,7 +353,12 @@ function getFocusSpecificContent(
     default:
       // Fallback caso o focus não seja reconhecido
       return {
-        services: [],
+        services: baseServices.length > 0 ? baseServices.map((svc: any) => ({
+          name: svc.service_name || svc.name,
+          description: svc.description || svc.desc || '',
+          price: svc.price ?? null,
+          durationMinutes: svc.duration ?? null,
+        })) : [],
         description: data.description || '',
       };
   }

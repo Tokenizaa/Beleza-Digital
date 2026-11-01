@@ -65,7 +65,9 @@ function numberOrNull(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 function demoServices(version: DemoVersion | null): ServiceItem[] {
-  const mapped = contentArray(version, ["services", "services_attributes"]).map((entry, index) => {
+  // Tenta "services_attributes" primeiro (formato do Mapscrape normalizer),
+  // depois "services" (formato direto do generated_content)
+  const mapped = contentArray(version, ["services_attributes", "services"]).map((entry, index) => {
     const item = asRecord(entry);
     return {
       id: firstText(item, ["id"]) || "demo-service-" + index,
@@ -80,7 +82,8 @@ function demoServices(version: DemoVersion | null): ServiceItem[] {
   return mapped;
 }
 function demoProducts(version: DemoVersion | null): ProductItem[] {
-  return contentArray(version, ["products", "featured_products"]).flatMap((entry, index) => {
+  // Tenta "featured_products" primeiro, depois "products"
+  return contentArray(version, ["featured_products", "products"]).flatMap((entry, index) => {
     const item = asRecord(entry);
     const mainImage = firstText(item, ["mainImage", "main_image", "imageUrl", "image_url", "image"]);
     const price = numberOrNull(item.price);
@@ -100,7 +103,8 @@ function demoProducts(version: DemoVersion | null): ProductItem[] {
   });
 }
 function demoMedia(version: DemoVersion | null): MediaItem[] {
-  const source = contentArray(version, ["media", "media_items", "portfolio"]);
+  // Tenta "media_items" primeiro, depois "media", depois "portfolio"
+  const source = contentArray(version, ["media_items", "media", "portfolio"]);
   const photos = contentArray(version, ["photos"]).map((url) => ({ url, type: "image" }));
   const videos = contentArray(version, ["videos"]).map((url) => ({ url, type: "video" }));
   const entries = [...source, ...photos, ...videos];
