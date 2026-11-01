@@ -4,7 +4,7 @@ import './index.css';
 import { initApiInterceptor } from './lib/api-interceptor';
 
 try {
-  initApiInterceptor();
+  if (import.meta.env.DEV) initApiInterceptor();
 } catch (error) {
   console.warn('API Interceptor initialization skipped:', error);
 }
