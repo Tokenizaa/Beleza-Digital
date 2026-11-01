@@ -12,6 +12,7 @@
  */
 
 import type { SiteTemplateConfig, SiteVariationId } from '../types/templates';
+import { normalizeScrapedPlace } from './scraped-place-normalizer';
 
 // Interface com todos os campos possíveis do Mapscrape.
 // Baseado na estrutura do buildCandidate() em scripts/scrape-local.cjs
@@ -116,29 +117,50 @@ export type {
 // Função principal que mapeia dados do Mapscrape para o formato
 // de generated_content adequado para cada template.
 export function mapDataForTemplate(
-  data: MapScrapeData,
+  data: MapScrapeData | Record<string, unknown>,
   template: SiteTemplateConfig
 ): TemplateGeneratedContent {
+  const normalized = normalizeScrapedPlace(data);
+  const source: MapScrapeData = {
+    businessName: normalized.businessName,
+    category: normalized.category,
+    description: normalized.description,
+    website: normalized.website,
+    phone: normalized.phone,
+    email: normalized.email,
+    address: normalized.address,
+    city: normalized.city,
+    region: normalized.region,
+    sourceUrl: normalized.sourceUrl,
+    photos: normalized.photos,
+    videos: normalized.videos,
+    rating: normalized.rating,
+    review_count: normalized.review_count,
+    opening_hours: normalized.opening_hours,
+    services_attributes: normalized.services_attributes,
+    media_items: normalized.media_items,
+  };
+
   // Dados básicos sempre presentes em todos os templates
   const baseContent: TemplateGeneratedContent = {
-    name: data.businessName,
-    category: data.category,
-    description: data.description,
+    name: source.businessName,
+    category: source.category,
+    description: source.description,
 
     contact: {
-      phone: data.phone,
-      email: data.email,
-      address: data.address,
-      city: data.city,
-      region: data.region,
+      phone: source.phone,
+      email: source.email,
+      address: source.address,
+      city: source.city,
+      region: source.region,
     },
 
-    website: data.website,
-    sourceUrl: data.sourceUrl,
+    website: source.website,
+    sourceUrl: source.sourceUrl,
 
-    photos: data.photos.length > 0 ? data.photos : [],
-    videos: data.videos.length > 0 ? data.videos : [],
-    services: (data.services_attributes || [])
+    photos: source.photos.length > 0 ? source.photos : [],
+    videos: source.videos.length > 0 ? source.videos : [],
+    services: (source.services_attributes || [])
       .filter((svc: any) => Boolean(svc?.service_name || svc?.name))
       .map((svc: any) => ({
         name: svc.service_name || svc.name,
@@ -146,9 +168,9 @@ export function mapDataForTemplate(
         price: svc.price ?? null,
         durationMinutes: svc.duration ?? svc.durationMinutes ?? null,
       })),
-    media_items: data.media_items || [],
-    rating: data.rating,
-    reviewCount: data.review_count,
+    media_items: source.media_items || [],
+    rating: source.rating,
+    reviewCount: source.review_count,
     originalProvider: 'mapscrape',
   };
 
