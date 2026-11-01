@@ -271,3 +271,165 @@ Não tratar ausência de informação como valor negativo; não inventar serviç
 - Definir se o MapScrape v2 é a fonte upstream que deve alimentar o pipeline atual ou se o Worker de prospecção do Beleza Digital permanece como coletor canônico.
 
 **Estado desta auditoria:** leitura estática concluída; nenhuma alteração funcional, migration, deploy ou teste de produção executado.
+
+
+---
+
+## 12. Escopo operacional inequívoco das cinco fases — instrução para agentes
+
+Esta seção é normativa e prevalece sobre qualquer interpretação genérica do plano. As cinco fases abaixo tratam **exclusivamente da evolução do PAINEL DO ESTABELECIMENTO**. Elas não são as fases do pipeline de prospecção, filas, qualificação de leads, geração de propostas ou abordagem comercial.
+
+### Visão geral e fronteiras
+
+| Fase | Nome | Resultado obrigatório |
+|---|---|---|
+| 1 | Fundação: autenticação, tenant e persistência | Usuário autenticado acessa somente seu estabelecimento; perfil básico e catálogo operacional são persistidos no Supabase |
+| 2 | Perfil comercial: ingestão, edição e proveniência | Dados coletados/onboarding preenchem o painel; proprietário consegue revisar e editar sem perder a origem nem sobrescrever edições manuais |
+| 3 | Operação: agenda e clientes | Agendamentos públicos e administrativos usam a mesma fonte Supabase; clientes e histórico ficam associados ao tenant |
+| 4 | Presença digital: site e cinco templates | Dados reais e editados no painel alimentam corretamente os cinco templates e seu fluxo de preview/publicação |
+| 5 | Certificação ponta a ponta do painel | Testes comprovam o percurso real desde login/onboarding até edição, agenda, publicação e renderização, com evidências verificáveis |
+
+### Fase 1 — Fundação: autenticação, tenant e persistência
+
+**Objetivo:** tornar o painel seguro e funcional com dados persistidos, sem depender de sessão sintética ou estado operacional do navegador.
+
+**Inclui:**
+1. Resolver sessão por Supabase Auth e membership válida em `establishment_memberships`.
+2. Identificar o estabelecimento exclusivamente pela membership autorizada; nunca confiar em tenant vindo de `localStorage`, `sessionStorage`, query string ou valor default.
+3. Aplicar papéis `owner`, `admin`, `editor` e `viewer`: leitura conforme membership; escrita somente para papéis autorizados.
+4. Implementar/ajustar repositório Supabase para perfil básico do estabelecimento, serviços, produtos e mídia.
+5. Aplicar RLS e políticas de leitura/escrita coerentes com tenant e papel.
+6. Hidratar a store/UI com dados do repositório após login e persistir operações no backend.
+7. Tratar loading, erro, sessão expirada, ausência de membership e falha de persistência sem simular sucesso.
+8. Manter dados demo/sessões sintéticas restritos a demonstração/testes, sem conceder acesso a dados reais.
+
+**Não inclui:** ingestão completa e resolução de conflitos dos dados coletados (Fase 2), agenda/clientes (Fase 3), refinamento dos templates (Fase 4).
+
+**Aceite verificável:**
+- usuário sem membership não entra no painel;
+- cada papel respeita as permissões previstas;
+- dois tenants não conseguem ler ou alterar registros um do outro;
+- CRUD de perfil básico, serviços, produtos e mídia sobrevive a reload e novo login;
+- logout encerra a sessão Supabase e limpa o estado visual;
+- falhas do backend são exibidas e não são mascaradas por gravação local.
+
+**Estado conhecido:** a branch de trabalho já recebeu implementação inicial desta fase e migration `20261101155810_establishment_catalog_persistence`. Isso não dispensa revalidar os critérios acima na branch/commit efetivamente testados.
+
+### Fase 2 — Perfil comercial: ingestão, edição e proveniência
+
+**Objetivo:** transformar os dados coletados e preservados no onboarding/projeto em um perfil comercial útil no painel, que o proprietário possa corrigir e complementar.
+
+**Inclui:**
+1. Rastrear o percurso real dos dados: coleta/prospect → promoção/conversão → onboarding → estabelecimento/projeto/versões → painel.
+2. Identificar o payload real existente no banco; mapear campos por evidência, sem presumir que o scraper forneça campos que não coleta.
+3. Criar uma projeção estruturada do perfil comercial ligada ao `establishment_id`, cobrindo quando disponíveis: nome, categoria, descrição, telefone, endereço, localização, website, horários, links/redes sociais, nota/avaliações, fotos e links de reserva.
+4. Exibir no painel os dados importados em seções editáveis e indicar campos ausentes; ausência não pode ser convertida em informação inventada.
+5. Preservar separadamente: dado original coletado, valor editado manualmente e valor atualmente publicado.
+6. Registrar proveniência por campo quando disponível: fonte, identificador externo, data da coleta e evidência.
+7. Na importação inicial, preencher o que estiver vazio; em reimportações, atualizar a origem sem sobrescrever silenciosamente edição manual.
+8. Permitir ao proprietário corrigir/complementar dados e salvar no repositório da Fase 1.
+9. Manter serviços, produtos e mídia como entidades administráveis próprias; não inferir catálogo a partir de texto genérico sem evidência.
+10. Expor estado de sincronização/conflitos de forma simples e compreensível.
+
+**Não inclui:** reconstruir scraper, reimplementar pipeline de prospecção/qualificação, sincronização futura com Google Business Profile ou refazer os templates.
+
+**Aceite verificável:**
+- um estabelecimento convertido com payload conhecido abre o painel com os campos existentes pré-preenchidos;
+- cada campo exibido pode ser rastreado à origem ou marcado como edição manual;
+- editar e recarregar mantém o valor manual;
+- reimportar atualiza a camada de origem e não destrói override;
+- campos ausentes permanecem vazios/indisponíveis, sem conteúdo fictício;
+- dados permanecem isolados por tenant.
+
+### Fase 3 — Operação: agenda e clientes
+
+**Objetivo:** entregar operação diária confiável para o estabelecimento, com agenda e clientes persistidos e multi-tenant.
+
+**Inclui:**
+1. Fazer o painel administrativo listar agendamentos reais de `establishment_appointments` pelo backend, filtrados pelo tenant autorizado.
+2. Implementar operações autenticadas para confirmar, cancelar, concluir e, se suportado pelo produto, reagendar/bloquear horários.
+3. Fazer o fluxo público de agendamento e o painel administrativo utilizarem a mesma fonte de verdade; remover cópias locais divergentes.
+4. Garantir consistência de disponibilidade e impedir dupla reserva sob concorrência no backend/banco.
+5. Criar ou consolidar identidade de cliente por estabelecimento, com telefone normalizado e deduplicação segura.
+6. Relacionar agendamentos ao cliente e manter histórico de visitas/procedimentos quando houver dados reais.
+7. Permitir busca e visualização do histórico no painel sem expor dados entre estabelecimentos.
+8. Definir e aplicar RLS/validação de autorização para dados pessoais dos clientes.
+9. Tratar estados vazios, cancelamentos, falhas, conflitos de horário e carregamento.
+
+**Não inclui:** CRM de prospecção comercial, campanhas de WhatsApp, automação de marketing ou pipeline de leads.
+
+**Aceite verificável:**
+- reserva pública aparece na agenda administrativa após atualização/relogin;
+- ações administrativas persistem e refletem no calendário;
+- duas tentativas concorrentes para o mesmo horário não geram dupla reserva;
+- cliente pode ser localizado e seus agendamentos/histórico são consistentes;
+- um tenant não consulta clientes ou agendamentos de outro;
+- nenhuma operação depende de `localStorage` como fonte de verdade.
+
+### Fase 4 — Presença digital: site e cinco templates
+
+**Objetivo:** garantir que o perfil e o catálogo administrados no painel alimentem os sites dos clientes nos cinco modelos visuais já existentes.
+
+**Templates no escopo:** Ouro Clássico, Preto Esmeralda, Minimal Studio, Safira Executivo e Rubi Lounge. Preservar os nomes/identificadores reais encontrados no código se diferirem desses rótulos.
+
+**Inclui:**
+1. Mapear o contrato de dados entre repositório do estabelecimento, mapper, modelo compartilhado e renderer.
+2. Conectar perfil, horários, serviços, produtos e mídia persistidos aos campos correspondentes do renderer.
+3. Corrigir mapeamentos de nomes/endereços/contatos/horários e demais campos sem criar valores fictícios.
+4. Fazer imagens e mídias válidas aparecerem nos locais previstos, inclusive imagens de serviços quando o modelo suportar.
+5. Garantir que todos os cinco templates recebam os mesmos dados de negócio; diferenças entre eles devem ser de apresentação, não de conteúdo ou fonte de dados.
+6. Preservar o mecanismo existente de projeto, versões, preview, publicação e URLs públicas.
+7. Ao editar dados no painel, atualizar a prévia e gerar/publicar versão conforme o fluxo atual, sem apagar conteúdo manual.
+8. Tratar dados opcionais ausentes com estados visuais adequados, sem endereço, horário, nota, mapa, serviço ou avaliação inventados.
+9. Validar desktop e mobile nos cinco templates.
+
+**Não inclui:** criar um sexto template, reescrever o motor de publicação, reconstruir pipeline de geração de propostas ou criar editor visual independente.
+
+**Aceite verificável:**
+- alterar perfil/serviço/mídia no painel reflete no preview/site;
+- os cinco modelos exibem os mesmos dados reais de origem;
+- nenhum template inventa dados ausentes;
+- versões anteriores continuam acessíveis conforme o mecanismo existente;
+- cinco modelos passam por validação visual e funcional em desktop/mobile.
+
+### Fase 5 — Certificação ponta a ponta do painel
+
+**Objetivo:** provar com testes e evidências que as Fases 1–4 funcionam integradas no produto real.
+
+**Inclui obrigatoriamente:**
+1. Autenticação: signup/login/logout, sessão expirada e usuário sem membership.
+2. Autorização: owner/admin/editor/viewer e isolamento entre pelo menos dois tenants de teste.
+3. Persistência: CRUD de perfil, serviços, produtos e mídia, com reload e novo login.
+4. Ingestão: perfil pré-preenchido a partir de fixture/payload real conhecido; edição manual e reimportação sem perda.
+5. Agenda: criação pública, exibição administrativa, mudança de status, cancelamento e concorrência de horário.
+6. Clientes: deduplicação, associação a agendamentos e isolamento por tenant.
+7. Templates: preview/publicação dos cinco modelos com os mesmos dados de negócio, desktop e mobile.
+8. Regressão: fluxos de onboarding e publicação já existentes continuam funcionando.
+9. Qualidade: TypeScript, lint, testes unitários/integrados, build e Playwright.
+10. Banco: verificar migration aplicada, RLS habilitado, policies e acesso efetivo no projeto Supabase correto.
+11. Evidências: registrar comandos, ambiente, commit/branch, nomes dos testes, resultados, screenshots/artefatos quando aplicável e limitações.
+
+**Regras de certificação:**
+- Testes de filas, leases, dead-letter, qualificação de leads, geração de propostas, WhatsApp, consentimento ou HMAC podem ser regressões válidas do produto, mas **não substituem** os testes específicos do painel listados acima.
+- Sessão sintética/demo não comprova autenticação real; deve ser identificada como teste de demonstração.
+- Teste unitário isolado não comprova integração com Supabase; identificar claramente testes mockados e testes contra backend real.
+- Não afirmar cobertura de agenda/clientes/templates se esses fluxos não foram exercitados.
+- Não declarar “100%”, “pronto para produção” ou “certificado” se houver critérios bloqueados, mocks relevantes ou ausência de evidência.
+- Não criar nem alterar dados reais de clientes/estabelecimentos em produção sem autorização expressa. Usar ambiente de teste/tenant de teste autorizado.
+- Executar a certificação em localhost, conforme a orientação operacional definida, sem deploy.
+- A fase só é concluída quando todos os critérios aplicáveis passam e os bloqueios restantes estão explicitamente documentados.
+
+### Instrução de delegação para agente local
+
+O agente local deve:
+1. Ler este documento inteiro antes de alterar código.
+2. Confirmar que está no repositório `Tokenizaa/Beleza-Digital`, branch `work/painel-estabelecimento-fases-1-5`.
+3. Trabalhar somente nessa branch; não alterar `main`, não fazer merge, não fazer deploy e não usar a branch futura de Google Business Profile.
+4. Conferir o estado real do Git e preservar alterações locais não commitadas.
+5. Executar cada fase na ordem 1 → 2 → 3 → 4 → 5, respeitando as fronteiras e critérios de aceite acima.
+6. Antes de marcar uma fase como concluída, anexar evidências específicas de cada critério; não reutilizar resultados de uma suíte de outro subsistema como prova.
+7. Se uma dependência, dado ou acesso estiver ausente, registrar o bloqueio e solicitar decisão; não inventar dados nem contornar segurança.
+8. Manter localhost operacional para validação visual ao final, sem publicar em produção.
+9. Entregar relatório com: branch e commit; fases executadas; arquivos alterados; testes por nome e resultado; testes mockados versus reais; evidências de Supabase/RLS; URL localhost; pendências.
+
+**Regra de interpretação:** quando um relatório mencionar “Fase 1 — filas/leases”, “Fase 2 — leads”, “Fase 3 — propostas” ou “Fase 4 — WhatsApp”, ele está descrevendo outro plano/subsistema e não pode ser usado para declarar concluídas as cinco fases deste Marco Zero do painel do estabelecimento.
