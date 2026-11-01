@@ -38,6 +38,7 @@ import {
 import { MonthCalendar } from './MonthCalendar';
 import { MediaModal } from './MediaModal';
 import { ProductDetailModal } from './ProductDetailModal';
+import { BusinessFacts } from './BusinessFacts';
 import { ServiceItem, ProductItem, MediaItem } from '../types';
 import { SiteTemplateConfig, SITE_TEMPLATES, SITE_TEMPLATES_LIST } from '../types/templates';
 
@@ -69,6 +70,9 @@ export interface SiteBusinessData {
   products?: ProductItem[];
   media?: MediaItem[];
   status?: string;
+  rating?: number | null;
+  reviewCount?: number | string | null;
+  priceRange?: string;
   note?: string;
   'quantidade-de-avaliacoes'?: string | number;
   'faixa-de-preco'?: string;
@@ -920,6 +924,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
       {/* Render the specific visual archetype layout */}
       <main className="flex-1">
+        <BusinessFacts rating={businessData.rating} reviewCount={businessData.reviewCount ?? businessData['quantidade-de-avaliacoes']} priceRange={businessData.priceRange ?? businessData['faixa-de-preco']} status={businessData.status} openingHours={businessData.horario} variation={activeVariation} />
         {activeVariation === 'ouro-classico' && renderOuroClassico()}
         {activeVariation === 'preto-esmeralda' && renderPretoEsmeralda()}
         {activeVariation === 'minimal-studio' && renderMinimalStudio()}
