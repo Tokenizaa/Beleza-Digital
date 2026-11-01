@@ -72,7 +72,7 @@ export interface SiteBusinessData {
   status?: string;
   rating?: number | null;
   reviewCount?: number | string | null;
-  priceRange?: string;
+  priceRange?: string | null;
   note?: string;
   'quantidade-de-avaliacoes'?: string | number;
   'faixa-de-preco'?: string;
