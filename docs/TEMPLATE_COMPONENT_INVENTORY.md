@@ -34,3 +34,35 @@ Todos os cinco devem passar os critérios comuns: (1) layout responsivo sem over
 ## Limites da inspeção
 
 Os componentes de navegação/rodapé e Instagram citados acima dependem do store da aplicação e não são plug-ins neutros para o renderer white-label. As páginas independentes também são páginas completas ligadas ao estado global, não componentes de seção. Reutilização deve respeitar esse contrato, não importar componentes que mostrem dados de outra empresa ou métricas padrão.
+
+
+## Inventário arquivo a arquivo de `src/components/`
+
+| Arquivo | Função efetiva lida | Reutilização no renderer white-label |
+|---|---|---|
+| `BusinessFacts.tsx` | Apresenta fatos agregados recebidos por props e omite valores vazios | Sim — compartilhado pelos cinco modelos |
+| `FloatingWhatsApp.tsx` | CTA flutuante que depende de `useStore` e usa o cadastro global da aplicação | Não — renderer usa CTA contextual com o telefone do preview |
+| `Footer.tsx` | Rodapé da aplicação, com navegação interna, empresa e store | Não — renderer mantém rodapé próprio, isolado por negócio |
+| `InstagramEmbedCard.tsx` | Embed oficial de post/reel com estado e atualização via store | Não — contrato atual do preview não transporta a coleção de embeds |
+| `InstagramEmbedModal.tsx` | Formulário administrativo para salvar posts/reels | Não — interface de gestão, não componente público |
+| `InstagramSection.tsx` | Feed de Instagram vinculado ao store; contém estatísticas fallback | Não — evita mostrar contagens/identidade da conta de outro estabelecimento |
+| `MediaModal.tsx` | Visualizador de imagem/vídeo com CTA contextual para WhatsApp | Sim — compartilhado pelos cinco modelos |
+| `MobileBottomNav.tsx` | Navegação móvel entre rotas internas e menu administrativo | Não — usa `PageView` e store, não navegação por seções do site white-label |
+| `MonthCalendar.tsx` | Calendário mensal de seleção de data, com dias passados e datas ocupadas desabilitados | Sim — usado na simulação de agendamento dos cinco modelos |
+| `Navbar.tsx` | Navegação global da aplicação entre páginas internas | Não — contrato acoplado ao store e às rotas do app |
+| `OfflineIndicator.tsx` | Indicador reativo aos eventos online/offline do navegador | Não — pertence ao shell da aplicação, não ao conteúdo comercial |
+| `PWAInstallButton.tsx` | CTA para abrir instruções de instalação PWA | Não — funcionalidade do shell/app, não conteúdo do site de prospecção |
+| `PWAInstallModal.tsx` | Instruções de instalação para iOS/Android/desktop e prompt nativo | Não — modal de instalação global |
+| `ProductDetailModal.tsx` | Detalhes de produto, seleção de imagens e CTA WhatsApp | Sim — compartilhado pelos cinco modelos |
+| `SiteSEOMetadata.tsx` | Injeta title, description, Open Graph, Twitter, canonical e JSON-LD | Sim — usado por `SharedSitePreview` |
+| `SiteTemplateRenderer.tsx` | Composição dos cinco layouts e das seções comerciais compartilhadas | É o ponto de integração principal |
+| `MapEmbed.tsx` (novo) | Iframe real do Google Maps baseado em endereço/cidade ou coordenadas; link externo de rota | Sim — compartilhado pelos cinco modelos e por ContactPage |
+
+## Páginas independentes e dependências
+
+- `GalleryPage.tsx`, `ServicesPage.tsx`, `ProductsPage.tsx`, `ContactPage.tsx` e `AppointmentPage.tsx` são páginas completas ligadas a `useStore`; não são componentes de seção neutros. `ContactPage` agora compartilha `MapEmbed`.
+- `SharedSitePreview.tsx` transforma o contrato da prévia em `SiteBusinessData`, seleciona os cinco modelos e chama `SiteTemplateRenderer`.
+- `PublicShowcaseDemo.tsx` contém o dataset ilustrativo exclusivo de `/demo`; `PublicDemoSelectionPage.tsx` converte versões personalizadas do backend em dados do renderer.
+- `template-data-mapper.ts` normaliza dados do scraper para conteúdo gerado, enquanto `PublicDemoSelectionPage.tsx` faz o mapeamento final das versões persistidas para `ShareableSitePreview`. O renderer recebe serviços, produtos, mídia, endereço, coordenadas, reputação e canais por props.
+- Dependências examinadas em `package.json`: React 19, Lucide React, Playwright e Supabase. Não há Leaflet, Mapbox GL ou SDK de mapa no pacote. O mapa existente era um iframe do Google Maps em ContactPage; a nova implementação compartilhada mantém esse provedor sem adicionar dependência ou chave de API.
+- O inventário de páginas também inclui os painéis administrativos, prospecção, seleção de demonstração, preview compartilhado e onboarding; eles permanecem fora do renderer público por dependerem de estado/rotas próprias.
