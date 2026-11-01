@@ -45,6 +45,7 @@ export interface MapScrapeData {
   priceRange?: string | null;
   status?: string | null;
   collectedAt?: string | null;
+  provider?: string | null;
   fieldStatus?: Record<string, unknown>;
 }
 
@@ -171,6 +172,7 @@ export function mapDataForTemplate(
     priceRange: normalized.priceRange,
     status: normalized.status,
     collectedAt: normalized.collectedAt,
+    provider: normalized.provider,
     fieldStatus: normalized.fieldStatus,
   };
 
@@ -217,7 +219,7 @@ export function mapDataForTemplate(
     rating: source.rating,
     reviewCount: source.review_count,
     collectedAt: source.collectedAt,
-    originalProvider: 'mapscrape',
+    originalProvider: source.provider || 'google-maps-cloudflare-playwright',
   };
 
   // Lógica switch por template.focus - mapeia dados relevantes para cada template
