@@ -36,6 +36,7 @@ export interface ShareableSitePreview {
   templateName: string;
   projectVersion: number;
   generatedAt: string;
+  isSampleContent?: boolean;
   logoUrl?: string | null;
   coverUrl?: string | null;
   instagramHandle?: string | null;
@@ -406,6 +407,11 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
       {/* ========================================================================= */}
       {/* 3. RENDERIZADOR DO TEMPLATE VISUAL SELECIONADO (Sem colisão de barra)      */}
       {/* ========================================================================= */}
+      {preview.isSampleContent && (
+        <div className="mx-auto w-full max-w-7xl border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-900">
+          Conteúdo ilustrativo: serviços, produtos e imagens são exemplos de apresentação e devem ser substituídos pelos dados reais do estabelecimento.
+        </div>
+      )}
       <SiteTemplateRenderer
         businessData={businessData}
         initialVariation={activeVariation}
