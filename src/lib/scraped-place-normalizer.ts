@@ -131,6 +131,7 @@ export interface NormalizedScrapedPlace {
   priceRange: string | null;
   status: string | null;
   collectedAt: string | null;
+  provider: string | null;
   fieldStatus: UnknownRecord;
   rawEvidence: UnknownRecord;
 }
@@ -183,7 +184,8 @@ export function normalizeScrapedPlace(input: unknown): NormalizedScrapedPlace {
     longitude,
     priceRange: stringValue(firstValue(source.price_range, source.priceRange, evidence.price_range)),
     status: stringValue(firstValue(source.business_status, source.status, evidence.operating_status, evidence.status)),
-    collectedAt: stringValue(firstValue(source.collected_at, source.created_at, evidence.collected_at)),
+    collectedAt: stringValue(firstValue(source.collected_at, source.source_captured_at, source.created_at, evidence.collected_at, evidence.observedAt)),
+    provider: stringValue(firstValue(source.provider, evidence.provider)),
     fieldStatus,
     rawEvidence: evidence,
   };
