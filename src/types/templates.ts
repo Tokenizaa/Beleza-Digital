@@ -176,7 +176,11 @@ export interface SiteBusinessData {
   products?: ProductItem[];
   media?: MediaItem[];
   // Novos campos alinhados com os 18 do provedor (para SEO/copy)
-  status?: string;           // Status operacional (active/inactive/suspended)
+  status?: string;           // Status operacional capturado na fonte
+  rating?: number | null;
+  reviewCount?: number | null;
+  priceRange?: string | null;
+  openingHours?: string | null;
   note?: string;           // Nota / avaliação geral
   'quantidade-de-avaliacoes'?: string;  // Qtd de avaliações
   'faixa-de-preco'?: string;            // Faixa de preço

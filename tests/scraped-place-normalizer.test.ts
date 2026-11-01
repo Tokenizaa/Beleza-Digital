@@ -58,24 +58,36 @@ assert.equal(nested.services_attributes[0].name, 'Hidratação');
 assert.equal(nested.services_attributes[0].price, 90);
 assert.equal(nested.opening_hours, 'Segunda: 09:00–18:00');
 
-const promotedProspect = normalizeScrapedPlace({
-  business_name: 'Prospect promovido',
-  phone: '(51) 98888-0000',
-  source_url: 'https://maps.google.com/?cid=789',
-  source_captured_at: '2026-10-31T13:00:00.000Z',
-  provider: 'google-maps-cloudflare-playwright',
+const actualWorkerPayload = normalizeScrapedPlace({
+  business_name: 'Studio Capturado',
   raw_evidence: {
-    rating: 4.6,
-    reviewCount: 42,
-    images: ['https://img.example/promoted.jpg'],
-    openingHours: ['Segunda 09:00–18:00'],
-    fieldStatus: { images: 'found' },
+    rating: 4.7,
+    reviewsCount: 318,
+    images: ['https://img.example/worker-photo.jpg'],
+    openingHours: ['Segunda: 09:00–18:00', 'Terça: 09:00–18:00'],
+    priceLevel: '$',
+    operatingStatus: 'Aberto',
+    fieldStatus: { rating: 'found', images: 'found' },
   },
 });
-assert.equal(promotedProspect.provider, 'google-maps-cloudflare-playwright');
-assert.equal(promotedProspect.collectedAt, '2026-10-31T13:00:00.000Z');
-assert.equal(promotedProspect.photos[0], 'https://img.example/promoted.jpg');
-assert.equal(promotedProspect.fieldStatus.images, 'found');
+
+assert.equal(actualWorkerPayload.rating, 4.7);
+assert.equal(actualWorkerPayload.review_count, 318);
+assert.equal(actualWorkerPayload.priceRange, '$');
+assert.equal(actualWorkerPayload.status, 'Aberto');
+assert.equal(actualWorkerPayload.opening_hours, 'Segunda: 09:00–18:00 · Terça: 09:00–18:00');
+assert.equal(actualWorkerPayload.photos[0], 'https://img.example/worker-photo.jpg');
+
+const topLevelAliases = normalizeScrapedPlace({
+  name: 'Ficha com aliases',
+  priceLevel: '$',
+  operatingStatus: 'Fechado temporariamente',
+  reviewsCount: 91,
+});
+assert.equal(topLevelAliases.businessName, 'Ficha com aliases');
+assert.equal(topLevelAliases.priceRange, '$');
+assert.equal(topLevelAliases.status, 'Fechado temporariamente');
+assert.equal(topLevelAliases.review_count, 91);
 
 const incomplete = normalizeScrapedPlace({ name: 'Ficha incompleta' });
 assert.equal(incomplete.businessName, 'Ficha incompleta');
@@ -105,13 +117,17 @@ for (const template of Object.values(SITE_TEMPLATES)) {
     longitude: '-51.22',
     collected_at: '2026-10-31T12:00:00.000Z',
   }, template);
+
   assert.equal(generated.name, 'Negócio vindo do Maps');
   assert.equal(generated.contact.phone, '(51) 90000-0000');
   assert.equal(generated.contact.address, 'Rua Real, 123');
   assert.equal(generated.rating, 4.7);
+  assert.equal(generated.reviewCount, 63);
   assert.equal(generated.photos.length, 2);
   assert.equal(generated.services?.length, 2);
   assert.equal(generated.openingHours, 'Segunda a sábado, 09h às 18h');
+  assert.equal(generated.priceRange, '$');
+  assert.equal(generated.status, 'OPERATIONAL');
 }
 
-console.log('scraped-place-normalizer: contrato de coleta, promoção e 5 templates aprovados');
+console.log('scraped-place-normalizer: contrato de coleta, aliases e 5 templates aprovados');

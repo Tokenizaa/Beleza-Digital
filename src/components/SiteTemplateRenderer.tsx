@@ -38,6 +38,7 @@ import {
 import { MonthCalendar } from './MonthCalendar';
 import { MediaModal } from './MediaModal';
 import { ProductDetailModal } from './ProductDetailModal';
+import { BusinessFacts } from './BusinessFacts';
 import { ServiceItem, ProductItem, MediaItem } from '../types';
 import { SiteTemplateConfig, SITE_TEMPLATES, SITE_TEMPLATES_LIST } from '../types/templates';
 
@@ -69,6 +70,9 @@ export interface SiteBusinessData {
   products?: ProductItem[];
   media?: MediaItem[];
   status?: string;
+  rating?: number | null;
+  reviewCount?: number | string | null;
+  priceRange?: string | null;
   note?: string;
   'quantidade-de-avaliacoes'?: string | number;
   'faixa-de-preco'?: string;
@@ -702,7 +706,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <p className="text-xs text-rose-200/70 mt-2 leading-relaxed">{service.description}</p>
               </div>
               <div className="mt-5 pt-3 border-t border-rose-950/80 flex items-center justify-between">
-                <span className="text-[11px] text-rose-400/80 font-sans">Tempo: {service.durationMinutes ? `${service.durationMinutes} min` : '50 min'}</span>
+                <span className="text-[11px] text-rose-400/80 font-sans">Tempo: {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração não informada'}</span>
                 <a
                   href="#agendamento"
                   onClick={() => setBookingService(service.name)}
@@ -925,6 +929,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         {activeVariation === 'minimal-studio' && renderMinimalStudio()}
         {activeVariation === 'safira-executivo' && renderSafiraExecutivo()}
         {activeVariation === 'rubi-lounge' && renderRubiLounge()}
+        <BusinessFacts rating={businessData.rating} reviewCount={businessData.reviewCount ?? businessData['quantidade-de-avaliacoes']} priceRange={businessData.priceRange ?? businessData['faixa-de-preco']} status={businessData.status} openingHours={businessData.horario} variation={activeVariation} />
 
         {/* Agendamento & Contato */}
         {renderSharedBookingSection()}
