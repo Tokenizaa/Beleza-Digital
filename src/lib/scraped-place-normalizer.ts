@@ -150,9 +150,9 @@ export function normalizeScrapedPlace(input: unknown): NormalizedScrapedPlace {
   const mapsUrl = stringValue(firstValue(source.maps_url, source.source_url, source.sourceUrl, evidence.maps_url, evidence.source_url));
   const website = stringValue(firstValue(source.website_url, source.website, evidence.website_url));
   const socialLinks = parseStructured(source.social_links);
-  const socialEntries = Array.isArray(socialLinks) ? socialLinks : typeof socialLinks === 'string' ? socialLinks.split(/[|,\\n]/) : [];
-  const instagramUrl = socialEntries.map((entry) => typeof entry === 'string' ? entry.trim() : stringValue(firstValue(record(entry).url, record(entry).href)) || '').find((url) => /instagram\\.com\\//i.test(url)) || null;
-  const instagramHandle = instagramUrl ? instagramUrl.match(/instagram\\.com\\/([^/?#]+)/i)?.[1] || null : null;
+  const socialEntries = Array.isArray(socialLinks) ? socialLinks : typeof socialLinks === 'string' ? socialLinks.split(/[|,\n]/) : [];
+  const instagramUrl = socialEntries.map((entry) => typeof entry === 'string' ? entry.trim() : stringValue(firstValue(record(entry).url, record(entry).href)) || '').find((url) => /instagram\.com\//i.test(url)) || null;
+  const instagramHandle = instagramUrl ? instagramUrl.match(/instagram\.com\/([^/?#]+)/i)?.[1] || null : null;
   const openingHours = normalizeHours(firstValue(source.opening_hours, source.openingHours, evidence.opening_hours, evidence.openingHours));
 
   return {
