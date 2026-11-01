@@ -882,10 +882,11 @@ export const store = {
   updateMedia(id: string, updates: Partial<MediaItem>) {
     const item = allMedia.find((entry) => entry.id === id);
     if (!item) return;
-    const tenantId = item.establishmentId;
+    const tenantId = item.establishmentId || activeTenantId;
     const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
     const access = this.requireTenantAccess(tenantId);
-    if (!auth.ok || !access.ok) throw new Error(!auth.ok ? auth.message : access.message);
+    if (!access.ok) throw new Error(access.message);
     const updated = { ...item, ...updates };
     allMedia = allMedia.map((entry) => entry.id === id ? updated : entry);
     if (isSupabaseConfigured) void establishmentRepository.saveMedia(tenantId, updated).then((saved) => {
@@ -899,10 +900,12 @@ export const store = {
     const item = allMedia.find((entry) => entry.id === id);
     if (!item) return;
     const auth = this.requireWriteAuth();
-    const access = this.requireTenantAccess(item.establishmentId);
-    if (!auth.ok || !access.ok) throw new Error(!auth.ok ? auth.message : access.message);
+    if (!auth.ok) throw new Error(auth.message);
+    const tenantId = item.establishmentId || activeTenantId;
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
     allMedia = allMedia.filter((entry) => entry.id !== id);
-    if (isSupabaseConfigured) void establishmentRepository.deleteMedia(item.establishmentId, id).catch((error) => console.error('Falha ao excluir mídia:', error));
+    if (isSupabaseConfigured) void establishmentRepository.deleteMedia(tenantId, id).catch((error) => console.error('Falha ao excluir mídia:', error));
     else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
   },
