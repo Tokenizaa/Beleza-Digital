@@ -129,10 +129,7 @@ export default function App() {
     switch (currentPage) {
       case 'home':
         return (
-          <HomePage
-            setCurrentPage={setCurrentPage}
-            onBookService={handleBookService}
-          />
+          <HomePage />
         );
       case 'servicos':
         return <ServicesPage onBookService={handleBookService} />;
@@ -163,7 +160,7 @@ export default function App() {
     return (
       <ToastProvider>
         <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
-          <HomePage setCurrentPage={setCurrentPage} onBookService={handleBookService} />
+          <HomePage />
           <OfflineIndicator />
         </div>
       </ToastProvider>
