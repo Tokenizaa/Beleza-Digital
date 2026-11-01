@@ -4,7 +4,7 @@
  * Responsibilities:
  * 1. Serve frontend Static Assets from ./dist (configured in wrangler.jsonc)
  * 2. Handle API routes formerly in functions/api/
- * 3. SPA fallback for React Router client-side routing
+ * 3. SPA fallback is handled by Cloudflare Static Assets configuration
  * 4. Preserve Supabase integration via env bindings
  */
 
@@ -148,9 +148,7 @@ async function handleProspectingApi(
  *    - If yes, it serves the file and the Worker never runs
  *    - If no, the Worker runs
  * 2. API routes (/api/) are handled by this script
- * 3. Client-side routes (including /demo) are handled via 302 redirect
- *    to /index.html, which the platform serves from ./dist automatically.
- *    React Router handles client-side routing using the original URL as base.
+ * 3. Client-side routes are served by the configured SPA asset fallback.
  */
 export default {
   async fetch(request: Request, env: any, ctx: any): Promise<Response> {
@@ -158,7 +156,7 @@ export default {
     const path = url.pathname;
 
     // 1. Handle API routes
-    // The platform does NOT map /api/* to files in ./dist, so the Worker always runs for these
+    // Cloudflare runs the Worker first for /api/* via assets.run_worker_first.
     if (path.startsWith('/api/')) {
       return routeToApi(request, env, ctx, url);
     }
