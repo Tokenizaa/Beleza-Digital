@@ -175,7 +175,7 @@ export function mapDataForTemplate(
   };
 
   // Lógica switch por template.focus - mapeia dados relevantes para cada template
-  const focusSpecificContent = getFocusSpecificContent(template.focus, data);
+  const focusSpecificContent = getFocusSpecificContent(template.focus, source);
 
   return {
     ...baseContent,
