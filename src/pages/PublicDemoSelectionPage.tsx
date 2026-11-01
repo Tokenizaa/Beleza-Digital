@@ -265,6 +265,7 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
     instagramUrl: contentText(activeVersion, ["instagramUrl", "instagram_url"]),
     googleMapsUrl: text(activeContent.googleMapsUrl) || text(activeContent.sourceUrl),
     logoUrl: text(activeContent.logoUrl),
+    coverUrl: contentArray(activeVersion, ["photos"]).map(text).find(Boolean) || undefined,
     latitude: numberOrNull(activeContent.latitude),
     longitude: numberOrNull(activeContent.longitude),
     templateId: TEMPLATE_ID_BY_SLUG[templateSlug] ?? "ouro-classico",
