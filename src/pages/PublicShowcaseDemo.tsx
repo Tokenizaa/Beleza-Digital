@@ -269,6 +269,6 @@ export const PublicShowcaseDemo: React.FC = () => (
       <LayoutDashboard className="h-4 w-4 text-amber-400" />
       Entrar no painel
     </a>
-    <SharedSitePreview preview={DEMO_PREVIEW} controlMode="sidebar" />
+    <SharedSitePreview preview={DEMO_PREVIEW} controlMode="sidebar" showSampleNotice={false} />
   </div>
 );
