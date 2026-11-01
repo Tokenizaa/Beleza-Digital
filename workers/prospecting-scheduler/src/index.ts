@@ -45,6 +45,8 @@ import {
   type CommercialOpportunityQualification,
 } from "../../../src/lib/prospecting";
 import { validateAndHydrateMessageTemplate } from "../../../src/lib/message-templates";
+import { mapDataForTemplate } from "../../../src/lib/template-data-mapper";
+import { SITE_TEMPLATES } from "../../../src/types/templates";
 
 interface ProspectingTask {
   id: number;
@@ -896,49 +898,12 @@ async function captureCandidateTask(env: Env, task: ProspectingTask, workerId: s
 async function generateDemoTask(env: Env, task: ProspectingTask, workerId: string) {
   const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
   const siteProjectId = typeof payload.siteProjectId === "string" ? payload.siteProjectId : "";
-  const templateVersionId = typeof payload.templateVersionId === "string" ? payload.templateVersionId : "";
-  if (!task.prospect_id || (siteProjectId && !/^[0-9a-f-]{36}$/i.test(siteProjectId)) || (templateVersionId && !/^[0-9a-f-]{36}$/i.test(templateVersionId))) {
+  const requestedTemplateVersionId = typeof payload.templateVersionId === "string" ? payload.templateVersionId : "";
+  if (!task.prospect_id || (siteProjectId && !/^[0-9a-f-]{36}$/i.test(siteProjectId)) || (requestedTemplateVersionId && !/^[0-9a-f-]{36}$/i.test(requestedTemplateVersionId))) {
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "demo_context_invalid",
       last_error: "Geração de demonstração exige um prospect_id válido; IDs opcionais, quando informados, devem ser UUIDs.",
       completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "demo_context_invalid" },
-    });
-    return "blocked";
-  }
-
-  let resolvedTemplateVersionId = templateVersionId;
-  if (!resolvedTemplateVersionId) {
-    const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id&order=created_at.desc&limit=1");
-    if (!templateLookup.ok) throw new Error(`demo_template_lookup_http_${templateLookup.status}`);
-    const templates = await templateLookup.json() as Array<{ id: string }>;
-    resolvedTemplateVersionId = templates[0]?.id ?? "";
-  }
-  if (!resolvedTemplateVersionId || !/^[0-9a-f-]{36}$/i.test(resolvedTemplateVersionId)) {
-    await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "template_version_required",
-      last_error: "Não existe versão publicada de modelo disponível para gerar a demonstração.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "template_version_required" },
-    });
-    return "blocked";
-  }
-
-  let resolvedProjectId = siteProjectId;
-  if (!resolvedProjectId) {
-    const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
-      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: resolvedTemplateVersionId }),
-    });
-    if (!projectResult.ok) throw new Error(`demo_project_create_http_${projectResult.status}`);
-    const projectBody = await projectResult.json() as { siteProjectId?: string };
-    if (!projectBody.siteProjectId || !/^[0-9a-f-]{36}$/i.test(projectBody.siteProjectId)) {
-      throw new Error("demo_project_create_missing_id");
-    }
-    resolvedProjectId = projectBody.siteProjectId;
-  }
-  if (!resolvedTemplateVersionId || !/^[0-9a-f-]{36}$/i.test(resolvedTemplateVersionId)) {
-    await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "template_version_required",
-      last_error: "O projeto foi preparado, mas não existe versão de modelo disponível para gerar a demonstração.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "template_version_required", siteProjectId: resolvedProjectId },
     });
     return "blocked";
   }
@@ -954,6 +919,54 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     });
     return "blocked";
   }
+  const prospect = prospects[0];
+
+  const templateResponse = await db(env, "site_template_versions?is_published=eq.true&select=id,template_id,site_templates(slug,is_active)&order=created_at.desc&limit=100");
+  if (!templateResponse.ok) throw new Error(`demo_templates_read_http_${templateResponse.status}`);
+  const templateRows = await templateResponse.json() as Array<{
+    id: string;
+    site_templates?: { slug?: string; is_active?: boolean } | null;
+  }>;
+  const requiredSlugs = ["ouro-classico", "preto-esmeralda", "minimal-studio", "safira-executivo", "rubi-lounge"] as const;
+  const templatesBySlug = new Map<string, { id: string }>();
+  for (const row of templateRows) {
+    const slug = row.site_templates?.slug;
+    if (slug && requiredSlugs.includes(slug as typeof requiredSlugs[number]) && row.site_templates?.is_active !== false && !templatesBySlug.has(slug)) {
+      templatesBySlug.set(slug, { id: row.id });
+    }
+  }
+  const missingSlugs = requiredSlugs.filter((slug) => !templatesBySlug.has(slug));
+  if (missingSlugs.length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "five_published_templates_required",
+      last_error: `Modelos publicados ausentes: ${missingSlugs.join(", ")}.`,
+      completed_at: new Date().toISOString(),
+      result: { outcome: "blocked", reason: "five_published_templates_required", missingSlugs },
+    });
+    return "blocked";
+  }
+
+  let defaultSlug = preferredTemplateSlug(prospect);
+  if (!requiredSlugs.includes(defaultSlug as typeof requiredSlugs[number])) defaultSlug = "ouro-classico";
+  if (requestedTemplateVersionId) {
+    const requested = [...templatesBySlug.entries()].find(([, template]) => template.id === requestedTemplateVersionId);
+    if (requested) defaultSlug = requested[0];
+  }
+
+  let resolvedProjectId = siteProjectId;
+  if (!resolvedProjectId) {
+    const defaultTemplate = templatesBySlug.get(defaultSlug)!;
+    const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
+      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: defaultTemplate.id }),
+    });
+    if (!projectResult.ok) throw new Error(`demo_project_create_http_${projectResult.status}`);
+    const projectBody = await projectResult.json() as { siteProjectId?: string };
+    if (!projectBody.siteProjectId || !/^[0-9a-f-]{36}$/i.test(projectBody.siteProjectId)) {
+      throw new Error("demo_project_create_missing_id");
+    }
+    resolvedProjectId = projectBody.siteProjectId;
+  }
+
   const projectResponse = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id&limit=1`);
   if (!projectResponse.ok) throw new Error(`demo_project_read_http_${projectResponse.status}`);
   if (!(await projectResponse.json() as unknown[]).length) {
@@ -964,56 +977,70 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     });
     return "blocked";
   }
-  const templateResponse = await db(env, `site_template_versions?id=eq.${encodeURIComponent(resolvedTemplateVersionId)}&select=id&limit=1`);
-  if (!templateResponse.ok) throw new Error(`demo_template_read_http_${templateResponse.status}`);
-  if (!(await templateResponse.json() as unknown[]).length) {
-    await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "template_version_not_found",
-      last_error: "A versão do modelo selecionada não existe.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+
+  const capturedData = prospect.captured_data && typeof prospect.captured_data === "object" && !Array.isArray(prospect.captured_data)
+    ? prospect.captured_data as Record<string, unknown> : {};
+  const rawEvidence = capturedData.raw_evidence && typeof capturedData.raw_evidence === "object" && !Array.isArray(capturedData.raw_evidence)
+    ? capturedData.raw_evidence as Record<string, unknown> : {};
+  const sourceRecord = {
+    ...prospect,
+    raw_evidence: rawEvidence,
+    social_links: rawEvidence.socialLinks ?? rawEvidence.social_links,
+  };
+
+  const generatedBySlug = new Map<string, Record<string, unknown>>();
+  for (const slug of requiredSlugs) {
+    const template = SITE_TEMPLATES[slug];
+    const mapped = mapDataForTemplate(sourceRecord, template);
+    generatedBySlug.set(slug, {
+      ...mapped,
+      businessName: mapped.name,
+      phone: mapped.contact.phone,
+      address: mapped.contact.address,
+      city: mapped.contact.city,
+      region: mapped.contact.region,
+      note: mapped.rating === null ? "" : String(mapped.rating) + "/5 no Google Maps",
+      "quantidade-de-avaliacoes": mapped.reviewCount === null ? "" : String(mapped.reviewCount),
+      "faixa-de-preco": mapped.priceRange ?? "",
+      horario: mapped.openingHours ?? "",
+      generatedAt: new Date().toISOString(),
+      generationMode: "scraped-place-normalized",
+      sourceCapturedAt: capturedData.source_captured_at ?? prospect.source_captured_at ?? null,
     });
-    return "blocked";
   }
 
-  const existingVersionResponse = await db(env, `site_project_versions?generation_task_id=eq.${task.id}&select=id,version,template_version_id,generated_content,design_overrides&limit=1`);
+  const existingVersionResponse = await db(env, `site_project_versions?generation_task_id=eq.${task.id}&select=id,version,template_version_id,generated_content,design_overrides&limit=10`);
   if (!existingVersionResponse.ok) throw new Error(`demo_generation_reconcile_http_${existingVersionResponse.status}`);
   const existingVersions = await existingVersionResponse.json() as Array<{
     id: string; version: number; template_version_id: string;
     generated_content: Record<string, unknown>; design_overrides: Record<string, unknown>;
   }>;
-  const prospect = prospects[0];
-  const defaultGeneratedContent = {
-    businessName: first(prospect, ["business_name", "name", "company_name"]) ?? "Negócio local",
-    category: first(prospect, ["category", "business_category", "segment"]),
-    headline: firstCaptured(prospect, ["tagline", "headline", "description", "business_description"]),
-    description: firstCaptured(prospect, ["description", "business_description"]),
-    website: first(prospect, ["website_url", "website", "url"]),
-    phone: first(prospect, ["normalized_phone", "phone", "phone_number"]),
-    email: first(prospect, ["email", "email_address"]),
-    address: firstCaptured(prospect, ["address", "formatted_address"]),
-    city: first(prospect, ["city", "locality"]),
-    region: first(prospect, ["region", "state", "province"]),
-    sourceUrl: firstCaptured(prospect, ["source_url", "sourceUrl", "source_link"]),
-    generatedAt: new Date().toISOString(),
-    generationMode: "deterministic-prospect-profile",
-  };
-  const requestedDesignOverrides = payload.designOverrides && typeof payload.designOverrides === "object"
+  const existingByTemplate = new Map(existingVersions.map((version) => [version.template_version_id, version]));
+  const designOverrides = payload.designOverrides && typeof payload.designOverrides === "object"
     ? payload.designOverrides as Record<string, unknown> : {};
-  let generatedContent: Record<string, unknown> = defaultGeneratedContent;
-  let designOverrides: Record<string, unknown> = requestedDesignOverrides;
-  let created: Array<{ id: string; version: number }>;
-  if (existingVersions.length) {
-    // Reuse the committed version after a partial failure; never mint a second version for the same task.
-    const existing = existingVersions[0];
-    resolvedTemplateVersionId = existing.template_version_id;
-    generatedContent = existing.generated_content ?? defaultGeneratedContent;
-    designOverrides = existing.design_overrides ?? requestedDesignOverrides;
-    created = [{ id: existing.id, version: existing.version }];
-  } else {
-    const current = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=version&order=version.desc&limit=1`);
-    if (!current.ok) throw new Error(`demo_version_read_http_${current.status}`);
-    const versions = await current.json() as Array<{ version: number }>;
-    const version = (versions[0]?.version ?? 0) + 1;
+
+  const currentResponse = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=version,generation_task_id&order=version.desc&limit=100`);
+  if (!currentResponse.ok) throw new Error(`demo_version_read_http_${currentResponse.status}`);
+  const currentVersions = await currentResponse.json() as Array<{ version: number; generation_task_id?: number | null }>;
+  const baseVersion = currentVersions
+    .filter((version) => version.generation_task_id !== task.id)
+    .reduce((maximum, version) => Math.max(maximum, Number(version.version) || 0), 0);
+
+  // The prospect's recommended model is ranked last so it is the first preview
+  // returned by the public endpoint (which sorts versions descending).
+  const orderedSlugs = [...requiredSlugs.filter((slug) => slug !== defaultSlug), defaultSlug];
+  const rankBySlug = new Map(orderedSlugs.map((slug, index) => [slug, index + 1]));
+  const generatedVersions: Array<{ id: string; version: number; templateVersionId: string; slug: string }> = [];
+
+  for (const slug of requiredSlugs) {
+    const templateVersion = templatesBySlug.get(slug)!;
+    const existing = existingByTemplate.get(templateVersion.id);
+    if (existing) {
+      generatedVersions.push({ id: existing.id, version: existing.version, templateVersionId: templateVersion.id, slug });
+      continue;
+    }
+
+    const version = baseVersion + (rankBySlug.get(slug) ?? 1);
     const inserted = await db(env, "site_project_versions", {
       method: "POST",
       headers: { prefer: "return=representation" },
@@ -1021,24 +1048,27 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
         site_project_id: resolvedProjectId,
         version,
         generation_task_id: task.id,
-        template_version_id: resolvedTemplateVersionId,
-        generated_content: generatedContent,
+        template_version_id: templateVersion.id,
+        generated_content: generatedBySlug.get(slug),
         design_overrides: designOverrides,
         selected_by_prospect: false,
         selection_source: "system",
       }),
     });
-    if (!inserted.ok) throw new Error(`demo_version_insert_http_${inserted.status}`);
-    created = await inserted.json() as Array<{ id: string; version: number }>;
-    if (!created.length) throw new Error("demo_version_insert_no_rows");
+    if (!inserted.ok) throw new Error(`demo_version_insert_http_${inserted.status}:${await inserted.text().catch(() => "")}`);
+    const created = await inserted.json() as Array<{ id: string; version: number }>;
+    if (!created.length) throw new Error(`demo_version_insert_no_rows_for_${slug}`);
+    generatedVersions.push({ id: created[0].id, version: created[0].version, templateVersionId: templateVersion.id, slug });
   }
 
+  const defaultTemplateVersion = templatesBySlug.get(defaultSlug)!;
+  const defaultGeneratedContent = generatedBySlug.get(defaultSlug)!;
   const projectDraft = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id`, {
     method: "PATCH",
     headers: { prefer: "return=representation" },
     body: JSON.stringify({
-      template_version_id: resolvedTemplateVersionId,
-      generated_content: generatedContent,
+      template_version_id: defaultTemplateVersion.id,
+      generated_content: defaultGeneratedContent,
       design_overrides: designOverrides,
       updated_at: new Date().toISOString(),
     }),
@@ -1047,22 +1077,23 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     throw new Error("demo_project_draft_persistence_failed");
   }
 
-  if (task.prospect_id) {
-    const event = await db(env, "prospect_events?on_conflict=idempotency_key", {
-      method: "POST",
-      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
-      body: JSON.stringify({
-        prospect_id: task.prospect_id,
-        campaign_id: task.campaign_id,
-        site_project_id: resolvedProjectId,
-        event_type: "demo_generated",
-        source_provider: "prospecting-worker",
-        idempotency_key: `site-project:${resolvedProjectId}:version:${created[0].version}:generated`,
-        evidence: { versionId: created[0].id, version: created[0].version, templateVersionId: resolvedTemplateVersionId },
-      }),
-    });
-    if (!event.ok) throw new Error("demo_generated_event_persistence_failed");
-  }
+  const event = await db(env, "prospect_events?on_conflict=idempotency_key", {
+    method: "POST",
+    headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify({
+      prospect_id: task.prospect_id,
+      campaign_id: task.campaign_id,
+      site_project_id: resolvedProjectId,
+      event_type: "demo_generated",
+      source_provider: "prospecting-worker",
+      idempotency_key: `site-project:${resolvedProjectId}:generation-task:${task.id}:generated`,
+      evidence: {
+        defaultTemplateSlug: defaultSlug,
+        versions: generatedVersions,
+      },
+    }),
+  });
+  if (!event.ok) throw new Error("demo_generated_event_persistence_failed");
 
   const publishTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
     method: "POST",
@@ -1080,7 +1111,12 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "demo_generated", siteProjectId: resolvedProjectId, versionId: created[0].id, version: created[0].version },
+    result: {
+      outcome: "demo_generated",
+      siteProjectId: resolvedProjectId,
+      defaultTemplateSlug: defaultSlug,
+      versions: generatedVersions,
+    },
   });
   return "succeeded";
 }
