@@ -77,6 +77,111 @@ assert.equal(promotedProspect.collectedAt, '2026-10-31T13:00:00.000Z');
 assert.equal(promotedProspect.photos[0], 'https://img.example/promoted.jpg');
 assert.equal(promotedProspect.fieldStatus.images, 'found');
 
+const actualWorkerPayload = normalizeScrapedPlace({
+  business_name: 'Studio Capturado',
+  raw_evidence: {
+    rating: 4.7,
+    reviewsCount: 318,
+    images: ['https://img.example/worker-photo.jpg'],
+    openingHours: ['Segunda: 09:00–18:00', 'Terça: 09:00–18:00'],
+    priceLevel: '$',
+    operatingStatus: 'Aberto',
+    fieldStatus: { rating: 'found', images: 'found' },
+  },
+});
+assert.equal(actualWorkerPayload.rating, 4.7);
+assert.equal(actualWorkerPayload.review_count, 318);
+assert.equal(actualWorkerPayload.priceRange, '$');
+assert.equal(actualWorkerPayload.status, 'Aberto');
+assert.equal(actualWorkerPayload.opening_hours, 'Segunda: 09:00–18:00 · Terça: 09:00–18:00');
+assert.equal(actualWorkerPayload.photos[0], 'https://img.example/worker-photo.jpg');
+
+const topLevelAliases = normalizeScrapedPlace({
+  name: 'Ficha com aliases',
+  priceLevel: '$
+assert.equal(incomplete.businessName, 'Ficha incompleta');
+assert.equal(incomplete.phone, null);
+assert.equal(incomplete.rating, null);
+assert.deepEqual(incomplete.photos, []);
+assert.deepEqual(incomplete.services_attributes, []);
+
+for (const template of Object.values(SITE_TEMPLATES)) {
+  const generated = mapDataForTemplate({
+    name: 'Negócio vindo do Maps',
+    category: 'Barbearia',
+    phone: '(51) 90000-0000',
+    address: 'Rua Real, 123',
+    city: 'Porto Alegre',
+    state: 'RS',
+    website: 'https://negocio.example',
+    rating: '4.7',
+    review_count: '63',
+    opening_hours: 'Segunda a sábado, 09h às 18h',
+    photos: 'https://img.example/a.jpg,https://img.example/b.jpg',
+    services_attributes: JSON.stringify(['Corte', 'Barba']),
+    price_range: '$',
+    business_status: 'OPERATIONAL',
+    maps_url: 'https://maps.google.com/?cid=456',
+    latitude: '-30.03',
+    longitude: '-51.22',
+    collected_at: '2026-10-31T12:00:00.000Z',
+  }, template);
+  assert.equal(generated.name, 'Negócio vindo do Maps');
+  assert.equal(generated.contact.phone, '(51) 90000-0000');
+  assert.equal(generated.contact.address, 'Rua Real, 123');
+  assert.equal(generated.rating, 4.7);
+  assert.equal(generated.photos.length, 2);
+  assert.equal(generated.services?.length, 2);
+  assert.equal(generated.openingHours, 'Segunda a sábado, 09h às 18h');
+}
+
+console.log('scraped-place-normalizer: contrato de coleta, promoção e 5 templates aprovados');
+,
+  operatingStatus: 'Fechado temporariamente',
+  reviewsCount: 91,
+});
+assert.equal(topLevelAliases.priceRange, '$
+assert.equal(incomplete.businessName, 'Ficha incompleta');
+assert.equal(incomplete.phone, null);
+assert.equal(incomplete.rating, null);
+assert.deepEqual(incomplete.photos, []);
+assert.deepEqual(incomplete.services_attributes, []);
+
+for (const template of Object.values(SITE_TEMPLATES)) {
+  const generated = mapDataForTemplate({
+    name: 'Negócio vindo do Maps',
+    category: 'Barbearia',
+    phone: '(51) 90000-0000',
+    address: 'Rua Real, 123',
+    city: 'Porto Alegre',
+    state: 'RS',
+    website: 'https://negocio.example',
+    rating: '4.7',
+    review_count: '63',
+    opening_hours: 'Segunda a sábado, 09h às 18h',
+    photos: 'https://img.example/a.jpg,https://img.example/b.jpg',
+    services_attributes: JSON.stringify(['Corte', 'Barba']),
+    price_range: '$',
+    business_status: 'OPERATIONAL',
+    maps_url: 'https://maps.google.com/?cid=456',
+    latitude: '-30.03',
+    longitude: '-51.22',
+    collected_at: '2026-10-31T12:00:00.000Z',
+  }, template);
+  assert.equal(generated.name, 'Negócio vindo do Maps');
+  assert.equal(generated.contact.phone, '(51) 90000-0000');
+  assert.equal(generated.contact.address, 'Rua Real, 123');
+  assert.equal(generated.rating, 4.7);
+  assert.equal(generated.photos.length, 2);
+  assert.equal(generated.services?.length, 2);
+  assert.equal(generated.openingHours, 'Segunda a sábado, 09h às 18h');
+}
+
+console.log('scraped-place-normalizer: contrato de coleta, promoção e 5 templates aprovados');
+);
+assert.equal(topLevelAliases.status, 'Fechado temporariamente');
+assert.equal(topLevelAliases.review_count, 91);
+
 const incomplete = normalizeScrapedPlace({ name: 'Ficha incompleta' });
 assert.equal(incomplete.businessName, 'Ficha incompleta');
 assert.equal(incomplete.phone, null);
