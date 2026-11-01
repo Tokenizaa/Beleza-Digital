@@ -31,6 +31,7 @@ export interface ExtractedPlace {
   images: string[];
   openingHours: string[];
   priceLevel: string | null;
+  operatingStatus: string | null;
   editorialSummary: string | null;
   rawListingText: string | null;
   fieldStatus: ExtractedFieldStatus;
@@ -120,6 +121,8 @@ export function extractPlaceDetails(page: any): ExtractedPlace {
   // Price level
   const price = bodyText.match(/(?:Preço|Price)\s*[:·]?\s*(\${1,4}|R\${1,4})/i);
   const priceLevel = price?.[1] || null;
+  const operatingStatusMatch = bodyText.match(/(Aberto(?:\s*[·•-]\s*fecha\s*às?\s*[\d: h.]+)?|Fechado temporariamente|Fechado permanentemente|Open(?:\s*[·•-]\s*Closes?\s*at\s*[\d: h.]+)?|Temporarily closed|Permanently closed)/i);
+  const operatingStatus = operatingStatusMatch?.[1]?.trim() || null;
 
   // Editorial summary
   const editorialSummary = textOf('[class*="PYvSYb"], [class*="WeS02d"]');
@@ -140,6 +143,7 @@ export function extractPlaceDetails(page: any): ExtractedPlace {
     images: uniqueImages,
     openingHours: hours,
     priceLevel: priceLevel || null,
+    operatingStatus,
     editorialSummary: editorialSummary || null,
     rawListingText: bodyText.slice(0, 8000),
     fieldStatus: {
