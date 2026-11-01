@@ -63,6 +63,27 @@ function numberOrNull(value: unknown): number | null {
   const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value.replace(",", ".")) : NaN;
   return Number.isFinite(parsed) ? parsed : null;
 }
+const SAMPLE_SERVICES: ServiceItem[] = [
+  { id: "sample-service-1", name: "Corte e finalização", description: "Corte personalizado com acabamento profissional.", price: 75, durationMinutes: 60, category: "Cabelo", featured: true },
+  { id: "sample-service-2", name: "Escova modelada", description: "Modelagem e finalização para valorizar o seu estilo.", price: 65, durationMinutes: 50, category: "Cabelo", featured: true },
+  { id: "sample-service-3", name: "Hidratação capilar", description: "Tratamento para devolver maciez, brilho e movimento aos fios.", price: 95, durationMinutes: 60, category: "Tratamentos", featured: false },
+  { id: "sample-service-4", name: "Design de sobrancelhas", description: "Design personalizado respeitando o formato do rosto.", price: 45, durationMinutes: 30, category: "Estética", featured: false },
+  { id: "sample-service-5", name: "Manicure", description: "Cuidados com as unhas e acabamento tradicional.", price: 40, durationMinutes: 45, category: "Unhas", featured: false },
+  { id: "sample-service-6", name: "Maquiagem social", description: "Produção para eventos e ocasiões especiais.", price: 150, durationMinutes: 90, category: "Maquiagem", featured: false },
+];
+const SAMPLE_PRODUCTS: ProductItem[] = [
+  { id: "sample-product-1", name: "Óleo nutritivo", description: "Finalizador ilustrativo para cuidado diário.", price: 49.9, mainImage: "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=800&q=80", additionalImages: [], available: true, category: "Cuidados", featured: true },
+  { id: "sample-product-2", name: "Máscara de tratamento", description: "Produto demonstrativo para rotina de hidratação.", price: 69.9, mainImage: "https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?auto=format&fit=crop&w=800&q=80", additionalImages: [], available: true, category: "Tratamentos", featured: true },
+  { id: "sample-product-3", name: "Sérum de beleza", description: "Exemplo de produto para apresentação da vitrine.", price: 59.9, mainImage: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=800&q=80", additionalImages: [], available: true, category: "Cuidados", featured: false },
+  { id: "sample-product-4", name: "Kit essencial", description: "Composição ilustrativa para demonstrar a área de produtos.", price: 89.9, mainImage: "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=800&q=80", additionalImages: [], available: true, category: "Kits", featured: false },
+];
+const SAMPLE_GALLERY_URLS = [
+  "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=1000&q=80",
+];
 function demoServices(version: DemoVersion | null): ServiceItem[] {
   return contentArray(version, ["services", "services_attributes"]).map((entry, index) => {
     const item = asRecord(entry);
@@ -265,7 +286,7 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
     templateId: TEMPLATE_ID_BY_SLUG[templateSlug] ?? "ouro-classico",
     templateName: activeVersion.template?.site_templates?.name || "Modelo inicial",
     projectVersion: activeVersion.version,
-    generatedAt: text(activeContent.generatedAt) || new Date().toISOString(),
+    generatedAt: text(activeContent.generatedAt) || new Date().toISOString(),\n    isSampleContent: !contentArray(activeVersion, ["services", "services_attributes"]).length || !contentArray(activeVersion, ["products", "featured_products"]).length || !contentArray(activeVersion, ["media", "media_items", "portfolio", "photos", "videos"]).length,
     // Novos campos alinhados com os 18 do provedor
     status: contentText(activeVersion, ["status", "estado", "status_operacional"]),
     note: contentText(activeVersion, ["note", "observacao", "avaliacao_geral"]),
