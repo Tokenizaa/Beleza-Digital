@@ -22,6 +22,8 @@ const place = normalizeScrapedPlace({
   photos: 'https://img.example/1.jpg,https://img.example/2.jpg',
   videos: '',
   field_status: JSON.stringify({ name: 'observed', website: 'observed' }),
+  social_links: JSON.stringify(['https://www.instagram.com/barbearia.exemplo/']),
+  logo_url: 'https://img.example/logo.png',
   collected_at: '2026-10-31T12:00:00.000Z',
 });
 
@@ -34,6 +36,8 @@ assert.equal(place.services_attributes[0].name, 'Corte masculino');
 assert.equal(place.latitude, -30.03);
 assert.equal(place.googleMapsUrl, 'https://maps.google.com/?cid=123');
 assert.equal(place.fieldStatus.name, 'observed');
+assert.equal(place.instagramHandle, 'barbearia.exemplo');
+assert.equal(place.logoUrl, 'https://img.example/logo.png');
 
 const nested = normalizeScrapedPlace({
   business_name: 'Studio Real',
