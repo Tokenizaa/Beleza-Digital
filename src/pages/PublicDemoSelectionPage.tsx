@@ -294,7 +294,8 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
     templateId: TEMPLATE_ID_BY_SLUG[templateSlug] ?? "ouro-classico",
     templateName: activeVersion.template?.site_templates?.name || "Modelo inicial",
     projectVersion: activeVersion.version,
-    generatedAt: text(activeContent.generatedAt) || new Date().toISOString(),\n    isSampleContent: !contentArray(activeVersion, ["services", "services_attributes"]).length || !contentArray(activeVersion, ["products", "featured_products"]).length || !contentArray(activeVersion, ["media", "media_items", "portfolio", "photos", "videos"]).length || !contentText(activeVersion, ["instagramUrl", "instagram_url"]),
+    generatedAt: text(activeContent.generatedAt) || new Date().toISOString(),
+    isSampleContent: !contentArray(activeVersion, ["services", "services_attributes"]).length || !contentArray(activeVersion, ["products", "featured_products"]).length || !contentArray(activeVersion, ["media", "media_items", "portfolio", "photos", "videos"]).length || !contentText(activeVersion, ["instagramUrl", "instagram_url"]),
     // Novos campos alinhados com os 18 do provedor
     status: contentText(activeVersion, ["status", "estado", "status_operacional"]),
     note: contentText(activeVersion, ["note", "observacao", "avaliacao_geral"]),
