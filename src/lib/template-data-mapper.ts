@@ -213,12 +213,11 @@ export function mapDataForTemplate(
     longitude: source.longitude ?? null,
     priceRange: source.priceRange ?? null,
     status: source.status ?? null,
-    openingHours: source.opening_hours,
+    openingHours: source.opening_hours ?? undefined,
     fieldStatus: source.fieldStatus ?? {},
     collectedAt: source.collectedAt,
-    rating: source.rating,
-    reviewCount: source.review_count,
-    collectedAt: source.collectedAt,
+    rating: source.rating ?? undefined,
+    reviewCount: source.review_count ?? undefined,
     originalProvider: source.provider || 'google-maps-cloudflare-playwright',
   };
 
