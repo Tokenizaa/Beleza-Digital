@@ -140,22 +140,22 @@ export function normalizeScrapedPlace(input: unknown): NormalizedScrapedPlace {
   const source = record(input);
   const evidence = record(parseStructured(source.raw_evidence));
   const fieldStatus = record(parseStructured(firstValue(source.field_status, evidence.field_status, evidence.fieldStatus)));
-  const photos = stringList(firstValue(source.photos, evidence.images, evidence.photos));
+  const photos = stringList(firstValue(source.photos, source.images, evidence.images, evidence.photos));
   const videos = stringList(firstValue(source.videos, evidence.videos));
-  const media = normalizeMedia(firstValue(source.media_items, evidence.media_items));
+  const media = normalizeMedia(firstValue(source.media_items, source.media, evidence.media_items, evidence.media));
   const services = normalizeServices(firstValue(source.services_attributes, evidence.services_attributes, evidence.services));
-  const rating = numberValue(firstValue(source.rating, evidence.rating));
-  const reviewCount = numberValue(firstValue(source.review_count, source.reviewCount, evidence.review_count, evidence.reviewCount));
+  const rating = numberValue(firstValue(source.rating, evidence.rating, evidence.stars));
+  const reviewCount = numberValue(firstValue(source.review_count, source.reviewCount, source.reviews_count, source.reviewsCount, evidence.review_count, evidence.reviewCount, evidence.reviews_count, evidence.reviewsCount, evidence.reviews));
   const latitude = numberValue(firstValue(source.latitude, evidence.latitude));
   const longitude = numberValue(firstValue(source.longitude, evidence.longitude));
   const mapsUrl = stringValue(firstValue(source.maps_url, source.source_url, source.sourceUrl, evidence.maps_url, evidence.source_url));
   const website = stringValue(firstValue(source.website_url, source.website, evidence.website_url));
-  const socialLinks = parseStructured(source.social_links);
+  const socialLinks = parseStructured(firstValue(source.social_links, source.socialLinks, evidence.social_links, evidence.socialLinks));
   const socialEntries = Array.isArray(socialLinks) ? socialLinks : typeof socialLinks === 'string' ? socialLinks.split(/[|,\n]/) : [];
   if (website && /instagram\.com\//i.test(website)) socialEntries.push(website);
   const instagramUrl = socialEntries.map((entry) => typeof entry === 'string' ? entry.trim() : stringValue(firstValue(record(entry).url, record(entry).href)) || '').find((url) => /instagram\.com\//i.test(url)) || null;
   const instagramHandle = instagramUrl ? instagramUrl.match(/instagram\.com\/([^/?#]+)/i)?.[1] || null : null;
-  const openingHours = normalizeHours(firstValue(source.opening_hours, source.openingHours, evidence.opening_hours, evidence.openingHours));
+  const openingHours = normalizeHours(firstValue(source.opening_hours, source.openingHours, source.hours, evidence.opening_hours, evidence.openingHours, evidence.hours));
 
   return {
     businessName: stringValue(firstValue(source.business_name, source.name, source.businessName, evidence.business_name)) || '',
@@ -175,15 +175,15 @@ export function normalizeScrapedPlace(input: unknown): NormalizedScrapedPlace {
     opening_hours: openingHours,
     services_attributes: services,
     media_items: media,
-    bookingUrl: stringValue(firstValue(source.booking_url, source.bookingUrl, evidence.booking_url)),
+    bookingUrl: stringValue(firstValue(source.booking_url, source.bookingUrl, source.appointment_url, evidence.booking_url, evidence.bookingUrl, evidence.appointment_url)),
     instagramUrl,
     instagramHandle,
     logoUrl: stringValue(firstValue(source.logo_url, source.logoUrl, evidence.logo_url)),
     googleMapsUrl: mapsUrl,
     latitude,
     longitude,
-    priceRange: stringValue(firstValue(source.price_range, source.priceRange, evidence.price_range)),
-    status: stringValue(firstValue(source.business_status, source.status, evidence.operating_status, evidence.status)),
+    priceRange: stringValue(firstValue(source.price_range, source.priceRange, source.price_level, source.priceLevel, evidence.price_range, evidence.priceRange, evidence.price_level, evidence.priceLevel)),
+    status: stringValue(firstValue(source.business_status, source.operating_status, source.operatingStatus, source.status, evidence.operating_status, evidence.operatingStatus, evidence.business_status, evidence.status)),
     collectedAt: stringValue(firstValue(source.collected_at, source.source_captured_at, source.created_at, evidence.collected_at, evidence.observedAt)),
     provider: stringValue(firstValue(source.provider, evidence.provider)),
     fieldStatus,
