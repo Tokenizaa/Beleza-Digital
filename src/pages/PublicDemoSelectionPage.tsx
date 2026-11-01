@@ -80,22 +80,24 @@ function demoServices(version: DemoVersion | null): ServiceItem[] {
   return mapped;
 }
 function demoProducts(version: DemoVersion | null): ProductItem[] {
-  const mapped = contentArray(version, ["products", "featured_products"]).map((entry, index) => {
+  return contentArray(version, ["products", "featured_products"]).flatMap((entry, index) => {
     const item = asRecord(entry);
     const mainImage = firstText(item, ["mainImage", "main_image", "imageUrl", "image_url", "image"]);
-    return {
+    const price = numberOrNull(item.price);
+    const name = firstText(item, ["name", "title", "product_name"]);
+    if (!name || !mainImage || price === null) return [];
+    return [{
       id: firstText(item, ["id"]) || "demo-product-" + index,
-      name: firstText(item, ["name", "title", "product_name"]),
+      name,
       description: firstText(item, ["description", "desc"]),
-      price: numberOrNull(item.price) ?? 0,
+      price,
       mainImage,
       additionalImages: Array.isArray(item.additionalImages) ? item.additionalImages.filter((image): image is string => typeof image === "string") : [],
       available: item.available !== false,
       category: firstText(item, ["category", "type"]) || "Produtos",
       featured: Boolean(item.featured),
-    };
-  }).filter((item) => item.name && item.mainImage);
-  return mapped;
+    }];
+  });
 }
 function demoMedia(version: DemoVersion | null): MediaItem[] {
   const source = contentArray(version, ["media", "media_items", "portfolio"]);
