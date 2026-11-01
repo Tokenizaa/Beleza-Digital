@@ -175,7 +175,6 @@ export const ContactPage: React.FC = () => {
           latitude={company.latitude}
           longitude={company.longitude}
           mapsUrl={company.googleMapsUrl}
-          className="h-96"
         />
       </div>
 
