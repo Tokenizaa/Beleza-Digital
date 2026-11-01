@@ -36,6 +36,9 @@ export interface MapScrapeData {
   services_attributes: any[] | null;
   media_items: any[] | null;
   bookingUrl?: string | null;
+  instagramUrl?: string | null;
+  instagramHandle?: string | null;
+  logoUrl?: string | null;
   googleMapsUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -83,6 +86,9 @@ export interface TemplateGeneratedContent {
   }>;
   media_items?: any[];
   bookingUrl?: string | null;
+  instagramUrl?: string | null;
+  instagramHandle?: string | null;
+  logoUrl?: string | null;
   googleMapsUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -156,6 +162,9 @@ export function mapDataForTemplate(
     services_attributes: normalized.services_attributes,
     media_items: normalized.media_items,
     bookingUrl: normalized.bookingUrl,
+    instagramUrl: normalized.instagramUrl,
+    instagramHandle: normalized.instagramHandle,
+    logoUrl: normalized.logoUrl,
     googleMapsUrl: normalized.googleMapsUrl,
     latitude: normalized.latitude,
     longitude: normalized.longitude,
@@ -194,6 +203,9 @@ export function mapDataForTemplate(
       })),
     media_items: source.media_items || [],
     bookingUrl: source.bookingUrl ?? null,
+    instagramUrl: source.instagramUrl ?? null,
+    instagramHandle: source.instagramHandle ?? null,
+    logoUrl: source.logoUrl ?? null,
     googleMapsUrl: source.googleMapsUrl ?? source.sourceUrl,
     latitude: source.latitude ?? null,
     longitude: source.longitude ?? null,
@@ -204,6 +216,7 @@ export function mapDataForTemplate(
     collectedAt: source.collectedAt,
     rating: source.rating,
     reviewCount: source.review_count,
+    collectedAt: source.collectedAt,
     originalProvider: 'mapscrape',
   };
 
