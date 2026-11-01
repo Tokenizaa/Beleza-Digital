@@ -44,7 +44,12 @@ export interface ShareableSitePreview {
   googleMapsUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  status?: string;                      // Status operacional (active/inactive/suspended)
+  status?: string;                      // Status operacional
+  rating?: number | null;
+  reviewCount?: number | null;
+  priceRange?: string | null;
+  openingHours?: string | null;
+  // Status operacional (active/inactive/suspended)
   note?: string;                        // Nota / avaliação geral
   'quantidade-de-avaliacoes'?: string;  // Qtd de avaliações
   'faixa-de-preco'?: string;            // Faixa de preço
@@ -151,7 +156,11 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
       googleMapsUrl: safeText(value.googleMapsUrl, 500) || null,
       latitude: typeof value.latitude === 'number' && Number.isFinite(value.latitude) ? value.latitude : null,
       longitude: typeof value.longitude === 'number' && Number.isFinite(value.longitude) ? value.longitude : null,
-      status: safeText(value.status, 40),
+      status: safeText(value.status, 120),
+      rating: typeof value.rating === 'number' && Number.isFinite(value.rating) ? value.rating : null,
+      reviewCount: typeof value.reviewCount === 'number' && Number.isFinite(value.reviewCount) ? value.reviewCount : null,
+      priceRange: safeText(value.priceRange, 60) || null,
+      openingHours: safeText(value.openingHours, 500) || null,
       note: safeText(value.note, 100),
       'quantidade-de-avaliacoes': safeText(value['quantidade-de-avaliacoes'], 60),
       'faixa-de-preco': safeText(value['faixa-de-preco'], 30),
@@ -227,10 +236,13 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
     latitude: preview.latitude,
     longitude: preview.longitude,
     status: preview.status,
+    rating: preview.rating,
+    reviewCount: preview.reviewCount,
+    priceRange: preview.priceRange ?? preview['faixa-de-preco'],
     note: preview.note,
     'quantidade-de-avaliacoes': preview['quantidade-de-avaliacoes'],
     'faixa-de-preco': preview['faixa-de-preco'],
-    horario: preview.horario,
+    horario: preview.openingHours ?? preview.horario,
     services: preview.services ?? [],
     products: preview.products ?? [],
     media: preview.media ?? [],
