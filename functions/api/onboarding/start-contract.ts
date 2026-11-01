@@ -78,6 +78,19 @@ export async function onRequestPost({ request, env }: Context) {
 
   const { prospect, siteProject, selectedVersion, link } = demoValidation;
 
+  // The client cannot start a contract for a version outside this exact demo project.
+  const requestedVersionId = body.selectedVersionId || selectedVersion?.id || link.selected_version_id;
+  if (!requestedVersionId || requestedVersionId !== link.selected_version_id) {
+    return json({ error: 'Selecione uma versão válida desta demonstração antes de continuar.' }, 409);
+  }
+  const selectedVersionResponse = await api(
+    env,
+    `site_project_versions?id=eq.${encodeURIComponent(requestedVersionId)}&site_project_id=eq.${encodeURIComponent(siteProject.id)}&select=id&limit=1`
+  );
+  if (!selectedVersionResponse.ok) return json({ error: 'Falha ao validar a versão selecionada.' }, 503);
+  const selectedVersions = await selectedVersionResponse.json() as Array<{ id: string }>;
+  if (!selectedVersions.length) return json({ error: 'A versão selecionada não pertence a esta demonstração.' }, 409);
+
   // Check if prospect already converted
   if (prospect.converted_establishment_id) {
     // Check establishment billing status
@@ -101,7 +114,7 @@ export async function onRequestPost({ request, env }: Context) {
   }
 
   // Return info needed for signup
-  const versionId = body.selectedVersionId || selectedVersion?.id || null;
+  const versionId = requestedVersionId;
 
   return json({
     nextStep: 'signup',
