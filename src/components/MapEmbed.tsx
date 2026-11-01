@@ -35,7 +35,7 @@ export const MapEmbed: React.FC<MapEmbedProps> = ({
       <iframe
         title={`Mapa de localização de ${name}`}
         src={embedUrl}
-        className="h-full min-h-[280px] w-full border-0"
+        className="h-[320px] w-full border-0 sm:h-[380px]"
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
         allowFullScreen

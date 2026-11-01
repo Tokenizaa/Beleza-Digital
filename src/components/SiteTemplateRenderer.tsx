@@ -828,7 +828,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   const hasAddress = Boolean(businessData.address?.trim());
   const hasCity = Boolean([businessData.city, businessData.state].filter(Boolean).join(' ').trim());
   const hasCoordinates = Number.isFinite(businessData.latitude) && Number.isFinite(businessData.longitude);
-  const hasLocation = hasAddress || hasCity || hasCoordinates || Boolean(businessData.googleMapsUrl);
+  const hasLocation = hasAddress || hasCity || hasCoordinates;
   const hasHours = Boolean(businessData.horario?.trim());
   const hasContact = Boolean(businessData.phone?.trim() || whatsappClean);
 
