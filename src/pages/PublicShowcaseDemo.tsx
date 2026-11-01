@@ -1,31 +1,141 @@
 import React from 'react';
 import { SharedSitePreview, type ShareableSitePreview } from './SharedSitePreview';
 
-const preview: ShareableSitePreview = {
+/**
+ * Dataset exclusivo da demonstração pública.
+ * Nunca é reutilizado por /demo/:token: links personalizados usam somente
+ * dados do prospect capturado.
+ */
+const DEMO_PREVIEW: ShareableSitePreview = {
   version: 1,
-  businessName: 'Demonstração genérica',
-  category: 'Modelo demonstrativo',
-  tagline: 'Uma experiência digital para apresentar os cinco modelos da plataforma',
-  description: 'Esta é uma demonstração genérica. Os textos e elementos visuais são ilustrativos e não representam um estabelecimento real.',
-  phone: '',
-  whatsapp: '',
-  email: '',
-  address: '',
-  city: '',
-  state: '',
+  businessName: 'Studio Aurora',
+  category: 'Beleza & Estética — Demonstração',
+  tagline: 'Seu momento de cuidado começa aqui',
+  description:
+    'Exemplo ilustrativo de um site profissional criado pela Beleza Digital. Serviços, produtos, preços e imagens abaixo existem apenas para demonstrar como as informações podem aparecer nos diferentes layouts.',
+  phone: '(00) 00000-0000',
+  whatsapp: '5500000000000',
+  email: 'demo@exemplo.local',
+  address: 'Rua Exemplo, 123 — Espaço Demonstrativo',
+  city: 'Cidade Modelo',
+  state: 'BR',
   websiteUrl: '',
   templateId: 'ouro-classico',
   templateName: 'Ouro & Âmbar Clássico',
   projectVersion: 1,
   generatedAt: new Date().toISOString(),
   isSampleContent: true,
-  services: [],
-  products: [],
-  media: [],
+  coverUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1600&q=85',
+  instagramHandle: '@studioaurora.demo',
+  status: 'Demonstração ilustrativa',
+  note: '4,9 — exemplo visual',
+  'quantidade-de-avaliacoes': '128 — exemplo visual',
+  'faixa-de-preco': '$$ — exemplo visual',
+  horario: 'Seg–Sáb · 09:00–19:00 — exemplo visual',
+  services: [
+    {
+      id: 'demo-corte',
+      name: 'Corte & Finalização',
+      description: 'Consulta de estilo, corte e finalização profissional.',
+      price: 95,
+      durationMinutes: 60,
+      category: 'Cabelos',
+      imageUrl: 'https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=900&q=80',
+      featured: true,
+    },
+    {
+      id: 'demo-coloracao',
+      name: 'Coloração Personalizada',
+      description: 'Avaliação e aplicação com acabamento personalizado.',
+      price: 240,
+      durationMinutes: 150,
+      category: 'Cabelos',
+      imageUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=900&q=80',
+      featured: true,
+    },
+    {
+      id: 'demo-unhas',
+      name: 'Manicure Premium',
+      description: 'Cuidado completo e acabamento de longa duração.',
+      price: 75,
+      durationMinutes: 60,
+      category: 'Unhas',
+      imageUrl: 'https://images.unsplash.com/photo-1610992015732-2449b76344bc?auto=format&fit=crop&w=900&q=80',
+      featured: false,
+    },
+    {
+      id: 'demo-sobrancelhas',
+      name: 'Design de Sobrancelhas',
+      description: 'Design adaptado às características de cada cliente.',
+      price: 65,
+      durationMinutes: 45,
+      category: 'Sobrancelhas',
+      imageUrl: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=900&q=80',
+      featured: false,
+    },
+  ],
+  products: [
+    {
+      id: 'demo-produto-1',
+      name: 'Máscara Nutritiva Aurora',
+      description: 'Produto ilustrativo para demonstrar a vitrine da loja.',
+      price: 89.9,
+      mainImage: 'https://images.unsplash.com/photo-1526947425960-945c6e72858f?auto=format&fit=crop&w=900&q=80',
+      additionalImages: [],
+      available: true,
+      category: 'Produtos',
+      featured: true,
+    },
+    {
+      id: 'demo-produto-2',
+      name: 'Óleo de Finalização',
+      description: 'Produto demonstrativo com apresentação comercial.',
+      price: 59.9,
+      mainImage: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=900&q=80',
+      additionalImages: [],
+      available: true,
+      category: 'Produtos',
+      featured: false,
+    },
+  ],
+  media: [
+    {
+      id: 'demo-media-1',
+      type: 'image',
+      title: 'Ambiente — exemplo',
+      url: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=85',
+      category: 'Ambiente',
+      dateAdded: '2026-01-01',
+      featured: true,
+    },
+    {
+      id: 'demo-media-2',
+      type: 'image',
+      title: 'Beleza — exemplo',
+      url: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=85',
+      category: 'Outros',
+      dateAdded: '2026-01-01',
+      featured: true,
+    },
+    {
+      id: 'demo-media-3',
+      type: 'image',
+      title: 'Cabelos — exemplo',
+      url: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=1200&q=85',
+      category: 'Cabelos',
+      dateAdded: '2026-01-01',
+      featured: false,
+    },
+  ],
 };
 
 export const PublicShowcaseDemo: React.FC = () => (
   <div className="min-h-screen bg-neutral-950">
-    <SharedSitePreview preview={preview} controlMode="sidebar" />
+    <div className="fixed inset-x-0 top-0 z-[100] bg-amber-400 px-4 py-2 text-center text-xs font-bold text-neutral-950 shadow-lg">
+      DEMONSTRAÇÃO ILUSTRATIVA — empresa, contatos, avaliações, preços e serviços são dados fictícios para apresentar os modelos.
+    </div>
+    <div className="pt-8">
+      <SharedSitePreview preview={DEMO_PREVIEW} controlMode="sidebar" />
+    </div>
   </div>
 );
