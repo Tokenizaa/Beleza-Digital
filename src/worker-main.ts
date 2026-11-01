@@ -148,7 +148,29 @@ async function handleProspectingApi(
  *    - If yes, it serves the file and the Worker never runs
  *    - If no, the Worker runs
  * 2. API routes (/api/) are handled by this script
- * 3. Client-side routes are served by the configured SPA asset fallback.
+ * 3. Client-side routes including /demo and /demo/${token} are served by
+ *    Cloudflare Static Assets SPA fallback, preserving the original URL.
+ *    The platform automatically serves ./dist/index.html for paths that don't
+ *    match specific files, and React Router handles client-side routing using
+ *    the original URL as the base.
+ * 4. Preserve Supabase integration via env bindings
+ * 
+ * NOTE on /demo routes:
+ * - /demo and /demo/${token} are React Router routes that must render content
+ *   without a 302 redirect. The Cloudflare Static Assets SPA fallback serves
+ *   ./dist/index.html transparently, preserving the original URL that the
+ *   user typed or linked to. React Router then handles client-side routing
+ *   using this original URL as the base.
+ * - We DO NOT use a 302 redirect, as that would change the URL in the browser
+ *   address bar and cause React Router to use the redirect URL (/index.html)
+ *   as the base instead of the original /demo URL.
+ * - If the SPA fallback isn't working as expected, ensure that
+ *   assets.not_found_handling = "single-page-application" is set in
+ *   wrangler.jsonc, and that the Cloudflare dashboard has SPA mode enabled
+ *   (Settings > Single Page App, route /index.html).
+ * - The Worker runs for non-/api/* paths (since run_worker_first only covers
+ *   /api/*), and env.ASSETS.fetch(request) lets the platform handle the
+ *   SPA fallback, serving index.html while preserving the original URL.
  */
 export default {
   async fetch(request: Request, env: any, ctx: any): Promise<Response> {
@@ -161,8 +183,46 @@ export default {
       return routeToApi(request, env, ctx, url);
     }
 
-    // Static files and client-side routes are served by Cloudflare Static Assets.
-    // The Worker is configured to run first only for /api/*.
+    // 2. Client-side routes including /demo and /demo/${token}.
+    //    Cloudflare Static Assets SPA fallback serves ./dist/index.html
+    //    transparently, preserving the original URL.
+    //    React Router handles client-side routing using the original URL as base.
+    //    We do NOT use a 302 redirect.
+    //
+    //    The platform serves ./dist/index.html for paths that don't match
+    //    specific files in ./dist, thanks to:
+    //    - assets.not_found_handling: "single-page-application" in wrangler.jsonc
+    //    - The Worker running for non-/api/* paths (run_worker_first only covers /api/*)
+    //    - env.ASSETS.fetch(request) triggering the SPA fallback
+    //
+    //    This ensures:
+    //    - /demo renders demo page content without 302 redirect
+    //    - /demo/demo-poa-yeshua renders demo with token data
+    //    - React Router uses /demo or /demo/demo-poa-yeshua as base URL
+    //    - All other SPA routes continue to work
+
+    // Special handling: serve index.html for /demo routes without 302 redirect.
+    // The Assets.fetch() below may return a 302 redirect for SPA routes in some
+    // configurations. To ensure the original URL is preserved for React Router,
+    // we explicitly handle /demo and /demo/${token} by fetching index.html
+    // from the same origin and returning its content directly.
+    if (path === '/demo' || path.startsWith('/demo/')) {
+      // Fetch index.html from the same origin (the Worker domain)
+      const indexHtmlRequest = new Request(`${url.origin}/index.html`, {
+        headers: request.headers,
+      });
+      try {
+        const indexHtmlResponse = await env.ASSETS.fetch(indexHtmlRequest);
+        // Return the index.html response, which will cause React Router to
+        // render using the original /demo URL as the base.
+        return indexHtmlResponse;
+      } catch (e) {
+        console.error('Error fetching index.html for /demo route:', e);
+        return new Response('Demo page not found', { status: 404 });
+      }
+    }
+
+    // For all other routes, use the default Static Assets SPA fallback
     return env.ASSETS.fetch(request);
   }
 };
