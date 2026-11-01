@@ -153,7 +153,7 @@ export const establishmentRepository = {
 
   async listServices(establishmentId: string): Promise<ServiceItem[]> {
     const { data, error } = await client().from('establishment_services').select('*')
-      .eq('establishment_id', establishmentId).order('sort_order').order('created_at');
+      .eq('establishment_id', establishmentId).order('sort_order').order('created_at', { ascending: false });
     fail(error, 'Não foi possível carregar os serviços.');
     return (data || []).map((row) => mapService(row as unknown as Row));
   },
