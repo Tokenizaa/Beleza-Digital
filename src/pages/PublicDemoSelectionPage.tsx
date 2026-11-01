@@ -45,7 +45,9 @@ function contentText(version: DemoVersion | null | undefined, keys: string[]) {
 function contentArray(version: DemoVersion | null | undefined, keys: string[]): unknown[] {
   const content = version?.generated_content ?? {};
   for (const key of keys) {
-    if (Array.isArray(content[key])) return content[key] as unknown[];
+    if (Array.isArray(content[key]) && (content[key] as unknown[]).length > 0) {
+      return content[key] as unknown[];
+    }
   }
   return [];
 }
