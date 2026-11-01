@@ -86,6 +86,11 @@ function saveToStorage<T>(key: string, data: T) {
 // IN-MEMORY MULTITENANT STATE WITH AUTOMATIC MIGRATION
 // -------------------------------------------------------------
 
+function createOperationalId(prefix: string): string {
+  if (isSupabaseConfigured && typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function normalizeLegacyTemplate(establishment: Establishment): Establishment {
   if (establishment.id === 'est-yeshua' && establishment.name === 'Barbearia & Estética Yeshua') {
     return {
@@ -729,7 +734,7 @@ export const store = {
     const tenantId = targetEstablishmentId || activeTenantId;
     const newService: ServiceItem = {
       ...service,
-      id: `srv-${Date.now()}`,
+      id: createOperationalId('srv'),
       establishmentId: tenantId,
     };
     allServices = [newService, ...allServices];
@@ -780,10 +785,10 @@ export const store = {
     const tenantId = item.establishmentId || 'est-yeshua';
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
-    allServices = allServices.map((s) =>
-      s.id === id ? { ...s, featured: !s.featured } : s
-    );
-    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    const updated = { ...item, featured: !item.featured };
+    allServices = allServices.map((s) => s.id === id ? updated : s);
+    if (isSupabaseConfigured) void establishmentRepository.saveService(tenantId, updated).catch((error) => console.error('Falha ao destacar serviço:', error));
+    else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
@@ -795,7 +800,7 @@ export const store = {
     const tenantId = targetEstablishmentId || activeTenantId;
     const newProduct: ProductItem = {
       ...product,
-      id: `prod-${Date.now()}`,
+      id: createOperationalId('prod'),
       establishmentId: tenantId,
     };
     allProducts = [newProduct, ...allProducts];
@@ -846,10 +851,10 @@ export const store = {
     const tenantId = item.establishmentId || 'est-yeshua';
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
-    allProducts = allProducts.map((p) =>
-      p.id === id ? { ...p, featured: !p.featured } : p
-    );
-    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    const updated = { ...item, featured: !item.featured };
+    allProducts = allProducts.map((p) => p.id === id ? updated : p);
+    if (isSupabaseConfigured) void establishmentRepository.saveProduct(tenantId, updated).catch((error) => console.error('Falha ao destacar produto:', error));
+    else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
@@ -861,7 +866,7 @@ export const store = {
     const tenantId = targetEstablishmentId || activeTenantId;
     const newMedia: MediaItem = {
       ...media,
-      id: `med-${Date.now()}`,
+      id: createOperationalId('med'),
       establishmentId: tenantId,
       dateAdded: new Date().toISOString().split('T')[0],
     };
