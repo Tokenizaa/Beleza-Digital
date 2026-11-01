@@ -924,12 +924,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
       {/* Render the specific visual archetype layout */}
       <main className="flex-1">
-        <BusinessFacts rating={businessData.rating} reviewCount={businessData.reviewCount ?? businessData['quantidade-de-avaliacoes']} priceRange={businessData.priceRange ?? businessData['faixa-de-preco']} status={businessData.status} openingHours={businessData.horario} variation={activeVariation} />
         {activeVariation === 'ouro-classico' && renderOuroClassico()}
         {activeVariation === 'preto-esmeralda' && renderPretoEsmeralda()}
         {activeVariation === 'minimal-studio' && renderMinimalStudio()}
         {activeVariation === 'safira-executivo' && renderSafiraExecutivo()}
         {activeVariation === 'rubi-lounge' && renderRubiLounge()}
+        <BusinessFacts rating={businessData.rating} reviewCount={businessData.reviewCount ?? businessData['quantidade-de-avaliacoes']} priceRange={businessData.priceRange ?? businessData['faixa-de-preco']} status={businessData.status} openingHours={businessData.horario} variation={activeVariation} />
 
         {/* Agendamento & Contato */}
         {renderSharedBookingSection()}
