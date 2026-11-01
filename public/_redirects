@@ -1,2 +1,6 @@
 # Cloudflare Pages SPA Routing
+# Serve index.html directly (no redirect) to prevent infinite loop
+/index.html    /index.html    200
+
+# Catch-all for SPA routing: other paths redirect to index.html
 /*    /index.html   200
