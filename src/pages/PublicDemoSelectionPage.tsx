@@ -85,7 +85,7 @@ const SAMPLE_GALLERY_URLS = [
   "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=1000&q=80",
 ];
 function demoServices(version: DemoVersion | null): ServiceItem[] {
-  return contentArray(version, ["services", "services_attributes"]).map((entry, index) => {
+  const mapped = contentArray(version, ["services", "services_attributes"]).map((entry, index) => {
     const item = asRecord(entry);
     return {
       id: firstText(item, ["id"]) || "demo-service-" + index,
@@ -97,9 +97,10 @@ function demoServices(version: DemoVersion | null): ServiceItem[] {
       featured: Boolean(item.featured),
     };
   }).filter((item) => item.name);
+  return mapped.length ? mapped : SAMPLE_SERVICES;
 }
 function demoProducts(version: DemoVersion | null): ProductItem[] {
-  return contentArray(version, ["products", "featured_products"]).map((entry, index) => {
+  const mapped = contentArray(version, ["products", "featured_products"]).map((entry, index) => {
     const item = asRecord(entry);
     const mainImage = firstText(item, ["mainImage", "main_image", "imageUrl", "image_url", "image"]);
     return {
@@ -114,6 +115,7 @@ function demoProducts(version: DemoVersion | null): ProductItem[] {
       featured: Boolean(item.featured),
     };
   }).filter((item) => item.name && item.mainImage);
+  return mapped.length ? mapped : SAMPLE_PRODUCTS;
 }
 function demoMedia(version: DemoVersion | null): MediaItem[] {
   const source = contentArray(version, ["media", "media_items", "portfolio"]);
@@ -137,7 +139,9 @@ function demoMedia(version: DemoVersion | null): MediaItem[] {
       featured: Boolean(item.featured),
     };
   }).filter((item) => item.url);
-  return mapped.filter((item, index) => mapped.findIndex((candidate) => candidate.url === item.url) === index);
+  const unique = mapped.filter((item, index) => mapped.findIndex((candidate) => candidate.url === item.url) === index);
+  if (unique.length) return unique;
+  return SAMPLE_GALLERY_URLS.map((url, index) => ({ id: "sample-gallery-" + index, title: "Trabalho demonstrativo " + (index + 1), type: "image" as const, url, thumbnailUrl: url, isReelVertical: false, category: "Outros" as MediaCategory, dateAdded: new Date().toISOString(), featured: index < 3 }));
 }
 export function PublicDemoSelectionPage({ token }: { token: string }) {
   const [data, setData] = useState<DemoData | null>(null);
