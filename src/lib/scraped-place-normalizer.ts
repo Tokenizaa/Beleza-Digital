@@ -138,7 +138,7 @@ export interface NormalizedScrapedPlace {
 export function normalizeScrapedPlace(input: unknown): NormalizedScrapedPlace {
   const source = record(input);
   const evidence = record(parseStructured(source.raw_evidence));
-  const fieldStatus = record(parseStructured(firstValue(source.field_status, evidence.field_status)));
+  const fieldStatus = record(parseStructured(firstValue(source.field_status, evidence.field_status, evidence.fieldStatus)));
   const photos = stringList(firstValue(source.photos, evidence.images, evidence.photos));
   const videos = stringList(firstValue(source.videos, evidence.videos));
   const media = normalizeMedia(firstValue(source.media_items, evidence.media_items));
@@ -151,6 +151,7 @@ export function normalizeScrapedPlace(input: unknown): NormalizedScrapedPlace {
   const website = stringValue(firstValue(source.website_url, source.website, evidence.website_url));
   const socialLinks = parseStructured(source.social_links);
   const socialEntries = Array.isArray(socialLinks) ? socialLinks : typeof socialLinks === 'string' ? socialLinks.split(/[|,\n]/) : [];
+  if (website && /instagram\.com\//i.test(website)) socialEntries.push(website);
   const instagramUrl = socialEntries.map((entry) => typeof entry === 'string' ? entry.trim() : stringValue(firstValue(record(entry).url, record(entry).href)) || '').find((url) => /instagram\.com\//i.test(url)) || null;
   const instagramHandle = instagramUrl ? instagramUrl.match(/instagram\.com\/([^/?#]+)/i)?.[1] || null : null;
   const openingHours = normalizeHours(firstValue(source.opening_hours, source.openingHours, evidence.opening_hours, evidence.openingHours));
