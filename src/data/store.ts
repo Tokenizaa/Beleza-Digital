@@ -296,6 +296,9 @@ if (platformConfig.platformName === 'Yeshua White Label Network') {
 // the login flow. The fallback to synthetic sessions is intentional for demo mode,
 // but gates MUST be consistent across all admin pages.
 let currentSession: AuthSession | null = (() => {
+  // A sessão sintética só pode existir no modo de demonstração sem Supabase.
+  // Em produção, a identidade vem exclusivamente do Supabase Auth + membership.
+  if (isSupabaseConfigured) return null;
   try {
     const sessionStr = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
     if (!sessionStr) return null;
@@ -311,6 +314,69 @@ let currentSession: AuthSession | null = (() => {
 
 export const store = {
   // --- Multitenant Establishment Management ---
+
+  /**
+   * Hidrata o contexto operacional com uma sessão Supabase já autenticada e
+   * uma membership consultada sob RLS. Não persiste tokens nem tenant em storage.
+   */
+  hydrateSupabaseSession(input: {
+    accessToken: string;
+    userName?: string;
+    establishment: Record<string, unknown>;
+    membershipRole: 'owner' | 'admin' | 'editor' | 'viewer';
+  }): void {
+    const row = input.establishment;
+    const contact = (row.contact && typeof row.contact === 'object' ? row.contact : {}) as Record<string, unknown>;
+    const brand = (row.brand_settings && typeof row.brand_settings === 'object' ? row.brand_settings : {}) as Record<string, unknown>;
+    const name = String(row.name || 'Estabelecimento');
+    const establishmentId = String(row.id || '');
+    if (!establishmentId) throw new Error('Membership sem estabelecimento válido.');
+
+    const establishment: Establishment = {
+      id: establishmentId,
+      slug: String(row.slug || ''),
+      name,
+      status: row.status === 'active' ? 'active' : 'inactive',
+      whatsapp: String(contact.whatsapp || contact.phone || ''),
+      whatsappClean: String(contact.whatsapp_clean || contact.whatsappClean || contact.phone_clean || ''),
+      phone: String(contact.phone || ''),
+      email: String(contact.email || ''),
+      address: String(contact.address || ''),
+      city: String(contact.city || ''),
+      state: String(contact.state || ''),
+      cityState: String(contact.city_state || contact.cityState || ''),
+      googleMapsUrl: String(contact.google_maps_url || contact.googleMapsUrl || ''),
+      latitude: typeof contact.latitude === 'number' ? contact.latitude : undefined,
+      longitude: typeof contact.longitude === 'number' ? contact.longitude : undefined,
+      logoUrl: typeof row.logo_url === 'string' ? row.logo_url : undefined,
+      primaryColor: typeof row.primary_color === 'string' ? row.primary_color : undefined,
+      secondaryColor: typeof row.secondary_color === 'string' ? row.secondary_color : undefined,
+      tagline: typeof brand.tagline === 'string' ? brand.tagline : undefined,
+      description: typeof brand.description === 'string' ? brand.description : undefined,
+      instagramHandle: typeof contact.instagram_handle === 'string' ? contact.instagram_handle : undefined,
+      instagramUrl: typeof contact.instagram_url === 'string' ? contact.instagram_url : undefined,
+      adminName: input.userName || String(contact.owner_name || ''),
+      adminEmail: String(contact.owner_email || ''),
+      createdAt: String(row.created_at || new Date().toISOString()),
+      updatedAt: String(row.updated_at || new Date().toISOString()),
+    };
+
+    allEstablishments = [establishment];
+    activeTenantId = establishmentId;
+    currentSession = {
+      role: input.membershipRole === 'viewer' ? 'client' : 'establishment_admin',
+      establishmentId,
+      establishmentName: name,
+      userName: input.userName || String(contact.owner_name || 'Administrador'),
+      token: input.accessToken,
+      createdAt: Date.now(),
+    };
+    try {
+      sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+      localStorage.removeItem(STORAGE_KEYS.CURRENT_TENANT_ID);
+    } catch {}
+    notify();
+  },
 
   /** Verifica se a sessão atual tem permissão para gravar. */
   requireWriteAuth(): { ok: true } | { ok: false; message: string } {
@@ -1092,6 +1158,9 @@ export const store = {
   },
 
   loginLocalAdmin(_pin: string, requestedEstablishmentId?: string): { success: boolean; session?: AuthSession; message?: string } {
+    if (isSupabaseConfigured) {
+      return { success: false, message: 'Autentique-se pelo Supabase Auth para acessar um estabelecimento.' };
+    }
     // Determine the target establishment ID:
     // - If explicitly requested, use that
     // - Otherwise, fall back to the current session's establishmentId (if any),
@@ -1140,6 +1209,9 @@ export const store = {
   },
 
   loginSuperAdmin(): { success: boolean; session?: AuthSession; message?: string } {
+    if (isSupabaseConfigured) {
+      return { success: false, message: 'Acesso administrativo deve ser validado pelo Supabase Auth.' };
+    }
     const session: AuthSession = {
       role: 'super_admin',
       userName: 'Super Administrador Geral',
