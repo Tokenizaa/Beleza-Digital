@@ -21,6 +21,7 @@ import { PublicDemoSelectionPage } from './pages/PublicDemoSelectionPage';
 import { PublicShowcaseDemo } from './pages/PublicShowcaseDemo';
 import { AlertTriangle } from 'lucide-react';
 import { ToastProvider } from './context/ToastContext';
+import { adminSectionFromLocation } from './lib/admin-routing';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageView>('home');
@@ -57,9 +58,9 @@ export default function App() {
     return null;
   }
 
-  // Administração geral e gestão do salão são rotas independentes.
-  if (window.location.pathname === '/plataforma/admin') {
-    return <PlatformAdminDashboard />;
+  // Cada módulo administrativo possui URL própria, mantendo o mesmo shell e autenticação.
+  if (/^\\/plataforma\\/admin(?:\\/|$)/.test(window.location.pathname)) {
+    return <PlatformAdminDashboard initialSection={adminSectionFromLocation(window.location)} />;
   }
   if (window.location.pathname === '/admin') {
     return <PlatformSalonDashboard />;
