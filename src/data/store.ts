@@ -910,6 +910,23 @@ export const store = {
     notify();
   },
 
+  recordPublicAppointment(
+    appointment: Omit<Appointment, 'id' | 'createdAt'>,
+    targetEstablishmentId?: string
+  ): Appointment {
+    const tenantId = targetEstablishmentId || appointment.establishmentId || activeTenantId;
+    const newAppt: Appointment = {
+      ...appointment,
+      id: `apt-${Date.now()}`,
+      establishmentId: tenantId,
+      createdAt: new Date().toISOString(),
+    };
+    allAppointments = [newAppt, ...allAppointments];
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    notify();
+    return newAppt;
+  },
+
   addAppointment(
     appointment: Omit<Appointment, 'id' | 'createdAt'>,
     targetEstablishmentId?: string
