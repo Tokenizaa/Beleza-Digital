@@ -59,7 +59,7 @@ export default function App() {
   }
 
   // Cada módulo administrativo possui URL própria, mantendo o mesmo shell e autenticação.
-  if (/^\\/plataforma\\/admin(?:\\/|$)/.test(window.location.pathname)) {
+  if (/^\/plataforma\/admin(?:\/|$)/.test(window.location.pathname)) {
     const canonicalPath = canonicalAdminPath(window.location);
     if (canonicalPath !== window.location.pathname) {
       window.history.replaceState({}, '', canonicalPath);
