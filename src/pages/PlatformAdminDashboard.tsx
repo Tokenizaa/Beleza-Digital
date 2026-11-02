@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
-import { UnifiedAdminDashboard, UnifiedAdminSection } from "./UnifiedAdminDashboard";
+import { UnifiedAdminDashboard, type UnifiedAdminSection } from "./UnifiedAdminDashboard";
 import { store } from "../data/store";
 
 interface PlatformAdminDashboardProps { initialSection?: UnifiedAdminSection; }
