@@ -56,16 +56,8 @@ export function normalizeWebsite(value?: string | null): string | null {
   }
 }
 
-/** Normalize a phone to digits. Only add Brazil's country code for 10/11-digit local numbers. */
-export function normalizePhone(value?: string | null, countryCode = 'BR'): string | null {
-  if (!value?.trim()) return null;
-  const digits = value.replace(/\D/g, '');
-  if (digits.length < 8 || digits.length > 15) return null;
-  if (countryCode.toUpperCase() === 'BR' && (digits.length === 10 || digits.length === 11)) {
-    return `55${digits}`;
-  }
-  return digits;
-}
+import { normalizePhone, hashPhone, hashPhoneSync } from './phone-utils';
+export { normalizePhone, hashPhone, hashPhoneSync };
 
 /** Stable identity key; prefer website, then phone, then normalized name + location. */
 export async function createProspectDedupeKey(input: ProspectIdentity): Promise<string | null> {

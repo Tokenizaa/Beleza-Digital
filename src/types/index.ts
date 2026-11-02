@@ -139,6 +139,41 @@ export interface Appointment {
   createdAt: string;
 }
 
+export interface ClientItem {
+  id: string;
+  establishmentId: string;
+  name: string;
+  phone: string;
+  normalizedPhone: string;
+  phoneHash: string;
+  email?: string;
+  notes?: string;
+  totalVisits: number;
+  lastVisitAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ClientHistory {
+  client: ClientItem;
+  appointments: Appointment[];
+}
+
+export interface ProfileFieldProvenance {
+  value: unknown;
+  source: 'imported' | 'manual';
+  updatedAt: string;
+}
+
+export interface ProfileProvenance {
+  establishmentId: string;
+  importedProfile: Record<string, unknown>;
+  manualOverrides: Record<string, ProfileFieldProvenance>;
+  effectiveProfile: Establishment;
+  lastImportedAt?: string;
+}
+
+
 // Autenticação e Perfis
 export type UserRole = 'super_admin' | 'establishment_admin' | 'client';
 

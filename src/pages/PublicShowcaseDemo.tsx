@@ -264,6 +264,7 @@ export const PublicShowcaseDemo: React.FC = () => (
     <a
       href="/plataforma/acesso?mode=login"
       aria-label="Entrar no painel da plataforma"
+      data-testid="showcase-admin-link"
       className="fixed right-4 top-4 z-[90] inline-flex items-center gap-2 rounded-full border border-neutral-700/80 bg-neutral-950/90 px-4 py-2.5 text-xs font-semibold text-neutral-100 shadow-lg backdrop-blur transition hover:border-amber-400/70 hover:bg-neutral-900"
     >
       <LayoutDashboard className="h-4 w-4 text-amber-400" />

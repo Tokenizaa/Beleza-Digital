@@ -3,7 +3,6 @@ import { useStore } from '../data/store';
 import { AdminPage } from './AdminPage';
 import { SuperAdminPage } from './SuperAdminPage';
 import { LeadsDashboard } from './LeadsDashboard';
-import { ScrapingConsole } from './ScrapingConsole';
 import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
 import { SITE_TEMPLATES_LIST, SiteVariationId } from '../types/templates';
 import { AdminTab, SuperAdminTab } from '../types';
@@ -34,8 +33,7 @@ import {
   Building,
   KeyRound,
   Eye,
-  Store,
-  Database
+  Store
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { adminPathForSection, adminSectionFromLocation } from '../lib/admin-routing';
@@ -51,7 +49,6 @@ export type UnifiedAdminSection =
   | 'prospeccao-hoje'
   | 'prospeccao-crm'
   | 'prospeccao-automacao'
-  | 'prospeccao-scraping'
   | 'rede-saloes'
   | 'rede-novo'
   | 'rede-admins'
@@ -289,10 +286,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           onBackToApp={onBackToApp}
         />
       );
-    }
-
-    if (activeSection === 'prospeccao-scraping') {
-      return <ScrapingConsole />;
     }
 
     if (
@@ -633,7 +626,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                     {[
                       { id: 'prospeccao-hoje', label: 'Painel do Dia (Hoje)', icon: Compass },
                       { id: 'prospeccao-crm', label: 'Pipeline CRM & Empresas', icon: Users },
-                      { id: 'prospeccao-scraping', label: 'Console de Scraping', icon: Database },
                     ].map((sub) => {
                       const Icon = sub.icon;
                       const isActive = activeSection === sub.id;
