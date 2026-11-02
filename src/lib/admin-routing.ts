@@ -28,7 +28,7 @@ const PATH_SECTIONS = Object.entries(SECTION_PATHS).reduce<Record<string, Unifie
 );
 
 export function adminSectionFromLocation(location: Pick<Location, 'pathname' | 'search' | 'hash'>): UnifiedAdminSection {
-  const pathname = location.pathname.replace(/\\/+$/, '') || '/plataforma/admin';
+  const pathname = location.pathname.replace(/\/+$/, '') || '/plataforma/admin';
   if (PATH_SECTIONS[pathname]) return PATH_SECTIONS[pathname];
 
   const params = new URLSearchParams(location.search);
