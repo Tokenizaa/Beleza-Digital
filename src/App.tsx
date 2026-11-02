@@ -21,7 +21,7 @@ import { PublicDemoSelectionPage } from './pages/PublicDemoSelectionPage';
 import { PublicShowcaseDemo } from './pages/PublicShowcaseDemo';
 import { AlertTriangle } from 'lucide-react';
 import { ToastProvider } from './context/ToastContext';
-import { adminSectionFromLocation } from './lib/admin-routing';
+import { adminSectionFromLocation, canonicalAdminPath } from './lib/admin-routing';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageView>('home');
@@ -60,6 +60,10 @@ export default function App() {
 
   // Cada módulo administrativo possui URL própria, mantendo o mesmo shell e autenticação.
   if (/^\\/plataforma\\/admin(?:\\/|$)/.test(window.location.pathname)) {
+    const canonicalPath = canonicalAdminPath(window.location);
+    if (canonicalPath !== window.location.pathname) {
+      window.history.replaceState({}, '', canonicalPath);
+    }
     return <PlatformAdminDashboard initialSection={adminSectionFromLocation(window.location)} />;
   }
   if (window.location.pathname === '/admin') {
