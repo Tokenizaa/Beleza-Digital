@@ -77,7 +77,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   const { establishment, allEstablishments, session, platformConfig, store } = useStore();
 
   const [activeSection, setActiveSection] = useState<UnifiedAdminSection>(
-    adminSectionFromLocation(window.location) || initialSection
+    window.location.pathname === '/plataforma/admin' ? initialSection : adminSectionFromLocation(window.location)
   );
 
   const navigateToSection = (section: UnifiedAdminSection) => {
@@ -641,7 +641,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                         <button
                           key={sub.id}
                           onClick={() => {
-                            setActiveSection(sub.id as UnifiedAdminSection);
+                            navigateToSection(sub.id as UnifiedAdminSection);
                             setMobileSidebarOpen(false);
                           }}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -693,7 +693,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                         <button
                           key={sub.id}
                           onClick={() => {
-                            setActiveSection(sub.id as UnifiedAdminSection);
+                            navigateToSection(sub.id as UnifiedAdminSection);
                             setMobileSidebarOpen(false);
                           }}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
