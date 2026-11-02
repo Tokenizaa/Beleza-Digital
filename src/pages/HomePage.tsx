@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Check, CalendarDays, Database, Globe2, LayoutTemplate, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, CalendarDays, Database, Globe2, LayoutTemplate, LogIn, Sparkles } from 'lucide-react';
 
 const goDemo = () => { window.location.assign('/demo'); };
 
@@ -49,9 +49,18 @@ export const HomePage: React.FC = () => (
           <a href="#servicos" className="hover:text-white">Recursos</a>
           <a href="#modelos" className="hover:text-white">Modelos</a>
         </nav>
-        <button onClick={goDemo} className="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-neutral-950 hover:bg-amber-400">
-          Ver demonstração
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/plataforma/acesso?mode=login"
+            className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-4 py-2.5 text-sm font-semibold text-neutral-100 transition-colors hover:border-neutral-600 hover:bg-neutral-900"
+          >
+            <LogIn className="h-4 w-4" />
+            Entrar
+          </a>
+          <button onClick={goDemo} className="rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-neutral-950 hover:bg-amber-400">
+            Ver demonstração
+          </button>
+        </div>
       </div>
     </header>
 
