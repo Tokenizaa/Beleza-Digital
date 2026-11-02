@@ -10,6 +10,7 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "tsx tests/scraped-place-normalizer.test.ts && tsx tests/white_label_validation.test.ts && tsx tests/prospecting_automation.test.ts && tsx tests/billing_and_onboarding.test.ts && tsx tests/end_to_end_pipeline_certification.test.ts && tsx tests/prospecting_contract.test.ts && tsx tests/message_templates_validation.test.ts && node --test scripts/scrape-local.test.cjs",
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "deploy": "wrangler deploy --config wrangler.jsonc",
     "pages:deploy": "wrangler pages deploy dist --project-name=beleza-digital"
   },

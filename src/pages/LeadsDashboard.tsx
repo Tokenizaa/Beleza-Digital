@@ -30,7 +30,6 @@ import {
   SlidersHorizontal,
   ChevronDown
 } from 'lucide-react';
-import { createShareablePreviewUrl } from './SharedSitePreview';
 import { SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId, normalizeTemplateId } from '../types/templates';
 import { supabase } from '../lib/supabase';
 import { createValidatedWhatsAppUrl } from '../lib/message-templates';
@@ -638,53 +637,38 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     }
   };
 
-  // Generate proposal link for a lead
+  // Only a published, server-generated demo is a valid commercial proposal.
+  // Never fabricate a local preview or insert inferred business facts into outreach.
   const getProposalUrl = (company: LeadCompany) => {
-    if (company.demoUrl) return company.demoUrl;
-    const templateKey = normalizeTemplateId(company.selectedTemplate);
-    return `${window.location.origin}${createShareablePreviewUrl({
-      version: 1,
-      businessName: company.name,
-      category: company.category,
-      description: `Site profissional e sistema de agendamento online exclusivo para ${company.name}, com atendimento rápido e alta conversão via WhatsApp.`,
-      phone: company.phone,
-      whatsapp: company.whatsapp,
-      email: '',
-      address: company.address,
-      city: company.city,
-      state: company.state,
-      websiteUrl: company.websiteUrl,
-      templateId: templateKey,
-      templateName: TEMPLATE_NAMES[templateKey] || 'Modelo Oficial',
-      projectVersion: 1,
-      generatedAt: new Date().toISOString(),
-      status: company.status || 'OPERATIONAL',
-      note: company.note || (company.rating ? `${company.rating} ⭐ no Google Maps` : '4.9 ⭐ no Google Maps'),
-      'quantidade-de-avaliacoes': company.reviewsCount !== null ? `${company.reviewsCount} avaliações` : undefined,
-      'faixa-de-preco': company.faixaDePreco || '$$',
-      horario: company.horario,
-    })}`;
+    const value = company.demoUrl?.trim() ?? '';
+    if (!/^https:\/\//i.test(value) || /localhost|127\.0\.0\.1/i.test(value)) return '';
+    return value;
   };
 
-  // WhatsApp click-to-chat with validated template and fallback protection
+  // Prepare a click-to-chat URL only after the real demo is published and a
+  // usable public phone number exists. Opening WhatsApp never sends the message.
   const getWhatsAppProposalMessage = (company: LeadCompany) => {
     const proposalLink = getProposalUrl(company);
-    const reputacao = company.rating
+    const phone = (company.whatsapp || company.phone || '').replace(/\D/g, '');
+    if (!proposalLink || phone.length < 10 || phone.length > 15 || !company.name.trim()) return '';
+
+    const reputacao = company.rating !== null
       ? `nota ${company.rating} ⭐ no Google Maps${company.reviewsCount ? ` com ${company.reviewsCount} avaliações` : ''}`
       : '';
-
-    const { url } = createValidatedWhatsAppUrl(
-      company.whatsapp || company.phone,
-      company.digitalDiagnosis === 'sem_site' ? 'DIAGNOSTICO_DIGITAL_SEM_SITE' : 'PROPOSTA_5_MODELOS',
+    const { url, validation } = createValidatedWhatsAppUrl(
+      phone,
+      'PROPOSTA_5_MODELOS',
       {
         cliente_nome: company.name,
         servico_destaque: company.category || company.niche,
         link_proposta: proposalLink,
         reputacao_sufixo: reputacao,
-        cidade: company.city,
       }
     );
-    return url;
+    const requiredFallbacks = validation.appliedFallbacks.filter((item) =>
+      ['cliente_nome', 'servico_destaque', 'link_proposta'].includes(item.key)
+    );
+    return validation.isValid && requiredFallbacks.length === 0 ? url : '';
   };
 
   // Filtered companies for CRM
@@ -1100,7 +1084,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                         </div>
                         <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
                           <span className="text-neutral-500 block">Novos</span>
-                          <span className="text-emerald-400 font-bold">{searchOperation.result.inserted}</span>
+                          <span data-testid="search-inserted-count" className="text-emerald-400 font-bold">{searchOperation.result.inserted}</span>
                         </div>
                         <div className="bg-[#12151b] p-2 rounded border border-[#202530]">
                           <span className="text-neutral-500 block">Duplicados</span>
@@ -1196,6 +1180,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
                 <div className="pt-2">
                   <button
+                    data-testid="run-prospecting-search"
                     disabled={isSearching || !searchNiche || !searchCity}
                     onClick={handleExecuteSearch}
                     className="w-full py-3.5 rounded-xl bg-[#facc15] hover:bg-[#fde047] disabled:opacity-50 text-neutral-950 text-sm font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-yellow-500/10 cursor-pointer"
@@ -1337,6 +1322,12 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                           stageCompanies.map((company) => (
                             <div
                               key={company.id}
+                              data-testid="lead-card"
+                              data-lead-id={company.id}
+                              data-lead-name={company.name}
+                              data-lead-created-at={company.createdAt}
+                              data-demo-url={company.demoUrl || ''}
+                              data-phone={company.phone || ''}
                               className="bg-[#171b23] hover:bg-[#1c212c] border border-[#252c3a] hover:border-purple-600/50 rounded-xl p-3.5 space-y-3 transition group"
                             >
                               {/* Top: Name & Details Button */}
@@ -1397,26 +1388,54 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                               <div className="pt-2 border-t border-[#202530] flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
                                   {/* WhatsApp with tailored proposal copy */}
-                                  <a
-                                    href={getWhatsAppProposalMessage(company)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    title="Chamar no WhatsApp com a proposta do modelo"
-                                    className="p-1.5 rounded-lg bg-[#252c3a] hover:bg-emerald-600 text-neutral-300 hover:text-white transition"
-                                  >
-                                    <MessageCircle className="h-3.5 w-3.5" />
-                                  </a>
+                                  {getWhatsAppProposalMessage(company) ? (
+                                    <a
+                                      href={getWhatsAppProposalMessage(company)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title="Preparar mensagem no WhatsApp para envio manual"
+                                      aria-label="Preparar mensagem no WhatsApp"
+                                      data-testid="prepare-whatsapp-message"
+                                      className="p-1.5 rounded-lg bg-[#252c3a] hover:bg-emerald-600 text-neutral-300 hover:text-white transition"
+                                    >
+                                      <MessageCircle className="h-3.5 w-3.5" />
+                                    </a>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled
+                                      title="Mensagem disponível após a publicação da demonstração e confirmação do telefone"
+                                      aria-label="Mensagem aguardando demonstração publicada"
+                                      className="p-1.5 rounded-lg bg-[#202530] text-neutral-600 cursor-not-allowed"
+                                    >
+                                      <MessageCircle className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
 
                                   {/* Web Preview of Proposal with the chosen template */}
-                                  <a
-                                    href={getProposalUrl(company)}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    title={`Abrir proposta no modelo: ${TEMPLATE_NAMES[company.selectedTemplate]}`}
-                                    className="p-1.5 rounded-lg bg-[#252c3a] hover:bg-purple-600 text-neutral-300 hover:text-white transition"
-                                  >
-                                    <Globe className="h-3.5 w-3.5" />
-                                  </a>
+                                  {getProposalUrl(company) ? (
+                                    <a
+                                      href={getProposalUrl(company)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title={`Abrir demonstração publicada: ${TEMPLATE_NAMES[company.selectedTemplate]}`}
+                                      aria-label="Abrir demonstração publicada"
+                                      data-testid="published-demo-link"
+                                      className="p-1.5 rounded-lg bg-[#252c3a] hover:bg-purple-600 text-neutral-300 hover:text-white transition"
+                                    >
+                                      <Globe className="h-3.5 w-3.5" />
+                                    </a>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled
+                                      title="Demonstração ainda não foi gerada e publicada"
+                                      aria-label="Demonstração em preparação"
+                                      className="p-1.5 rounded-lg bg-[#202530] text-neutral-600 cursor-not-allowed"
+                                    >
+                                      <Globe className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
 
                                   {company.instagramUrl && (
                                     <a
@@ -1802,40 +1821,56 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                 <h4 className="font-bold text-white">Abordagem Comercial</h4>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <a
-                    href={getWhatsAppProposalMessage(selectedCompany)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 transition text-center shadow-lg shadow-emerald-900/20"
-                  >
-                    <MessageCircle className="h-4 w-4" /> Enviar Proposta via WhatsApp
-                  </a>
+                  {getWhatsAppProposalMessage(selectedCompany) ? (
+                    <a
+                      href={getWhatsAppProposalMessage(selectedCompany)}
+                      target="_blank"
+                      rel="noreferrer"
+                      data-testid="prepare-whatsapp-message"
+                      className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 transition text-center shadow-lg shadow-emerald-900/20"
+                    >
+                      <MessageCircle className="h-4 w-4" /> Preparar mensagem no WhatsApp
+                    </a>
+                  ) : (
+                    <button type="button" disabled className="flex-1 py-3 px-4 rounded-xl bg-neutral-800 text-neutral-500 font-bold flex items-center justify-center gap-2 cursor-not-allowed">
+                      <MessageCircle className="h-4 w-4" /> Aguardando site publicado e telefone válido
+                    </button>
+                  )}
 
-                  <a
-                    href={getProposalUrl(selectedCompany)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center justify-center gap-2 transition text-center"
-                  >
-                    <Globe className="h-4 w-4" /> {selectedCompany.demoUrl ? 'Abrir demonstração publicada' : 'Abrir prévia local'}
-                  </a>
+                  {getProposalUrl(selectedCompany) ? (
+                    <a
+                      href={getProposalUrl(selectedCompany)}
+                      target="_blank"
+                      rel="noreferrer"
+                      data-testid="published-demo-link"
+                      className="py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center justify-center gap-2 transition text-center"
+                    >
+                      <Globe className="h-4 w-4" /> Abrir demonstração publicada
+                    </a>
+                  ) : (
+                    <button type="button" disabled className="py-3 px-4 rounded-xl bg-neutral-800 text-neutral-500 font-bold flex items-center justify-center gap-2 cursor-not-allowed">
+                      <Globe className="h-4 w-4" /> Demonstração em preparação
+                    </button>
+                  )}
                 </div>
 
                 <div className="p-3 bg-[#171b23] rounded-xl border border-[#202530] flex items-center justify-between text-xs">
                   <span className="text-neutral-400 truncate max-w-sm">
-                    {getProposalUrl(selectedCompany)}
+                    {getProposalUrl(selectedCompany) || 'O link ficará disponível após a geração e publicação das cinco versões.'}
                   </span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(getProposalUrl(selectedCompany));
-                      setProposalCopied(true);
-                      setTimeout(() => setProposalCopied(false), 2000);
-                    }}
-                    className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 shrink-0 ml-2"
-                  >
-                    {proposalCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Share2 className="h-3.5 w-3.5" />}
-                    {proposalCopied ? 'Copiado!' : 'Copiar Link'}
-                  </button>
+                  {getProposalUrl(selectedCompany) && (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(getProposalUrl(selectedCompany));
+                        setProposalCopied(true);
+                        setTimeout(() => setProposalCopied(false), 2000);
+                      }}
+                      className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 shrink-0 ml-2"
+                    >
+                      {proposalCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Share2 className="h-3.5 w-3.5" />}
+                      {proposalCopied ? 'Copiado!' : 'Copiar Link'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

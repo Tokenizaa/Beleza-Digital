@@ -1,5 +1,6 @@
 interface Env {
   SUPABASE_URL?: string;
+  SUPABASE_PUBLISHABLE_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
   // Endpoint do Worker de prospecção (com BROWSER binding) que executa a captura.
   PROSPECTING_WORKER_URL?: string;
@@ -27,7 +28,37 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
  * Se o Worker não estiver configurado, retorna um erro informativo orientando a
  * configuração necessária para que a coleta funcione de fato.
  */
+async function validatePlatformAdmin(env: Env, authorization: string): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { ok: false, error: "Autenticação administrativa não configurada.", status: 503 };
+  }
+  let auth: Response;
+  try {
+    auth = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/auth/v1/user`, {
+      headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, authorization },
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    return { ok: false, error: "Serviço de autenticação indisponível.", status: 502 };
+  }
+  if (!auth.ok) return { ok: false, error: "Sessão inválida ou expirada.", status: 401 };
+  const user = await auth.json() as { id?: string };
+  if (!user.id) return { ok: false, error: "Sessão inválida.", status: 401 };
+  const adminCheck = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/rest/v1/platform_admins?user_id=eq.${encodeURIComponent(user.id)}&select=user_id&limit=1`, {
+    headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!adminCheck.ok) return { ok: false, error: "Não foi possível verificar a permissão administrativa.", status: 503 };
+  const admins = await adminCheck.json() as unknown[];
+  return admins.length ? { ok: true } : { ok: false, error: "Acesso restrito ao Admin Geral.", status: 403 };
+}
+
 export async function onRequestPost({ request, env }: Context) {
+  const authorization = request.headers.get("authorization") || "";
+  if (!authorization.startsWith("Bearer ")) return json({ error: "Autenticação obrigatória." }, 401);
+  const admin = await validatePlatformAdmin(env, authorization);
+  if (!admin.ok) return json({ error: admin.error }, admin.status);
+
   if (!env.PROSPECTING_WORKER_URL?.trim() || !env.PROSPECTING_WORKER_SECRET?.trim()) {
     return json({
       error: "scraper_worker_not_configured",

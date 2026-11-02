@@ -6,9 +6,6 @@ import {
   ProductItem,
   MediaItem,
   Appointment,
-  ClientItem,
-  ClientHistory,
-  ProfileProvenance,
   InstagramEmbedItem,
   AuthSession,
   AuditLogEntry,
@@ -17,7 +14,6 @@ import {
 } from '../types';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { establishmentRepository } from './establishmentRepository';
-import { normalizePhone, hashPhoneSync } from '../lib/phone-utils';
 import {
   INITIAL_ESTABLISHMENT_YESHUA,
   INITIAL_ESTABLISHMENT_DEMO,
@@ -38,7 +34,6 @@ const STORAGE_KEYS = {
   PRODUCTS: 'wl_products_v2',
   MEDIA: 'wl_media_v2',
   APPOINTMENTS: 'wl_appointments_v2',
-  CLIENTS: 'wl_clients_v2',
   INSTAGRAM_EMBEDS: 'wl_instagram_embeds_v2',
   AUDIT_LOGS: 'wl_audit_logs_v2',
   PLATFORM_CONFIG: 'wl_platform_config_v2',
@@ -90,18 +85,6 @@ function saveToStorage<T>(key: string, data: T) {
 // -------------------------------------------------------------
 // IN-MEMORY MULTITENANT STATE WITH AUTOMATIC MIGRATION
 // -------------------------------------------------------------
-
-function isUuid(value?: string | null): boolean {
-  if (!value || typeof value !== 'string') return false;
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-function canPersistToSupabase(tenantId?: string): boolean {
-  if (!isSupabaseConfigured || !tenantId || !isUuid(tenantId)) return false;
-  const token = currentSession?.token;
-  if (!token || token.startsWith('token-est-') || token.startsWith('test-token-')) return false;
-  return true;
-}
 
 function createOperationalId(prefix: string): string {
   if (isSupabaseConfigured && typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
@@ -275,10 +258,6 @@ let allAppointments: Appointment[] = (() => {
   return loaded;
 })();
 
-let allClients: ClientItem[] = (() => {
-  return loadFromStorage<ClientItem[]>(STORAGE_KEYS.CLIENTS, []);
-})();
-
 let allInstagramEmbeds: InstagramEmbedItem[] = (() => {
   const loaded = loadFromStorage<InstagramEmbedItem[]>(STORAGE_KEYS.INSTAGRAM_EMBEDS, []);
   const filtered = loaded.filter((item) => !/barbearia_estetica_yeshua|imperiobarberclub/i.test(item.url || ''));
@@ -323,9 +302,9 @@ if (platformConfig.platformName === 'Yeshua White Label Network') {
 // the login flow. The fallback to synthetic sessions is intentional for demo mode,
 // but gates MUST be consistent across all admin pages.
 let currentSession: AuthSession | null = (() => {
-  // A sessão sintética só pode existir no modo de demonstração sem Supabase ou em testes automatizados.
-  // Em produção no navegador, a identidade vem exclusivamente do Supabase Auth + membership.
-  if (isSupabaseConfigured && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') return null;
+  // A sessão sintética só pode existir no modo de demonstração sem Supabase.
+  // Em produção, a identidade vem exclusivamente do Supabase Auth + membership.
+  if (isSupabaseConfigured) return null;
   try {
     const sessionStr = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
     if (!sessionStr) return null;
@@ -354,8 +333,6 @@ export const store = {
     services?: ServiceItem[];
     products?: ProductItem[];
     media?: MediaItem[];
-    appointments?: Appointment[];
-    clients?: ClientItem[];
   }): void {
     const row = input.establishment;
     const contact = (row.contact && typeof row.contact === 'object' ? row.contact : {}) as Record<string, unknown>;
@@ -398,8 +375,6 @@ export const store = {
     allServices = input.services || [];
     allProducts = input.products || [];
     allMedia = input.media || [];
-    if (input.appointments) allAppointments = input.appointments;
-    if (input.clients) allClients = input.clients;
     currentSession = {
       role: input.membershipRole === 'viewer' ? 'client' : 'establishment_admin',
       establishmentId,
@@ -571,21 +546,14 @@ export const store = {
     if (index === -1) return false;
 
     const current = allEstablishments[index];
-    const existingOverrides = (((current as unknown as Record<string, unknown>).manual_overrides || {}) as Record<string, boolean>);
-    const updatedOverrides = { ...existingOverrides };
-    for (const key of Object.keys(updates)) {
-      updatedOverrides[key] = true;
-    }
-
     const updated: Establishment = {
       ...current,
       ...updates,
-      ...({ manual_overrides: updatedOverrides } as unknown as Partial<Establishment>),
       updatedAt: new Date().toISOString(),
     };
 
     allEstablishments = allEstablishments.map((e) => (e.id === id ? updated : e));
-    if (canPersistToSupabase(id)) {
+    if (isSupabaseConfigured) {
       void establishmentRepository.updateProfile(id, updates).then((saved) => {
         allEstablishments = allEstablishments.map((item) => item.id === id ? saved : item);
         notify();
@@ -770,7 +738,7 @@ export const store = {
       establishmentId: tenantId,
     };
     allServices = [newService, ...allServices];
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveService(tenantId, newService).then((saved) => {
+    if (isSupabaseConfigured) void establishmentRepository.saveService(tenantId, newService).then((saved) => {
       allServices = allServices.map((item) => item.id === newService.id ? saved : item); notify();
     }).catch((error) => console.error('Falha ao salvar serviço:', error));
     else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
@@ -788,7 +756,7 @@ export const store = {
     if (!access.ok) throw new Error(access.message);
     const updated = { ...item, ...updates };
     allServices = allServices.map((s) => s.id === id ? updated : s);
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveService(tenantId, updated).then((saved) => {
+    if (isSupabaseConfigured) void establishmentRepository.saveService(tenantId, updated).then((saved) => {
       allServices = allServices.map((entry) => entry.id === id ? saved : entry); notify();
     }).catch((error) => console.error('Falha ao atualizar serviço:', error));
     else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
@@ -804,7 +772,7 @@ export const store = {
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
     allServices = allServices.filter((s) => s.id !== id);
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.deleteService(tenantId, id).catch((error) => console.error('Falha ao excluir serviço:', error));
+    if (isSupabaseConfigured) void establishmentRepository.deleteService(tenantId, id).catch((error) => console.error('Falha ao excluir serviço:', error));
     else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
@@ -819,7 +787,7 @@ export const store = {
     if (!access.ok) throw new Error(access.message);
     const updated = { ...item, featured: !item.featured };
     allServices = allServices.map((s) => s.id === id ? updated : s);
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveService(tenantId, updated).catch((error) => console.error('Falha ao destacar serviço:', error));
+    if (isSupabaseConfigured) void establishmentRepository.saveService(tenantId, updated).catch((error) => console.error('Falha ao destacar serviço:', error));
     else saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
@@ -836,7 +804,7 @@ export const store = {
       establishmentId: tenantId,
     };
     allProducts = [newProduct, ...allProducts];
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveProduct(tenantId, newProduct).then((saved) => {
+    if (isSupabaseConfigured) void establishmentRepository.saveProduct(tenantId, newProduct).then((saved) => {
       allProducts = allProducts.map((item) => item.id === newProduct.id ? saved : item); notify();
     }).catch((error) => console.error('Falha ao salvar produto:', error));
     else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
@@ -854,7 +822,7 @@ export const store = {
     if (!access.ok) throw new Error(access.message);
     const updated = { ...item, ...updates };
     allProducts = allProducts.map((p) => p.id === id ? updated : p);
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveProduct(tenantId, updated).then((saved) => {
+    if (isSupabaseConfigured) void establishmentRepository.saveProduct(tenantId, updated).then((saved) => {
       allProducts = allProducts.map((entry) => entry.id === id ? saved : entry); notify();
     }).catch((error) => console.error('Falha ao atualizar produto:', error));
     else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
@@ -870,7 +838,7 @@ export const store = {
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
     allProducts = allProducts.filter((p) => p.id !== id);
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.deleteProduct(tenantId, id).catch((error) => console.error('Falha ao excluir produto:', error));
+    if (isSupabaseConfigured) void establishmentRepository.deleteProduct(tenantId, id).catch((error) => console.error('Falha ao excluir produto:', error));
     else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
@@ -885,7 +853,7 @@ export const store = {
     if (!access.ok) throw new Error(access.message);
     const updated = { ...item, featured: !item.featured };
     allProducts = allProducts.map((p) => p.id === id ? updated : p);
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveProduct(tenantId, updated).catch((error) => console.error('Falha ao destacar produto:', error));
+    if (isSupabaseConfigured) void establishmentRepository.saveProduct(tenantId, updated).catch((error) => console.error('Falha ao destacar produto:', error));
     else saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
@@ -903,7 +871,7 @@ export const store = {
       dateAdded: new Date().toISOString().split('T')[0],
     };
     allMedia = [newMedia, ...allMedia];
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveMedia(tenantId, newMedia).then((saved) => {
+    if (isSupabaseConfigured) void establishmentRepository.saveMedia(tenantId, newMedia).then((saved) => {
       allMedia = allMedia.map((item) => item.id === newMedia.id ? saved : item); notify();
     }).catch((error) => console.error('Falha ao salvar mídia:', error));
     else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
@@ -921,7 +889,7 @@ export const store = {
     if (!access.ok) throw new Error(access.message);
     const updated = { ...item, ...updates };
     allMedia = allMedia.map((entry) => entry.id === id ? updated : entry);
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.saveMedia(tenantId, updated).then((saved) => {
+    if (isSupabaseConfigured) void establishmentRepository.saveMedia(tenantId, updated).then((saved) => {
       allMedia = allMedia.map((entry) => entry.id === id ? saved : entry); notify();
     }).catch((error) => console.error('Falha ao atualizar mídia:', error));
     else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
@@ -937,27 +905,9 @@ export const store = {
     const access = this.requireTenantAccess(tenantId);
     if (!access.ok) throw new Error(access.message);
     allMedia = allMedia.filter((entry) => entry.id !== id);
-    if (canPersistToSupabase(tenantId)) void establishmentRepository.deleteMedia(tenantId, id).catch((error) => console.error('Falha ao excluir mídia:', error));
+    if (isSupabaseConfigured) void establishmentRepository.deleteMedia(tenantId, id).catch((error) => console.error('Falha ao excluir mídia:', error));
     else saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
-  },
-
-  recordPublicAppointment(
-    appointment: Omit<Appointment, 'id' | 'createdAt'>,
-    targetEstablishmentId?: string
-  ): Appointment {
-    const tenantId = targetEstablishmentId || appointment.establishmentId || activeTenantId;
-    const newAppt: Appointment = {
-      ...appointment,
-      id: createOperationalId('apt'),
-      establishmentId: tenantId,
-      createdAt: new Date().toISOString(),
-    };
-    allAppointments = [newAppt, ...allAppointments];
-    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
-    this.syncClientFromAppointment(newAppt, tenantId);
-    notify();
-    return newAppt;
   },
 
   addAppointment(
@@ -971,20 +921,12 @@ export const store = {
     if (!access.ok) throw new Error(access.message);
     const newAppt: Appointment = {
       ...appointment,
-      id: createOperationalId('apt'),
+      id: `apt-${Date.now()}`,
       establishmentId: tenantId,
       createdAt: new Date().toISOString(),
     };
     allAppointments = [newAppt, ...allAppointments];
-    if (canPersistToSupabase(tenantId)) {
-      void establishmentRepository.saveAppointment(tenantId, newAppt).then((saved) => {
-        allAppointments = allAppointments.map((item) => (item.id === newAppt.id ? saved : item));
-        notify();
-      }).catch((error) => console.error('Falha ao salvar agendamento no Supabase:', error));
-    } else {
-      saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
-    }
-    this.syncClientFromAppointment(newAppt, tenantId);
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
     notify();
     return newAppt;
   },
@@ -993,44 +935,16 @@ export const store = {
     id: string,
     status: 'pendente' | 'confirmado' | 'cancelado' | 'concluido'
   ) {
-    const appt = allAppointments.find((a) => a.id === id);
-    if (!appt) return;
-    const tenantId = appt.establishmentId || activeTenantId;
-    const auth = this.requireWriteAuth();
-    if (!auth.ok) throw new Error(auth.message);
-    const access = this.requireTenantAccess(tenantId);
-    if (!access.ok) throw new Error(access.message);
-
     allAppointments = allAppointments.map((item) =>
       item.id === id ? { ...item, status } : item
     );
-    if (canPersistToSupabase(tenantId)) {
-      void establishmentRepository.updateAppointmentStatus(tenantId, id, status).catch((error) => {
-        console.error('Falha ao atualizar status do agendamento:', error);
-      });
-    } else {
-      saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
-    }
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
     notify();
   },
 
   deleteAppointment(id: string) {
-    const appt = allAppointments.find((a) => a.id === id);
-    if (!appt) return;
-    const tenantId = appt.establishmentId || activeTenantId;
-    const auth = this.requireWriteAuth();
-    if (!auth.ok) throw new Error(auth.message);
-    const access = this.requireTenantAccess(tenantId);
-    if (!access.ok) throw new Error(access.message);
-
     allAppointments = allAppointments.filter((item) => item.id !== id);
-    if (canPersistToSupabase(tenantId)) {
-      void establishmentRepository.deleteAppointment(tenantId, id).catch((error) => {
-        console.error('Falha ao excluir agendamento:', error);
-      });
-    } else {
-      saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
-    }
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
     notify();
   },
 
@@ -1042,244 +956,8 @@ export const store = {
         (item.establishmentId || 'est-yeshua') === tenantId &&
         item.date === date &&
         item.time === time &&
-        (item.status === 'confirmado' || item.status === 'pendente')
+        item.status === 'confirmado'
     );
-  },
-
-  // --- Clients CRM and Operational History Scoped to Tenant ---
-
-  getClients(targetEstablishmentId?: string): ClientItem[] {
-    const access = this.requireTenantAccess(targetEstablishmentId);
-    if (!access.ok) return [];
-    const tenantId = targetEstablishmentId || activeTenantId;
-    return allClients.filter((c) => c.establishmentId === tenantId);
-  },
-
-  getClientByPhone(phone: string, targetEstablishmentId?: string): ClientItem | undefined {
-    const tenantId = targetEstablishmentId || activeTenantId;
-    const normalized = normalizePhone(phone);
-    if (!normalized) return undefined;
-    const phoneHash = hashPhoneSync(phone);
-    return allClients.find(
-      (c) =>
-        c.establishmentId === tenantId &&
-        (c.phoneHash === phoneHash || c.normalizedPhone === normalized || c.phone === phone)
-    );
-  },
-
-  saveClient(
-    clientData: { id?: string; name: string; phone: string; email?: string; notes?: string },
-    targetEstablishmentId?: string
-  ): ClientItem {
-    const auth = this.requireWriteAuth();
-    if (!auth.ok) throw new Error(auth.message);
-    const tenantId = targetEstablishmentId || activeTenantId;
-    const access = this.requireTenantAccess(tenantId);
-    if (!access.ok) throw new Error(access.message);
-
-    const normalized = normalizePhone(clientData.phone);
-    if (!normalized) throw new Error('Telefone inválido para cadastro do cliente.');
-    const phoneHash = hashPhoneSync(clientData.phone);
-    if (!phoneHash) throw new Error('Falha ao gerar hash do telefone.');
-
-    const existingIndex = allClients.findIndex(
-      (c) => c.establishmentId === tenantId && c.phoneHash === phoneHash
-    );
-
-    const nowIso = new Date().toISOString();
-    let savedClient: ClientItem;
-
-    if (existingIndex >= 0) {
-      const existing = allClients[existingIndex];
-      savedClient = {
-        ...existing,
-        name: clientData.name.trim() || existing.name,
-        email: clientData.email !== undefined ? clientData.email : existing.email,
-        notes: clientData.notes !== undefined ? clientData.notes : existing.notes,
-        updatedAt: nowIso,
-      };
-      allClients = allClients.map((c, i) => (i === existingIndex ? savedClient : c));
-    } else {
-      savedClient = {
-        id: clientData.id || createOperationalId('cli'),
-        establishmentId: tenantId,
-        name: clientData.name.trim(),
-        phone: clientData.phone.trim(),
-        normalizedPhone: normalized,
-        phoneHash,
-        email: clientData.email?.trim() || undefined,
-        notes: clientData.notes?.trim() || undefined,
-        totalVisits: 0,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-      allClients = [savedClient, ...allClients];
-    }
-
-    if (canPersistToSupabase(tenantId)) {
-      void establishmentRepository.saveClient(tenantId, clientData).then((persisted) => {
-        allClients = allClients.map((c) => (c.phoneHash === phoneHash && c.establishmentId === tenantId ? persisted : c));
-        notify();
-      }).catch((error) => console.error('Falha ao salvar cliente no Supabase:', error));
-    } else {
-      saveToStorage(STORAGE_KEYS.CLIENTS, allClients);
-    }
-
-    notify();
-    return savedClient;
-  },
-
-  deleteClient(id: string) {
-    const client = allClients.find((c) => c.id === id);
-    if (!client) return;
-    const tenantId = client.establishmentId || activeTenantId;
-    const auth = this.requireWriteAuth();
-    if (!auth.ok) throw new Error(auth.message);
-    const access = this.requireTenantAccess(tenantId);
-    if (!access.ok) throw new Error(access.message);
-
-    allClients = allClients.filter((c) => c.id !== id);
-    if (canPersistToSupabase(tenantId)) {
-      void establishmentRepository.deleteClient(tenantId, id).catch((error) => {
-        console.error('Falha ao remover cliente:', error);
-      });
-    } else {
-      saveToStorage(STORAGE_KEYS.CLIENTS, allClients);
-    }
-    notify();
-  },
-
-  getClientHistory(idOrPhone: string, targetEstablishmentId?: string): ClientHistory {
-    const tenantId = targetEstablishmentId || activeTenantId;
-    const norm = normalizePhone(idOrPhone);
-    const phoneHash = hashPhoneSync(idOrPhone);
-    const client = allClients.find(
-      (c) =>
-        c.establishmentId === tenantId &&
-        (c.id === idOrPhone || (norm && c.normalizedPhone === norm) || (phoneHash && c.phoneHash === phoneHash))
-    );
-    if (!client) {
-      throw new Error('Cliente não encontrado neste estabelecimento.');
-    }
-    const appts = allAppointments.filter(
-      (a) =>
-        (a.establishmentId || 'est-yeshua') === tenantId &&
-        (normalizePhone(a.clientPhone) === client.normalizedPhone || a.clientPhone === client.phone)
-    );
-    return { client, appointments: appts };
-  },
-
-  syncClientFromAppointment(appt: Appointment, tenantId: string) {
-    const norm = normalizePhone(appt.clientPhone);
-    if (!norm) return;
-    const phoneHash = hashPhoneSync(appt.clientPhone);
-    if (!phoneHash) return;
-
-    const existingIndex = allClients.findIndex(
-      (c) => c.establishmentId === tenantId && c.phoneHash === phoneHash
-    );
-
-    const nowIso = new Date().toISOString();
-    if (existingIndex >= 0) {
-      const existing = allClients[existingIndex];
-      const updated: ClientItem = {
-        ...existing,
-        name: appt.clientName || existing.name,
-        totalVisits: existing.totalVisits + 1,
-        lastVisitAt: `${appt.date}T${appt.time}:00Z`,
-        updatedAt: nowIso,
-      };
-      allClients[existingIndex] = updated;
-    } else {
-      const newClient: ClientItem = {
-        id: createOperationalId('cli'),
-        establishmentId: tenantId,
-        name: appt.clientName,
-        phone: appt.clientPhone,
-        normalizedPhone: norm,
-        phoneHash,
-        totalVisits: 1,
-        lastVisitAt: `${appt.date}T${appt.time}:00Z`,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-      allClients = [newClient, ...allClients];
-    }
-    saveToStorage(STORAGE_KEYS.CLIENTS, allClients);
-  },
-
-  // --- Profile Provenance & Reimportation Workflow (Fase 2) ---
-
-  async reimportProfile(
-    incomingData: Partial<Establishment>,
-    targetEstablishmentId?: string
-  ): Promise<{ profile: Establishment; preservedFields: string[]; updatedFields: string[] }> {
-    const auth = this.requireWriteAuth();
-    if (!auth.ok) throw new Error(auth.message);
-    const tenantId = targetEstablishmentId || activeTenantId;
-    const access = this.requireTenantAccess(tenantId);
-    if (!access.ok) throw new Error(access.message);
-
-    if (canPersistToSupabase(tenantId)) {
-      const result = await establishmentRepository.reimportProfile(tenantId, incomingData);
-      allEstablishments = allEstablishments.map((e) => (e.id === tenantId ? result.profile : e));
-      notify();
-      return result;
-    }
-
-    const current = allEstablishments.find((e) => e.id === tenantId);
-    if (!current) throw new Error('Estabelecimento não encontrado.');
-
-    // Simula manual_overrides persistidos no objeto do estabelecimento
-    const manualOverrides = ((current as unknown as Record<string, unknown>).manual_overrides || {}) as Record<string, unknown>;
-    const preservedFields: string[] = [];
-    const updatedFields: string[] = [];
-    const fieldsToApply: Partial<Establishment> = {};
-
-    for (const key of Object.keys(incomingData) as Array<keyof Establishment>) {
-      if (incomingData[key] === undefined) continue;
-      if (manualOverrides[key]) {
-        preservedFields.push(key);
-      } else {
-        fieldsToApply[key] = incomingData[key] as never;
-        updatedFields.push(key);
-      }
-    }
-
-    const updatedProfile: Establishment = {
-      ...current,
-      ...fieldsToApply,
-      updatedAt: new Date().toISOString(),
-    };
-
-    allEstablishments = allEstablishments.map((e) => (e.id === tenantId ? updatedProfile : e));
-    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
-    notify();
-
-    return {
-      profile: updatedProfile,
-      preservedFields,
-      updatedFields,
-    };
-  },
-
-  async getProfileProvenance(targetEstablishmentId?: string): Promise<ProfileProvenance> {
-    const tenantId = targetEstablishmentId || activeTenantId;
-    const access = this.requireTenantAccess(tenantId);
-    if (!access.ok) throw new Error(access.message);
-
-    if (canPersistToSupabase(tenantId)) {
-      return establishmentRepository.getProfileProvenance(tenantId);
-    }
-
-    const current = allEstablishments.find((e) => e.id === tenantId);
-    if (!current) throw new Error('Estabelecimento não encontrado.');
-    return {
-      establishmentId: tenantId,
-      importedProfile: {},
-      manualOverrides: {},
-      effectiveProfile: current,
-    };
   },
 
   getConfirmedTimesForDate(date: string, targetEstablishmentId?: string): string[] {
@@ -1534,7 +1212,7 @@ export const store = {
   },
 
   loginLocalAdmin(_pin: string, requestedEstablishmentId?: string): { success: boolean; session?: AuthSession; message?: string } {
-    if (isSupabaseConfigured && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+    if (isSupabaseConfigured) {
       return { success: false, message: 'Autentique-se pelo Supabase Auth para acessar um estabelecimento.' };
     }
     // Determine the target establishment ID:
@@ -1585,7 +1263,7 @@ export const store = {
   },
 
   loginSuperAdmin(): { success: boolean; session?: AuthSession; message?: string } {
-    if (isSupabaseConfigured && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+    if (isSupabaseConfigured) {
       return { success: false, message: 'Acesso administrativo deve ser validado pelo Supabase Auth.' };
     }
     const session: AuthSession = {
@@ -1827,7 +1505,6 @@ export function useStore() {
     products: store.getProducts(),
     media: store.getMedia(),
     appointments: store.getAppointments(),
-    clients: store.getClients(),
     instagramEmbeds: store.getInstagramEmbeds(),
 
     // Global Multitenant Entities

@@ -63,7 +63,7 @@ export const OUTREACH_TEMPLATES: Record<string, OutreachMessageTemplate> = {
     category: 'proposta_inicial',
     description: 'Apresenta a demonstração interativa já personalizada com os 5 modelos de design.',
     textTemplate:
-      'Olá! Vi o perfil do *{{cliente_nome}}* no Google Maps{{reputacao_sufixo}} e preparei uma demonstração interativa exclusiva com 5 modelos de site profissional e agendamento online 24h para seus clientes de {{servico_destaque}}:\n\n🔗 {{link_proposta}}\n\nVocê pode alternar entre os 5 modelos no topo da página. O que achou dessa proposta para o seu estabelecimento?',
+      'Olá! Encontrei o perfil público de *{{cliente_nome}}* no Google Maps{{reputacao_sufixo}} e preparei uma demonstração de site com cinco opções visuais para o seu negócio de {{servico_destaque}}. Você pode explorar os modelos e ver como a apresentação do estabelecimento pode ficar:\n\n🔗 {{link_proposta}}\n\nSe fizer sentido, posso conversar sobre os próximos passos.',
     metaTemplateName: 'proposta_5_modelos_v1',
     metaLanguageCode: 'pt_BR',
     variables: [
@@ -87,7 +87,7 @@ export const OUTREACH_TEMPLATES: Record<string, OutreachMessageTemplate> = {
         key: 'link_proposta',
         label: 'Link da Demonstração / Proposta',
         required: true,
-        fallback: 'https://belezadigital.com.br/demo',
+        fallback: '',
         description: 'URL pública da demonstração interativa.',
         sanitizer: (val, fb) => sanitizeUrl(val, fb),
       },
@@ -108,7 +108,7 @@ export const OUTREACH_TEMPLATES: Record<string, OutreachMessageTemplate> = {
     category: 'diagnostico_digital',
     description: 'Focado em leads que não possuem site e dependem apenas de WhatsApp/direct.',
     textTemplate:
-      'Olá, equipe do *{{cliente_nome}}*! Notamos que vocês têm forte procura no Google Maps em {{cidade}}, mas ainda não contam com um site próprio com agenda online para {{servico_destaque}}.\n\nPara ajudar a converter visitantes em agendamentos automáticos, montamos uma proposta interativa com 5 modelos prontos:\n\n👉 {{link_proposta}}\n\nGostariam de colocar essa página no ar com domínio próprio esta semana?',
+      'Olá, equipe do *{{cliente_nome}}*! Encontrei o perfil público do estabelecimento e preparei uma proposta visual de site para apresentar melhor os serviços de {{servico_destaque}}.\n\nA demonstração com cinco opções de layout está aqui:\n\n👉 {{link_proposta}}\n\nSe fizer sentido, posso explicar como personalizar e publicar a página.',
     metaTemplateName: 'diagnostico_sem_site_v1',
     metaLanguageCode: 'pt_BR',
     variables: [
@@ -140,7 +140,7 @@ export const OUTREACH_TEMPLATES: Record<string, OutreachMessageTemplate> = {
         key: 'link_proposta',
         label: 'Link da Demonstração',
         required: true,
-        fallback: 'https://belezadigital.com.br/demo',
+        fallback: '',
         description: 'URL da proposta interativa.',
         sanitizer: (val, fb) => sanitizeUrl(val, fb),
       },
@@ -177,7 +177,7 @@ export const OUTREACH_TEMPLATES: Record<string, OutreachMessageTemplate> = {
         key: 'link_proposta',
         label: 'Link da Proposta',
         required: true,
-        fallback: 'https://belezadigital.com.br/demo',
+        fallback: '',
         description: 'URL de demonstração.',
         sanitizer: (val, fb) => sanitizeUrl(val, fb),
       },
@@ -206,7 +206,7 @@ export const OUTREACH_TEMPLATES: Record<string, OutreachMessageTemplate> = {
         key: 'link_proposta',
         label: 'Link da Proposta',
         required: true,
-        fallback: 'https://belezadigital.com.br/demo',
+        fallback: '',
         description: 'Link da proposta.',
         sanitizer: (val, fb) => sanitizeUrl(val, fb),
       },

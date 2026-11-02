@@ -58,7 +58,7 @@ console.log('====================================================\n');
   assert(result.appliedFallbacks.length === 3, 'Identifica as 3 variáveis obrigatórias faltantes');
   assert(result.renderedMessage.includes('seu estabelecimento'), 'Aplica fallback inteligente para nome do cliente');
   assert(result.renderedMessage.includes('beleza, estética e barbearia'), 'Aplica fallback inteligente para serviço');
-  assert(result.renderedMessage.includes('https://belezadigital.com.br/demo'), 'Aplica fallback seguro para link de proposta');
+  assert(!result.renderedMessage.includes('https://belezadigital.com.br/demo'), 'Não inventa URL pública quando ainda não existe demonstração publicada');
   assert(!result.renderedMessage.includes('{{') && !result.renderedMessage.includes('undefined'), 'Garante ausência de {{tags}} ou texto undefined');
 }
 
