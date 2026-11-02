@@ -77,13 +77,11 @@ export function PlatformSalonDashboard() {
         }
 
         const establishmentId = String(establishment.id);
-        const [profile, services, products, media, appointments, clients] = await Promise.all([
+        const [profile, services, products, media] = await Promise.all([
           establishmentRepository.getProfile(establishmentId),
           establishmentRepository.listServices(establishmentId),
           establishmentRepository.listProducts(establishmentId),
           establishmentRepository.listMedia(establishmentId),
-          establishmentRepository.listAppointments(establishmentId).catch(() => []),
-          establishmentRepository.listClients(establishmentId).catch(() => []),
         ]);
         if (!active) return;
         store.hydrateSupabaseSession({
@@ -94,8 +92,6 @@ export function PlatformSalonDashboard() {
           services,
           products,
           media,
-          appointments,
-          clients,
         });
         if (active) setAccess('authorized');
       } catch (error) {

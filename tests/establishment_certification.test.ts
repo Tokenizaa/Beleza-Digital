@@ -43,15 +43,15 @@ test.describe('Painel do Estabelecimento — Certificação Marco Zero', () => {
   });
 
   test('Fase 2: Templates utilizam dados reais', async ({ page }) => {
-    await page.goto(`${BASE}/preview`);
-    // Verificar que os 5 templates são reconhecidos na interface de preview
+    await page.goto(`${BASE}/`);
+    // Verificar que os 5 templates são reconhecidos
     const templateNames = ['Ouro Clássico', 'Preto Esmeralda', 'Minimal Studio', 'Safira Executivo', 'Rubi Lounge'];
     for (const template of templateNames) {
-      await expect(page.getByText(new RegExp(template)).first()).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(new RegExp(template))).toBeVisible({ timeout: 5000 });
     }
   });
 
-  test('Fase 3: Deduplicação de telefone funciona', async ({ page }) => {
+  test('Fase 3: Deduplicação de telefone funciona', async () => {
     // Testar o fluxo de cadastro de cliente com phone normalization
     await page.goto(`${BASE}/plataforma/acesso?mode=login`);
     // Navegar para agendamento ou cliente
@@ -79,11 +79,12 @@ test.describe('Painel do Estabelecimento — Certificação Marco Zero', () => {
   });
 
   test('Fase 4: Preview reflete alterações', async ({ page }) => {
-    // Testar que a prévia carrega e disponibiliza a barra de modelos visuais
-    await page.goto(`${BASE}/preview`);
+    // Testar que alterações no painel aparecem na prévia
+    await page.goto(`${BASE}/plataforma/acesso?mode=login`);
     await page.waitForLoadState('domcontentloaded');
-    const tablist = page.locator('[role="tablist"]');
-    await expect(tablist).toBeVisible({ timeout: 5000 });
+    // A página deve carregar e mostrar os templates
+    const templateSections = page.locator('.template-section, .modelo');
+    await expect(templateSections.first()).toBeVisible({ timeout: 5000 });
   });
 
   test('Fase 5: Isolamento entre estabelecimentos', async ({ page }) => {

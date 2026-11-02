@@ -5,10 +5,10 @@ workers_dev = true
 compatibility_flags = ["nodejs_compat"]
 
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["* * * * *"]
 
 [vars]
-PROSPECTING_BATCH_SIZE = "10"
+PROSPECTING_BATCH_SIZE = "5"
 
 [browser]
 binding = "PROSPECTING_BROWSER"
