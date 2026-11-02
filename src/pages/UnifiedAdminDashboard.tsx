@@ -180,7 +180,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       buscar: 'prospeccao-hoje',
       empresas: 'prospeccao-crm',
     };
-    if (map[tab]) setActiveSection(map[tab]);
+    if (map[tab]) navigateToSection(map[tab]);
   };
 
   const handleSuperAdminTabChange = (tab: SuperAdminTab) => {
