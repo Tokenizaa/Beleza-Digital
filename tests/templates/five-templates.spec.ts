@@ -78,3 +78,112 @@ test('layout mobile não cria rolagem horizontal na demonstração', async ({ pa
   }));
   expect(widths.document).toBeLessThanOrEqual(widths.viewport + 1);
 });
+
+
+test('captura as seções do Ouro Clássico, página completa e GIF vertical para a landing', async ({ page }) => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/demo');
+  await expect(page.getByRole('heading', { name: 'Studio Aurora' })).toBeVisible();
+
+  const firstTemplate = page.getByRole('tab', { name: 'Ouro Clássico' });
+  await firstTemplate.click();
+  await expect(firstTemplate).toHaveAttribute('aria-selected', 'true');
+  // Capture the site itself, not the showcase navigation or admin shortcut.
+  await page.addStyleTag({
+    content: '[data-testid="template-switcher"], [data-testid="showcase-admin-link"] { display: none !important; }',
+  });
+
+  const outputDir = path.resolve(process.cwd(), 'public/assets/landing/showcase');
+  const sectionsDir = path.join(outputDir, 'sections');
+  const framesDir = path.resolve(process.cwd(), 'test-results/landing-capture/frames');
+  fs.mkdirSync(sectionsDir, { recursive: true });
+  fs.mkdirSync(framesDir, { recursive: true });
+
+  const sections = page.locator('section');
+  const sectionCount = await sections.count();
+  let captured = 0;
+  let heroCaptured = false;
+
+  for (let index = 0; index < sectionCount; index++) {
+    const section = sections.nth(index);
+    if (!(await section.isVisible())) continue;
+
+    const meta = await section.evaluate((element) => ({
+      id: element.id || '',
+      hasH1: Boolean(element.querySelector('h1')),
+      heading: element.querySelector('h1,h2,h3')?.textContent?.trim() || '',
+    }));
+    let key = meta.id || (meta.hasH1 ? 'hero' : '');
+    if (!key && index === 0) key = 'hero';
+    if (!key) key = `section-${String(index + 1).padStart(2, '0')}`;
+    key = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+
+    await section.screenshot({
+      path: path.join(sectionsDir, `${key}.png`),
+      animations: 'disabled',
+    });
+    captured++;
+    if (key === 'hero') heroCaptured = true;
+  }
+
+  expect(captured).toBeGreaterThanOrEqual(4);
+  expect(heroCaptured).toBe(true);
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: path.join(outputDir, 'ouro-classico-full.png'),
+    fullPage: true,
+    animations: 'disabled',
+  });
+
+  const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+  const viewportHeight = page.viewportSize()?.height ?? 900;
+  const maxScroll = Math.max(0, documentHeight - viewportHeight);
+  const step = Math.max(420, Math.floor(viewportHeight * 0.72));
+  let frame = 0;
+  for (let scrollY = 0; scrollY <= maxScroll; scrollY += step) {
+    await page.evaluate((y) => window.scrollTo(0, y), scrollY);
+    await page.waitForTimeout(180);
+    await page.screenshot({
+      path: path.join(framesDir, `frame-${String(frame).padStart(3, '0')}.png`),
+      animations: 'disabled',
+    });
+    frame++;
+  }
+  if (frame === 0) {
+    await page.screenshot({ path: path.join(framesDir, 'frame-000.png'), animations: 'disabled' });
+    frame = 1;
+  }
+
+  execFileSync('ffmpeg', [
+    '-y',
+    '-framerate', '2',
+    '-i', path.join(framesDir, 'frame-%03d.png'),
+    '-filter_complex', '[0:v]fps=2,scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer',
+    '-loop', '0',
+    path.join(outputDir, 'ouro-classico-scroll.gif'),
+  ], { stdio: 'pipe' });
+
+  expect(fs.existsSync(path.join(outputDir, 'ouro-classico-full.png'))).toBe(true);
+  expect(fs.existsSync(path.join(outputDir, 'ouro-classico-scroll.gif'))).toBe(true);
+
+  // Confirm the seven-fold landing consumes the generated, real Playwright assets.
+  await page.goto('/');
+  await expect(page.locator('[data-landing-section]')).toHaveCount(7);
+  for (const asset of [
+    '/assets/landing/showcase/sections/hero.png',
+    '/assets/landing/showcase/sections/servicos.png',
+    '/assets/landing/showcase/sections/agendamento.png',
+    '/assets/landing/showcase/sections/contato.png',
+    '/assets/landing/showcase/sections/galeria.png',
+    '/assets/landing/showcase/ouro-classico-full.png',
+    '/assets/landing/showcase/ouro-classico-scroll.gif',
+  ]) {
+    const response = await page.request.get(asset);
+    expect(response.ok(), `Landing asset must be served: ${asset}`).toBe(true);
+  }
+});

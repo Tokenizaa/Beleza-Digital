@@ -3,7 +3,6 @@ import { useStore } from '../data/store';
 import { AdminPage } from './AdminPage';
 import { SuperAdminPage } from './SuperAdminPage';
 import { LeadsDashboard } from './LeadsDashboard';
-import { ScrapingConsole } from './ScrapingConsole';
 import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
 import { SITE_TEMPLATES_LIST, SiteVariationId } from '../types/templates';
 import { AdminTab, SuperAdminTab } from '../types';
@@ -34,10 +33,10 @@ import {
   Building,
   KeyRound,
   Eye,
-  Store,
-  Database
+  Store
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { adminPathForSection, adminSectionFromLocation } from '../lib/admin-routing';
 
 export type UnifiedAdminSection =
   | 'salao-dashboard'
@@ -50,7 +49,6 @@ export type UnifiedAdminSection =
   | 'prospeccao-hoje'
   | 'prospeccao-crm'
   | 'prospeccao-automacao'
-  | 'prospeccao-scraping'
   | 'rede-saloes'
   | 'rede-novo'
   | 'rede-admins'
@@ -75,7 +73,25 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
 }) => {
   const { establishment, allEstablishments, session, platformConfig, store } = useStore();
 
-  const [activeSection, setActiveSection] = useState<UnifiedAdminSection>(initialSection);
+  const [activeSection, setActiveSection] = useState<UnifiedAdminSection>(
+    window.location.pathname === '/plataforma/admin' ? initialSection : adminSectionFromLocation(window.location)
+  );
+
+  const navigateToSection = (section: UnifiedAdminSection) => {
+    setActiveSection(section);
+    const nextPath = adminPathForSection(section);
+    if (window.location.pathname !== nextPath || window.location.search || window.location.hash) {
+      window.history.pushState({}, '', nextPath);
+    }
+  };
+
+  useEffect(() => {
+    const syncSectionFromUrl = () => {
+      setActiveSection(adminSectionFromLocation(window.location));
+    };
+    window.addEventListener('popstate', syncSectionFromUrl);
+    return () => window.removeEventListener('popstate', syncSectionFromUrl);
+  }, []);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [establishmentDropdownOpen, setEstablishmentDropdownOpen] = useState(false);
 
@@ -152,7 +168,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       instagram: 'salao-instagram',
       configuracoes: 'salao-configuracoes',
     };
-    if (map[tab]) setActiveSection(map[tab]);
+    if (map[tab]) navigateToSection(map[tab]);
   };
 
   const handleLeadsDashboardTabChange = (tab: 'hoje' | 'buscar' | 'empresas') => {
@@ -161,7 +177,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       buscar: 'prospeccao-hoje',
       empresas: 'prospeccao-crm',
     };
-    if (map[tab]) setActiveSection(map[tab]);
+    if (map[tab]) navigateToSection(map[tab]);
   };
 
   const handleSuperAdminTabChange = (tab: SuperAdminTab) => {
@@ -173,7 +189,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       'audit-logs': 'rede-auditoria',
       settings: 'rede-configuracoes',
     };
-    if (map[tab]) setActiveSection(map[tab]!);
+    if (map[tab]) navigateToSection(map[tab]!);
   };
 
   // Se não autenticado, renderiza tela de login unificada
@@ -272,10 +288,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       );
     }
 
-    if (activeSection === 'prospeccao-scraping') {
-      return <ScrapingConsole />;
-    }
-
     if (
       activeSection === 'prospeccao-hoje' ||
       activeSection === 'prospeccao-crm' ||
@@ -315,7 +327,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
           onTabChange={handleSuperAdminTabChange}
           onEnterEstablishmentAdmin={(estId) => {
             store.selectEstablishment(estId);
-            setActiveSection('salao-dashboard');
+            navigateToSection('salao-dashboard');
           }}
           onBackToApp={onBackToApp}
         />
@@ -523,7 +535,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                 <div className="pt-1.5 border-t border-neutral-800">
                   <button
                     onClick={() => {
-                      setActiveSection('rede-novo');
+                      navigateToSection('rede-novo');
                       setEstablishmentDropdownOpen(false);
                     }}
                     className="w-full p-2 rounded-lg text-left text-xs text-amber-400 hover:bg-neutral-900 flex items-center gap-1.5 font-bold"
@@ -572,7 +584,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                         <button
                           key={sub.id}
                           onClick={() => {
-                            setActiveSection(sub.id as UnifiedAdminSection);
+                            navigateToSection(sub.id as UnifiedAdminSection);
                             setMobileSidebarOpen(false);
                           }}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -614,7 +626,6 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                     {[
                       { id: 'prospeccao-hoje', label: 'Painel do Dia (Hoje)', icon: Compass },
                       { id: 'prospeccao-crm', label: 'Pipeline CRM & Empresas', icon: Users },
-                      { id: 'prospeccao-scraping', label: 'Console de Scraping', icon: Database },
                     ].map((sub) => {
                       const Icon = sub.icon;
                       const isActive = activeSection === sub.id;
@@ -622,7 +633,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                         <button
                           key={sub.id}
                           onClick={() => {
-                            setActiveSection(sub.id as UnifiedAdminSection);
+                            navigateToSection(sub.id as UnifiedAdminSection);
                             setMobileSidebarOpen(false);
                           }}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -674,7 +685,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                         <button
                           key={sub.id}
                           onClick={() => {
-                            setActiveSection(sub.id as UnifiedAdminSection);
+                            navigateToSection(sub.id as UnifiedAdminSection);
                             setMobileSidebarOpen(false);
                           }}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
@@ -698,7 +709,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setActiveSection('templates-catalogo');
+                    navigateToSection('templates-catalogo');
                     setMobileSidebarOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${

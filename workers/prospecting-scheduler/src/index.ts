@@ -513,9 +513,11 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   }
 
   // Add retry with exponential backoff and jitter to handle 429 rate limit errors.
-  const MAX_RETRIES = 3;
-  const BASE_DELAY_MS = 2_000; // 2s base delay
-  const MAX_DELAY_MS = 60_000; // 60s max delay
+  // One Browser Run attempt per task execution. Transient failures return to
+  // the durable queue with available_at backoff instead of hammering Browser Run.
+  const MAX_RETRIES = 0;
+  const BASE_DELAY_MS = 2_000;
+  const MAX_DELAY_MS = 60_000;
   let lastError: Error | null = null;
   let step = "init";
   let bindingType = "unknown";
@@ -536,6 +538,9 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   try {
     const browserBindingValue = env.PROSPECTING_BROWSER;
     step = "browser_connect";
+    bindingType = typeof browserBindingValue;
+    bindingIsString = typeof browserBindingValue === "string";
+    bindingLength = bindingIsString ? browserBindingValue.length : 0;
     if (!browserBindingValue) throw new Error("prospecting_browser_binding_missing");
 
     const { launch } = await import("@cloudflare/playwright");
@@ -652,12 +657,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       const errorMessage = lastError.message ?? "";
 
       // Verificar se é um erro de taxa limite (429) que merece retry
-      const isRateLimit = errorMessage.includes('429') ||
-                          errorMessage.includes('rate limit') ||
-                          errorMessage.includes('over capacity') ||
-                          errorMessage.includes('PROSPECTING_BROWSER') ||
-                          errorMessage.includes('browser_run') ||
-                          errorMessage.includes('throttl');
+      const isRateLimit = /429|rate limit|over capacity|browser_run|throttl/i.test(errorMessage);
 
       if (!isRateLimit || retryAttempt === MAX_RETRIES) {
         // Interrompe o retry; o estado será persistido como bloqueado abaixo.
@@ -690,12 +690,52 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   // Se após todas as tentativas ainda houver erro, marcar como bloqueado
   if (lastError) {
     const errorMessage = lastError.message ?? "browser_scraping_failed";
+    const isRateLimit = /429|rate limit|over capacity|browser_run|throttl/i.test(errorMessage);
+    const isTransient = isRateLimit || /timeout|timed out|network|ERR_|target page|frame was detached|temporarily/i.test(errorMessage);
+    const attemptsRemain = task.attempt_count < task.max_attempts;
+
+    if (isTransient && attemptsRemain) {
+      const retryAfterMatch = errorMessage.match(/retry after (\d+)/i);
+      const retryAfterSeconds = retryAfterMatch ? Number(retryAfterMatch[1]) : null;
+      const exponentialDelay = Math.min(900, (isRateLimit ? 300 : 60) * (2 ** Math.max(0, task.attempt_count - 1)));
+      const delaySeconds = Math.max(60, Math.min(900, retryAfterSeconds ?? exponentialDelay));
+      const availableAt = new Date(Date.now() + delaySeconds * 1000).toISOString();
+      await updateTask(env, task, workerId, {
+        status: "retryable",
+        available_at: availableAt,
+        last_error_code: isRateLimit ? "browser_rate_limited" : "browser_transient_error",
+        last_error: `Coleta temporariamente indisponível no passo '${step}'. Nova tentativa após ${delaySeconds}s. ${errorMessage}`.slice(0, 1000),
+        completed_at: null,
+        result: {
+          outcome: "retryable",
+          reason: isRateLimit ? "browser_rate_limited" : "browser_transient_error",
+          failedStep: step,
+          attempt: task.attempt_count,
+          maxAttempts: task.max_attempts,
+          availableAt,
+        },
+      });
+      return "retryable";
+    }
+
+    const terminalStatus = isTransient ? "dead_letter" : "blocked";
     await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "browser_scraping_failed",
-      last_error: `Falha na coleta via Cloudflare Browser Run após ${MAX_RETRIES + 1} tentativas no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${errorMessage}`,
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed", failedStep: step, bindingType, bindingIsString, bindingLength, retryAttempts: MAX_RETRIES + 1 },
+      status: terminalStatus,
+      last_error_code: isTransient ? "browser_retries_exhausted" : "browser_scraping_failed",
+      last_error: `Falha na coleta via Cloudflare Browser Run no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${errorMessage}`.slice(0, 1000),
+      completed_at: new Date().toISOString(),
+      result: {
+        outcome: terminalStatus,
+        reason: isTransient ? "browser_retries_exhausted" : "browser_scraping_failed",
+        failedStep: step,
+        bindingType,
+        bindingIsString,
+        bindingLength,
+        attempt: task.attempt_count,
+        maxAttempts: task.max_attempts,
+      },
     });
-    return "blocked";
+    return terminalStatus;
   }
 
   if (!scrapedResults.length) {
@@ -836,9 +876,41 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       }),
     });
     if (!stored.ok) throw new Error(`candidate_persist_http_${stored.status}`);
-    const storedRows = await stored.json() as unknown[];
-    if (storedRows.length) inserted++;
-    else duplicates++;
+    const storedRows = await stored.json() as Array<{ id?: string; status?: string; prospect_id?: string | null }>;
+    let persistedCandidate = storedRows[0] ?? null;
+
+    if (storedRows.length) {
+      inserted++;
+    } else {
+      duplicates++;
+      // A duplicate may still be awaiting promotion. Recover it by its stable
+      // dedupe key and enqueue capture idempotently; never create a second lead.
+      const existingCandidateResponse = await db(env, `prospecting_candidates?dedupe_key=eq.${encodeURIComponent(dedupeKey)}&select=id,status,prospect_id&limit=1`);
+      if (!existingCandidateResponse.ok) {
+        throw new Error(`candidate_dedupe_lookup_http_${existingCandidateResponse.status}`);
+      }
+      persistedCandidate = (await existingCandidateResponse.json() as Array<{ id?: string; status?: string; prospect_id?: string | null }>)[0] ?? null;
+    }
+
+    if (
+      persistedCandidate?.id &&
+      !persistedCandidate.prospect_id &&
+      !["blocked", "disqualified", "duplicate"].includes(String(persistedCandidate.status ?? ""))
+    ) {
+      const captureTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+        method: "POST",
+        headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+        body: JSON.stringify({
+          campaign_id: campaign.campaignId ?? null,
+          task_type: "capture",
+          idempotency_key: `candidate:${persistedCandidate.id}:capture:v1`,
+          payload: { candidateId: persistedCandidate.id, minimumScore: 50 },
+        }),
+      });
+      if (!captureTask.ok) {
+        throw new Error(`candidate_capture_enqueue_http_${captureTask.status}`);
+      }
+    }
 
 
   }
@@ -1465,6 +1537,8 @@ async function processBatch(env: Env) {
     try {
       const result = await executeTask(env, task, workerId);
       if (result === "succeeded") counts.succeeded++;
+      else if (result === "retryable") counts.retryable++;
+      else if (result === "dead_letter") counts.deadLetter++;
       else counts.blocked++;
     } catch (error) {
       const message = error instanceof Error ? error.message.slice(0, 500) : "unknown_worker_error";

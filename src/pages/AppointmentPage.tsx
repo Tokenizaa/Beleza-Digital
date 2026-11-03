@@ -185,19 +185,24 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
       return;
     }
 
-    // Compatibility bridge for the legacy admin panel on this browser only.
-    store.addAppointment({
-      clientName: clientName.trim(),
-      clientPhone: clientPhone.trim(),
-      serviceId: selectedService.id,
-      serviceName: selectedService.name,
-      servicePrice: selectedService.price,
-      serviceDuration: selectedService.durationMinutes,
-      date: selectedDate,
-      time: selectedTime,
-      notes: clientNotes.trim() || undefined,
-      status: 'pendente',
-    }, company.id);
+    // Registra na store para atualização imediata da interface
+    try {
+      store.addAppointment({
+        clientName: clientName.trim(),
+        clientPhone: clientPhone.trim(),
+        serviceId: selectedService.id,
+        serviceName: selectedService.name,
+        servicePrice: selectedService.price,
+        serviceDuration: selectedService.durationMinutes,
+        date: selectedDate,
+        time: selectedTime,
+        notes: clientNotes.trim() || undefined,
+        status: 'pendente',
+        establishmentId: company.id,
+      });
+    } catch {
+      // Ignora erro local caso o agendamento já tenha sido registrado no servidor
+    }
 
     setSubmittedWhatsAppUrl(waUrl);
     setStep(3);

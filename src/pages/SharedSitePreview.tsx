@@ -347,7 +347,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null;
       </header>}
 
       {controlMode === 'sidebar' && (
-        <aside className="fixed left-3 top-1/2 z-[70] -translate-y-1/2 rounded-2xl border border-neutral-700 bg-neutral-950/95 p-2 shadow-2xl backdrop-blur-md">
+        <aside data-testid="template-switcher" className="fixed left-3 top-1/2 z-[70] -translate-y-1/2 rounded-2xl border border-neutral-700 bg-neutral-950/95 p-2 shadow-2xl backdrop-blur-md">
           <div className="px-2 py-2 text-[10px] font-black uppercase tracking-wider text-neutral-500">Modelos</div>
           <div className="space-y-1" role="tablist" aria-label="Escolher modelo">
             {SITE_TEMPLATES_LIST.map((tpl) => {
