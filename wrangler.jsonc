@@ -8,8 +8,7 @@
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application",
-    "run_worker_first": true,
-    "binding": "ASSETS"
+    "run_worker_first": ["/api/*"]
   },
   "main": "src/worker-main.ts",
   "kv_namespaces": [
