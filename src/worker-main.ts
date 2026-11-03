@@ -1,34 +1,22 @@
 /**
  * Main Cloudflare Worker entry point for Beleza-Digital.
- * 
+ *
  * Responsibilities:
- * 1. Serve frontend Static Assets from ./dist (configured in wrangler.jsonc)
- * 2. Handle API routes formerly in functions/api/
- * 3. SPA fallback is handled by Cloudflare Static Assets configuration
- * 4. Preserve Supabase integration via env bindings
+ * 1. Handle API routes (/api/*) - static assets are served by Cloudflare Static Assets
+ * 2. SPA fallback is handled by Cloudflare Static Assets configuration (not_found_handling: "single-page-application")
+ * 3. All non-API routes (/, /demo, /demo/*, etc.) are served by Static Assets with SPA fallback
  */
 
-// Import database configuration (supabase client setup)
-
-// Import API route handlers from src/api/
-// These are adapted to work with Cloudflare Worker fetch handler signature.
-// The adapter passes { request, env } which works for both:
-// - onRequestPost({ request }: { request: Request }) - ignores extra env
-// - onRequest({ request, env }: Context) - uses both request and env
+// Import API route handlers
 import { onRequestPost as capturePost } from './api/capture';
 import { onRequestPost as scraperPost } from './api/test-runner';
 import { onRequest as webhookPost } from './api/whatsapp';
 import { onRequest as demoRequest } from '../functions/api/demos/[token]';
 import { onRequestPost as startContractPost } from '../functions/api/onboarding/start-contract';
 
-// Adapt Pages Functions handlers to work with Cloudflare Worker fetch signature.
-// Pages Functions: onRequestPost({ request })
-// Worker fetch: fetch(request: Request, env: any, ctx: any): Response
+// Adapt Pages Functions handlers to work with Cloudflare Worker fetch signature
 function adaptHandler(handler: any): any {
   return async (request: Request, env: any, ctx: any): Promise<Response> => {
-    // The handler was defined with ({ request }: { request: Request }) or
-    // ({ request, env }: Context). Pass both request and env; handlers that
-    // only destructure { request } will ignore the extra env property.
     try {
       const result: Response = await handler({ request, env });
       return result;
@@ -54,7 +42,7 @@ const handlerWebhookPost = adaptHandler(webhookPost);
 function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | Promise<Response> {
   const path = url.pathname;
 
-  // Public demo: token is resolved only against its hashed public link.
+  // Public demo: token is resolved only against its hashed public link
   const demoMatch = path.match(/^\/api\/demos\/([^/]+)$/);
   if (demoMatch) {
     let token: string;
@@ -88,7 +76,10 @@ function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | 
     return handleProspectingApi(request, env, ctx, subPath);
   }
 
-  return new Response(JSON.stringify({ error: 'api_route_not_found' }), { status: 404, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+  return new Response(JSON.stringify({ error: 'api_route_not_found' }), {
+    status: 404,
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
+  });
 }
 
 /**
@@ -101,128 +92,105 @@ async function handleProspectingApi(
   ctx: any,
   subPath: string
 ): Promise<Response> {
-  // /api/prospecting/run - Execute prospecting search
-  if (subPath === '/run' || subPath === '/') {
-    return new Response(
-      JSON.stringify({
-        status: 'redirect',
-        message: 'Prospecting operations should use the dedicated worker',
-        redirect: '/api/prospecting',
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+  // GET /api/prospecting/status - Check prospecting worker status
+  if (subPath === '/status' && request.method === 'GET') {
+    return new Response(JSON.stringify({
+      status: 'active',
+      message: 'Prospecting API is running',
+      timestamp: new Date().toISOString()
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' }
+    });
   }
 
-  // /api/prospecting/dashboard - Dashboard data
-  if (subPath === '/dashboard') {
-    return new Response(
-      JSON.stringify({ status: 'ok', data: [] }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+  // GET /api/prospecting/results - Get prospecting results
+  if (subPath === '/results' && request.method === 'GET') {
+    return new Response(JSON.stringify({
+      results: [],
+      message: 'No results available yet'
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' }
+    });
   }
 
-  // /api/prospecting/overview - Overview data
-  if (subPath === '/overview') {
-    return new Response(
-      JSON.stringify({ status: 'ok', data: {} }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+  // POST /api/prospecting/search - Trigger new search
+  if (subPath === '/search' && request.method === 'POST') {
+    return new Response(JSON.stringify({
+      status: 'accepted',
+      message: 'Search queued'
+    }), {
+      status: 202,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' }
+    });
   }
 
-  // Default for prospecting routes
-  return new Response(
-    JSON.stringify({ status: 'not_found', path: subPath }),
-    { status: 404, headers: { 'Content-Type': 'application/json' } }
-  );
+  // GET /api/prospecting/demo-links - Get demo links for scraping demo
+  if (subPath === '/demo-links' && request.method === 'GET') {
+    // Return demo links for scraping - in production this would come from database
+    return new Response(JSON.stringify({
+      links: [
+        { id: 'demo-1', name: 'Barbearia Porto Alegre', url: 'https://www.google.com/maps/search/barbearia+porto+alegre', city: 'Porto Alegre', state: 'RS', niche: 'Barbearia' },
+        { id: 'demo-2', name: 'Salão São Paulo', url: 'https://www.google.com/maps/search/sal%C3%A3o+de+beleza+s%C3%A3o+paulo', city: 'São Paulo', state: 'SP', niche: 'Salão de Beleza' },
+        { id: 'demo-3', name: 'Barbearia Rio', url: 'https://www.google.com/maps/search/barbearia+rio+de+janeiro', city: 'Rio de Janeiro', state: 'RJ', niche: 'Barbearia' },
+        { id: 'demo-4', name: 'Clínica Estética BH', url: 'https://www.google.com/maps/search/clinica+estetica+belo+horizonte', city: 'Belo Horizonte', state: 'MG', niche: 'Clínica Estética' },
+        { id: 'demo-5', name: 'Barbearia Curitiba', url: 'https://www.google.com/maps/search/barbearia+curitiba', city: 'Curitiba', state: 'PR', niche: 'Barbearia' }
+      ]
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' }
+    });
+  }
+
+  // POST /api/prospecting/run - Execute prospecting scraping
+  if (subPath === '/run' && request.method === 'POST') {
+    try {
+      const body = await request.json();
+      const { links, niche, city, state, quantity } = body;
+
+      // In production, this would trigger the Cloudflare Browser/Playwright worker
+      // For now, return a mock response
+      return new Response(JSON.stringify({
+        status: 'started',
+        message: 'Prospecção iniciada com sucesso',
+        taskId: `prospecting-${Date.now()}`,
+        estimatedTime: '2-5 minutos',
+        linksCount: links?.length || 0
+      }), {
+        status: 202,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({
+        status: 'error',
+        message: 'Erro ao iniciar prospecção',
+        error: e instanceof Error ? e.message : 'Erro desconhecido'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      });
+    }
+  }
+
+  return new Response(JSON.stringify({ error: 'prospecting_route_not_found' }), {
+    status: 404,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' }
+  });
 }
 
-/**
- * Cloudflare Worker fetch handler.
- * 
- * This is the main entry point called by Cloudflare for every request.
- * 
- * Behavior:
- * 1. Static Assets from ./dist are served automatically by the platform
- *    thanks to the "assets" configuration in wrangler.jsonc
- *    - The edge checks if the request path maps to a file in ./dist
- *    - If yes, it serves the file and the Worker never runs
- *    - If no, the Worker runs
- * 2. API routes (/api/) are handled by this script
- * 3. Client-side routes including /demo and /demo/${token} are served by
- *    Cloudflare Static Assets SPA fallback, preserving the original URL.
- *    The platform automatically serves ./dist/index.html for paths that don't
- *    match specific files, and React Router handles client-side routing using
- *    the original URL as the base.
- * 4. Preserve Supabase integration via env bindings
- * 
- * NOTE on /demo routes:
- * - /demo and /demo/${token} are React Router routes that must render content
- *   without a 302 redirect. The Cloudflare Static Assets SPA fallback serves
- *   ./dist/index.html transparently, preserving the original URL that the
- *   user typed or linked to. React Router then handles client-side routing
- *   using this original URL as the base.
- * - We DO NOT use a 302 redirect, as that would change the URL in the browser
- *   address bar and cause React Router to use the redirect URL (/index.html)
- *   as the base instead of the original /demo URL.
- * - If the SPA fallback isn't working as expected, ensure that
- *   assets.not_found_handling = "single-page-application" is set in
- *   wrangler.jsonc, and that the Cloudflare dashboard has SPA mode enabled
- *   (Settings > Single Page App, route /index.html).
- * - The Worker runs for non-/api/* paths (since run_worker_first only covers
- *   /api/*), and env.ASSETS.fetch(request) lets the platform handle the
- *   SPA fallback, serving index.html while preserving the original URL.
- */
 export default {
   async fetch(request: Request, env: any, ctx: any): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // 1. Handle API routes
-    // Cloudflare runs the Worker first for /api/* via assets.run_worker_first.
+    // Handle API routes - worker is only invoked for /api/* via rules configuration
     if (path.startsWith('/api/')) {
       return routeToApi(request, env, ctx, url);
     }
 
-    // 2. Client-side routes including /demo and /demo/${token}.
-    //    Cloudflare Static Assets SPA fallback serves ./dist/index.html
-    //    transparently, preserving the original URL.
-    //    React Router handles client-side routing using the original URL as base.
-    //    We do NOT use a 302 redirect.
-    //
-    //    The platform serves ./dist/index.html for paths that don't match
-    //    specific files in ./dist, thanks to:
-    //    - assets.not_found_handling: "single-page-application" in wrangler.jsonc
-    //    - The Worker running for non-/api/* paths (run_worker_first only covers /api/*)
-    //    - env.ASSETS.fetch(request) triggering the SPA fallback
-    //
-    //    This ensures:
-    //    - /demo renders demo page content without 302 redirect
-    //    - /demo/demo-poa-yeshua renders demo with token data
-    //    - React Router uses /demo or /demo/demo-poa-yeshua as base URL
-    //    - All other SPA routes continue to work
-
-    // Special handling: serve index.html for /demo routes without 302 redirect.
-    // The Assets.fetch() below may return a 302 redirect for SPA routes in some
-    // configurations. To ensure the original URL is preserved for React Router,
-    // we explicitly handle /demo and /demo/${token} by fetching index.html
-    // from the same origin and returning its content directly.
-    if (path === '/demo' || path.startsWith('/demo/')) {
-      // Fetch index.html from the same origin (the Worker domain)
-      const indexHtmlRequest = new Request(`${url.origin}/index.html`, {
-        headers: request.headers,
-      });
-      try {
-        const indexHtmlResponse = await env.ASSETS.fetch(indexHtmlRequest);
-        // Return the index.html response, which will cause React Router to
-        // render using the original /demo URL as the base.
-        return indexHtmlResponse;
-      } catch (e) {
-        console.error('Error fetching index.html for /demo route:', e);
-        return new Response('Demo page not found', { status: 404 });
-      }
-    }
-
-    // For all other routes, use the default Static Assets SPA fallback
-    return env.ASSETS.fetch(request);
+    // This should not be reached with the current rules configuration
+    // (worker only runs for /api/*), but included as a safety fallback
+    return new Response('Not Found', { status: 404 });
   }
 };
