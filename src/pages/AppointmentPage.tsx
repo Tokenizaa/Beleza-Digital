@@ -187,7 +187,7 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
 
     // Registra na store para atualização imediata da interface
     try {
-      store.recordPublicAppointment({
+      store.addAppointment({
         clientName: clientName.trim(),
         clientPhone: clientPhone.trim(),
         serviceId: selectedService.id,
@@ -198,7 +198,8 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
         time: selectedTime,
         notes: clientNotes.trim() || undefined,
         status: 'pendente',
-      }, company.id);
+        establishmentId: company.id,
+      });
     } catch {
       // Ignora erro local caso o agendamento já tenha sido registrado no servidor
     }

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
-import { UnifiedAdminDashboard } from "./UnifiedAdminDashboard";
+import { UnifiedAdminDashboard, type UnifiedAdminSection } from "./UnifiedAdminDashboard";
 import { store } from "../data/store";
 
-export function PlatformAdminDashboard() {
+interface PlatformAdminDashboardProps { initialSection?: UnifiedAdminSection; }
+
+export function PlatformAdminDashboard({ initialSection = "prospeccao-hoje" }: PlatformAdminDashboardProps) {
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
 
@@ -54,7 +56,7 @@ export function PlatformAdminDashboard() {
   // Usa a seção de prospecção como inicial, pois é o módulo principal do admin.
   // Módulo de Gestão do Salão (salao-*) é excluído: admin da plataforma não acessa funções de salão.
   return <UnifiedAdminDashboard
-    initialSection="prospeccao-hoje"
+    initialSection={initialSection}
     preAuthenticated
     excludeModules={['salao']}
     onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign("/") }}
