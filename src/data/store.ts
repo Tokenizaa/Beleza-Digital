@@ -87,7 +87,7 @@ function saveToStorage<T>(key: string, data: T) {
 // -------------------------------------------------------------
 
 function createOperationalId(prefix: string): string {
-  if (isSupabaseConfigured && typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -174,9 +174,10 @@ function detectInitialTenant(): string {
   // override the established tenant context. This prevents untrusted sources from
   // dictating the active tenant.
   if (typeof window !== 'undefined') {
-    // Skip URL param check if currentSession exists and has an establishmentId,
+    // Only check URL params if there is an active session with an establishmentId,
     // indicating the user has already authenticated into a specific establishment.
-    if (!currentSession || !currentSession.establishmentId) {
+    // URL params without authentication must not bypass the auth guard.
+    if (currentSession && currentSession.establishmentId) {
       const params = new URLSearchParams(window.location.search);
       const tenantParam = params.get('tenant') || params.get('estabelecimento') || params.get('e');
       if (tenantParam) {
@@ -512,7 +513,7 @@ export const store = {
       ...data,
       // ID robusto: combina timestamp com componente aleatório para evitar colisões
       // quando vários establishes são criados em sequência rápida (mesmo milissegundo).
-      id: `est-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: createOperationalId('est'),
       slug: finalSlug,
       isDefault: false,
       createdAt: new Date().toISOString(),
@@ -1256,7 +1257,7 @@ export const store = {
       establishmentId: est.id,
       establishmentName: est.name,
       userName: est.adminName || `Admin ${est.name}`,
-      token: `token-est-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      token: `token-est-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
       createdAt: Date.now(),
     };
 
@@ -1286,7 +1287,7 @@ export const store = {
     const session: AuthSession = {
       role: 'super_admin',
       userName: 'Super Administrador Geral',
-      token: `token-master-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      token: `token-master-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
       createdAt: Date.now(),
     };
 
@@ -1423,7 +1424,7 @@ export const store = {
   addAuditLog(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): void {
     const newLog: AuditLogEntry = {
       ...entry,
-      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: createOperationalId('log'),
       timestamp: new Date().toISOString(),
     };
     auditLogs = [newLog, ...auditLogs.slice(0, 99)]; // Keep latest 100 logs
