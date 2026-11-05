@@ -31,7 +31,10 @@ export const MapEmbed: React.FC<MapEmbedProps> = ({
   const externalUrl = mapsUrl || `https://www.google.com/maps/search/?api=1&query=${query}`;
 
   return (
-    <div className={`w-full overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950 ${className}`}>
+    <div
+      className={`w-full overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950 ${className}`}
+      onClick={() => window.open(externalUrl, '_blank')}
+    >
       <iframe
         title={`Mapa de localização de ${name}`}
         src={embedUrl}
@@ -39,6 +42,7 @@ export const MapEmbed: React.FC<MapEmbedProps> = ({
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
         allowFullScreen
+        onClick={(e) => e.stopPropagation()}
       />
       <div className="flex items-center justify-between gap-3 border-t border-neutral-800 px-4 py-3">
         <span className="min-w-0 truncate text-xs text-neutral-400">{location}</span>
