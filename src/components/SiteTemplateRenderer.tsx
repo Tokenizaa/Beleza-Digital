@@ -10,12 +10,9 @@ import {
   Instagram,
   Clock,
   ShieldCheck,
-  CheckCircle2,
   ChevronRight,
   ExternalLink,
   Calendar,
-  Lock,
-  CalendarCheck,
   Star,
   Phone,
   Check,
@@ -35,9 +32,9 @@ import {
   Layers,
   Palette
 } from 'lucide-react';
-import { MonthCalendar } from './MonthCalendar';
 import { MediaModal } from './MediaModal';
 import { ProductDetailModal } from './ProductDetailModal';
+import { AgendaModal } from './AgendaModal';
 import { BusinessFacts } from './BusinessFacts';
 import { MapEmbed } from './MapEmbed';
 import { ServiceItem, ProductItem, MediaItem } from '../types';
@@ -113,15 +110,8 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   // Modal and Interactive States
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<ProductItem | null>(null);
-
-  // Calendar State for interactive booking simulation
-  const todayIso = new Date().toISOString().split('T')[0];
-  const [bookingDate, setBookingDate] = useState<string>(todayIso);
-  const [bookingTime, setBookingTime] = useState<string>('14:00');
-  const [bookingService, setBookingService] = useState<string>('');
-  const [bookingConfirmed, setBookingConfirmed] = useState(false);
-
-  const timeslots = ['09:00', '10:00', '11:00', '13:30', '14:30', '15:30', '16:30', '17:30', '18:30'];
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [selectedBookingService, setSelectedBookingService] = useState<string>('');
 
   // Os modelos usam somente dados reais fornecidos pela demonstração.
   // Não preencher serviços, produtos ou fotos com conteúdo fictício.
@@ -274,12 +264,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 font-sans">
-            <a
-              href="#agendamento"
+            <button
+              onClick={() => setBookingModalOpen(true)}
               className="w-full sm:w-auto px-8 py-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 hover:from-amber-400 hover:to-amber-500 shadow-xl shadow-amber-500/20 transition transform active:scale-95 flex items-center justify-center gap-2"
             >
               <Calendar className="w-4 h-4" /> Agendar Atendimento Clássico
-            </a>
+            </button>
             {whatsappClean && (
               <a
                 href={whatsappUrl}
@@ -329,13 +319,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                 <span className="font-serif text-xl font-bold text-amber-300">
                   {service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
                 </span>
-                <a
-                  href="#agendamento"
-                  onClick={() => setBookingService(service.name)}
+                <button
+                  onClick={() => {
+                    setSelectedBookingService(service.name);
+                    setBookingModalOpen(true);
+                  }}
                   className="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider bg-amber-500 hover:bg-amber-400 text-neutral-950 transition"
                 >
                   Agendar
-                </a>
+                </button>
               </div>
             </div>
           ))}
@@ -388,12 +380,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="#agendamento"
+            <button
+              onClick={() => setBookingModalOpen(true)}
               className="w-full sm:w-auto px-8 py-4 rounded-lg text-xs font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-neutral-950 shadow-lg shadow-emerald-500/30 transition transform active:scale-95 flex items-center justify-center gap-2"
             >
               <Zap className="w-4 h-4" /> Marcar Horário Online
-            </a>
+            </button>
             {whatsappClean && (
               <a
                 href={whatsappUrl}
@@ -447,13 +439,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               </div>
 
               <div className="mt-5 pt-4 border-t border-neutral-800/80 flex items-center justify-end">
-                <a
-                  href="#agendamento"
-                  onClick={() => setBookingService(service.name)}
+                <button
+                  onClick={() => {
+                    setSelectedBookingService(service.name);
+                    setBookingModalOpen(true);
+                  }}
                   className="px-4 py-2 rounded bg-emerald-500/10 hover:bg-emerald-500 border border-emerald-500/30 text-emerald-300 hover:text-neutral-950 font-mono text-xs font-bold transition flex items-center gap-1.5"
                 >
                   RESERVAR <ChevronRight className="w-3.5 h-3.5" />
-                </a>
+                </button>
               </div>
             </div>
           ))}
@@ -491,12 +485,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="#agendamento"
+            <button
+              onClick={() => setBookingModalOpen(true)}
               className="w-full sm:w-auto px-7 py-3.5 rounded-full text-xs font-semibold tracking-wide bg-slate-100 hover:bg-white text-neutral-950 transition shadow-lg shadow-slate-900/40"
             >
               Consultar Disponibilidade
-            </a>
+            </button>
             {whatsappClean && (
               <a
                 href={whatsappUrl}
@@ -536,13 +530,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               <div className="flex items-center gap-4 shrink-0">
                 <span className="text-xs text-slate-500 font-mono">{service.durationMinutes ? `${service.durationMinutes} min` : 'Duração sob consulta'}</span>
                 <span className="text-base font-medium text-slate-900">{service.price != null ? 'R$ ' + service.price.toFixed(2).replace('.', ',') : 'Consulte valor'}</span>
-                <a
-                  href="#agendamento"
-                  onClick={() => setBookingService(service.name)}
+                <button
+                  onClick={() => {
+                    setSelectedBookingService(service.name);
+                    setBookingModalOpen(true);
+                  }}
                   className="px-3.5 py-1.5 rounded-full text-xs border border-slate-300 hover:border-slate-500 text-slate-700 hover:text-slate-900 transition"
                 >
                   Agendar
-                </a>
+                </button>
               </div>
             </div>
           ))}
@@ -590,12 +586,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="#agendamento"
+            <button
+              onClick={() => setBookingModalOpen(true)}
               className="w-full sm:w-auto px-8 py-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xl shadow-blue-600/30 transition transform active:scale-95 flex items-center justify-center gap-2"
             >
               <Calendar className="w-4 h-4" /> Reserva Prioritária
-            </a>
+            </button>
             {whatsappClean && (
               <a
                 href={whatsappUrl}
@@ -645,13 +641,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               </div>
               <div className="mt-4 pt-3 border-t border-blue-900/40 flex items-center justify-between">
                 <span className="text-[11px] text-blue-300/80 font-mono">Duração: {service.durationMinutes ? `${service.durationMinutes} min` : 'sob consulta'}</span>
-                <a
-                  href="#agendamento"
-                  onClick={() => setBookingService(service.name)}
+                <button
+                  onClick={() => {
+                    setSelectedBookingService(service.name);
+                    setBookingModalOpen(true);
+                  }}
                   className="px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-500 text-white transition"
                 >
                   Agendar
-                </a>
+                </button>
               </div>
             </div>
           ))}
@@ -698,12 +696,12 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 font-sans">
-            <a
-              href="#agendamento"
+            <button
+              onClick={() => setBookingModalOpen(true)}
               className="w-full sm:w-auto px-8 py-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white shadow-xl shadow-rose-500/25 transition transform active:scale-95 flex items-center justify-center gap-2"
             >
               <Calendar className="w-4 h-4" /> Reservar Meu Momento
-            </a>
+            </button>
             {whatsappClean && (
               <a
                 href={whatsappUrl}
@@ -752,13 +750,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               </div>
               <div className="mt-5 pt-3 border-t border-rose-950/80 flex items-center justify-between">
                 <span className="text-[11px] text-rose-400/80 font-sans">Tempo: {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração não informada'}</span>
-                <a
-                  href="#agendamento"
-                  onClick={() => setBookingService(service.name)}
+                <button
+                  onClick={() => {
+                    setSelectedBookingService(service.name);
+                    setBookingModalOpen(true);
+                  }}
                   className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white transition shadow-sm"
                 >
                   Reservar
-                </a>
+                </button>
               </div>
             </div>
           ))}
@@ -771,103 +771,6 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   );
 
 
-  // Common interactive booking section adapted to current theme
-  const renderSharedBookingSection = () => {
-    return (
-      <section id="agendamento" hidden={rawServices.length === 0} className="max-w-4xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
-        <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
-          <span className="text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300">
-            Agendamento Online
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white">Escolha Seu Dia e Horário</h2>
-          <p className="text-xs text-neutral-400">Veja como o agendamento poderá funcionar no site do estabelecimento.</p>
-        </div>
-
-        <div className="p-6 sm:p-8 rounded-3xl border border-neutral-800 bg-neutral-950/80 backdrop-blur-xl shadow-2xl space-y-6">
-          {bookingConfirmed ? (
-            <div className="text-center py-10 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center text-emerald-400 mx-auto">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold text-white">Simulação de agendamento concluída</h3>
-              <p className="text-xs text-neutral-400 max-w-md mx-auto">
-                Horário reservado para <strong>{new Date(bookingDate + "T00:00:00").toLocaleDateString("pt-BR")}</strong> às <strong>{bookingTime}</strong>
-                {bookingService ? ` (${bookingService})` : ''} na {businessData.name}.
-              </p>
-              <div className="pt-2">
-                <button
-                  onClick={() => setBookingConfirmed(false)}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-neutral-800 text-neutral-200 hover:bg-neutral-700 transition"
-                >
-                  Simular Novo Agendamento
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
-                  1. Selecione o Serviço
-                </label>
-                <select
-                  value={bookingService}
-                  onChange={(e) => setBookingService(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-neutral-700 bg-neutral-900 text-white text-xs outline-none focus:border-amber-500"
-                >
-                  <option value="">Selecione um serviço...</option>
-                  {rawServices.map((s) => (
-                    <option key={s.id} value={s.name}>
-                      {s.name} - {s.price != null ? 'R$ ' + s.price.toFixed(2).replace('.', ',') : 'Consulte valor'}
-                    </option>
-                  ))}
-                </select>
-
-                <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider pt-2">
-                  2. Escolha o Horário
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {timeslots.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setBookingTime(t)}
-                      className={`p-2.5 rounded-lg text-xs font-bold transition border ${
-                        bookingTime === t
-                          ? 'border-amber-500 bg-amber-500/20 text-amber-300'
-                          : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
-                  3. Selecione a Data
-                </label>
-                <MonthCalendar selectedDate={bookingDate} onSelectDate={setBookingDate} appointments={[]} minDate={todayIso} />
-
-                <div className="pt-4">
-                  <button
-                    onClick={() => setBookingConfirmed(true)}
-                    className="w-full py-4 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 shadow-xl transition transform active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <CalendarCheck className="w-4 h-4" /> Simular Agendamento
-                  </button>
-                  <p className="text-[11px] text-neutral-500 text-center mt-2">
-                    Prévia interativa. A disponibilidade real será configurada na ativação do site.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-    );
-  };
-
   // Localização & Contato: exibe apenas informações fornecidas pela fonte.
   const hasAddress = Boolean(businessData.address?.trim());
   const hasCity = Boolean([businessData.city, businessData.state].filter(Boolean).join(' ').trim());
@@ -876,18 +779,28 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
   const hasHours = Boolean(businessData.horario?.trim());
   const hasContact = Boolean(businessData.phone?.trim() || whatsappClean);
 
+  const footerTheme = {
+    'ouro-classico': { icon: 'text-amber-400', link: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-900/20', accent: 'text-amber-300' },
+    'preto-esmeralda': { icon: 'text-emerald-400', link: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-900/20', accent: 'text-emerald-300' },
+    'minimal-studio': { icon: 'text-slate-600', link: 'text-slate-600', border: 'border-slate-500/30', bg: 'bg-slate-800/20', accent: 'text-slate-700' },
+    'safira-executivo': { icon: 'text-blue-400', link: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-900/20', accent: 'text-blue-300' },
+    'rubi-lounge': { icon: 'text-rose-400', link: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-900/20', accent: 'text-rose-300' },
+  };
+
+  const ft = footerTheme[activeVariation];
+
   const renderContactFooter = () => (
-    <section id="contato" className="mx-auto max-w-6xl border-t border-neutral-800/80 px-4 py-16 sm:px-8">
+    <section id="contato" className={`mx-auto max-w-6xl border-t ${ft.border} px-4 py-16 sm:px-8 ${ft.bg}`}>
       {(hasLocation || hasHours || hasContact) && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {hasLocation && (
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
-              <MapPin className="mb-3 h-5 w-5 text-amber-400" />
+              <MapPin className={`mb-3 h-5 w-5 ${ft.icon}`} />
               <h3 className="text-sm font-bold text-white">Localização</h3>
               {hasAddress && <p className="mt-1 text-xs text-neutral-300">{businessData.address}</p>}
               {hasCity && <p className="mt-1 text-xs text-neutral-400">{[businessData.city, businessData.state].filter(Boolean).join(' - ')}</p>}
               {businessData.googleMapsUrl && (
-                <a href={businessData.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-amber-400 hover:underline">
+                <a href={businessData.googleMapsUrl} target="_blank" rel="noopener noreferrer" className={`mt-2 inline-flex items-center gap-1 text-xs ${ft.link} hover:underline`}>
                   Ver no Google Maps <ExternalLink className="h-3 w-3" />
                 </a>
               )}
@@ -896,7 +809,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
           {hasHours && (
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
-              <Clock className="mb-3 h-5 w-5 text-emerald-400" />
+              <Clock className={`mb-3 h-5 w-5 ${ft.icon}`} />
               <h3 className="text-sm font-bold text-white">Horário de Atendimento</h3>
               <p className="mt-1 whitespace-pre-line text-xs text-neutral-400">{businessData.horario}</p>
             </div>
@@ -904,11 +817,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
           {hasContact && (
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
-              <Phone className="mb-3 h-5 w-5 text-blue-400" />
+              <Phone className={`mb-3 h-5 w-5 ${ft.icon}`} />
               <h3 className="text-sm font-bold text-white">Contato & Reservas</h3>
               {businessData.phone?.trim() && <p className="mt-1 text-xs text-neutral-400">{businessData.phone}</p>}
               {whatsappClean && (
-                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-emerald-400 hover:underline">
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={`mt-2 inline-flex items-center gap-1 text-xs ${ft.link} hover:underline`}>
                   Chamar no WhatsApp <ChevronRight className="h-3 w-3" />
                 </a>
               )}
@@ -935,7 +848,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         </div>
       )}
 
-      <footer className="mt-14 border-t border-neutral-800/80 pt-8 text-center text-xs text-neutral-500">
+      <footer className={`mt-14 border-t ${ft.border} pt-8 text-center text-xs text-neutral-500 ${ft.bg}`}>
         <p>© {new Date().getFullYear()} {businessData.name}. Todos os direitos reservados.</p>
         <p className="mt-1 text-[11px] text-neutral-500">Plataforma White-Label Beleza Digital</p>
       </footer>
@@ -1010,8 +923,6 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         {activeVariation === 'rubi-lounge' && renderRubiLounge()}
         <BusinessFacts rating={businessData.rating} reviewCount={businessData.reviewCount ?? businessData['quantidade-de-avaliacoes']} priceRange={businessData.priceRange ?? businessData['faixa-de-preco']} status={businessData.status} openingHours={businessData.horario} variation={activeVariation} />
 
-        {/* Agendamento & Contato */}
-        {renderSharedBookingSection()}
         {renderContactFooter()}
       </main>
 
@@ -1022,6 +933,14 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       {selectedProduct && (
         <ProductDetailModal product={selectedProduct} whatsappNumber={businessData.whatsapp || businessData.phone} onClose={() => setSelectedProduct(null)} />
       )}
+      <AgendaModal
+        isOpen={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        services={rawServices}
+        businessName={businessData.name}
+        whatsappNumber={businessData.whatsapp || businessData.phone}
+        variation={activeVariation}
+      />
     </div>
   );
 };
