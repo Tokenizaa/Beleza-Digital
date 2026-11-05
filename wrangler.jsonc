@@ -1,14 +1,15 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "beleza-digital",
-  "compatibility_date": "2026-01-01",
+  "compatibility_date": "2026-11-04",
   "compatibility_flags": [
     "nodejs_compat"
   ],
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application",
-    "run_worker_first": true
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
   },
   "main": "src/worker-main.ts",
   "kv_namespaces": [
