@@ -922,9 +922,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         {activeVariation === 'safira-executivo' && renderSafiraExecutivo()}
         {activeVariation === 'rubi-lounge' && renderRubiLounge()}
         <BusinessFacts rating={businessData.rating} reviewCount={businessData.reviewCount ?? businessData['quantidade-de-avaliacoes']} priceRange={businessData.priceRange ?? businessData['faixa-de-preco']} status={businessData.status} openingHours={businessData.horario} variation={activeVariation} />
-
-        {renderContactFooter()}
       </main>
+
+      {renderContactFooter()}
 
       {/* Modais */}
       {selectedMedia && (
