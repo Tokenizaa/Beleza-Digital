@@ -33,6 +33,7 @@ import {
 import { SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId, normalizeTemplateId } from '../types/templates';
 import { supabase } from '../lib/supabase';
 import { createValidatedWhatsAppUrl } from '../lib/message-templates';
+import { createShareablePreviewUrl, type ShareableSitePreview } from './SharedSitePreview';
 
 export type LeadStage = 'novo' | 'contatado' | 'respondeu' | 'reuniao' | 'fechado';
 export type OpportunityLevel = 'alta' | 'media' | 'baixa';
@@ -643,6 +644,51 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     const value = company.demoUrl?.trim() ?? '';
     if (!/^https:\/\//i.test(value) || /localhost|127\.0\.0\.1/i.test(value)) return '';
     return value;
+  };
+
+  /**
+   * Constrói um ShareableSitePreview a partir dos dados do lead (ficha raspada),
+   * permitindo visualizar a página do modelo selecionado mesmo quando não há
+   * demonstração publicada no Supabase. Usa apenas dados reais da ficha.
+   */
+  const buildLeadPreview = (company: LeadCompany): ShareableSitePreview => {
+    const template = SITE_TEMPLATES[normalizeTemplateId(company.selectedTemplate)] ?? SITE_TEMPLATES['ouro-classico'];
+    return {
+      version: 1,
+      businessName: company.name || 'Estabelecimento',
+      category: company.category || company.niche,
+      description: company.notes.join(' ') || '',
+      phone: company.phone || '',
+      whatsapp: company.whatsapp || company.phone || undefined,
+      address: company.address || '',
+      city: company.city || undefined,
+      state: company.state || undefined,
+      websiteUrl: company.websiteUrl || '',
+      instagramUrl: company.instagramUrl || undefined,
+      googleMapsUrl: company.websiteUrl || undefined,
+      templateId: normalizeTemplateId(company.selectedTemplate),
+      templateName: template.name,
+      projectVersion: 1,
+      generatedAt: company.createdAt || new Date().toISOString(),
+      isSampleContent: false,
+      status: company.status,
+      rating: company.rating,
+      reviewCount: company.reviewsCount,
+      priceRange: company.faixaDePreco || company['faixa-de-preco'] || undefined,
+      openingHours: company.horario || undefined,
+      note: company.note,
+      services: [],
+      products: [],
+      media: [],
+    };
+  };
+
+  /**
+   * Gera uma URL de prévia local da página do lead (site-preview) usando os dados
+   * da ficha raspada, sem depender de demonstração publicada no banco.
+   */
+  const getLeadPreviewUrl = (company: LeadCompany): string => {
+    return createShareablePreviewUrl(buildLeadPreview(company));
   };
 
   // Prepare a click-to-chat URL only after the real demo is published and a
@@ -1448,6 +1494,19 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                                       <Instagram className="h-3.5 w-3.5" />
                                     </a>
                                   )}
+
+                                  {/* Visualizar página do modelo (pré-visualização local da ficha) */}
+                                  <a
+                                    href={getLeadPreviewUrl(company)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title={`Visualizar página no modelo ${TEMPLATE_NAMES[company.selectedTemplate]}`}
+                                    aria-label="Visualizar página do modelo"
+                                    data-testid="visualizar-pagina-lead"
+                                    className="p-1.5 rounded-lg bg-[#252c3a] hover:bg-blue-600 text-neutral-300 hover:text-white transition"
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                  </a>
                                 </div>
 
                                 {/* Dropdown to change stage */}
@@ -1523,6 +1582,15 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                             className="inline-block p-1.5 rounded-lg bg-[#252c3a] hover:bg-purple-600 text-neutral-300 hover:text-white"
                           >
                             <Globe className="h-3.5 w-3.5" />
+                          </a>
+                          <a
+                            href={getLeadPreviewUrl(c)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={`Visualizar página no modelo ${TEMPLATE_NAMES[c.selectedTemplate]}`}
+                            className="inline-block p-1.5 rounded-lg bg-[#252c3a] hover:bg-blue-600 text-neutral-300 hover:text-white"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         </td>
                       </tr>
@@ -1852,6 +1920,17 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                       <Globe className="h-4 w-4" /> Demonstração em preparação
                     </button>
                   )}
+
+                  {/* Visualizar página do modelo (pré-visualização local da ficha) */}
+                  <a
+                    href={getLeadPreviewUrl(selectedCompany)}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`Visualizar página no modelo ${TEMPLATE_NAMES[selectedCompany.selectedTemplate]}`}
+                    className="py-3 px-4 rounded-xl bg-[#252c3a] hover:bg-blue-600 text-white font-bold flex items-center justify-center gap-2 transition text-center"
+                  >
+                    <ExternalLink className="h-4 w-4" /> Visualizar página
+                  </a>
                 </div>
 
                 <div className="p-3 bg-[#171b23] rounded-xl border border-[#202530] flex items-center justify-between text-xs">
