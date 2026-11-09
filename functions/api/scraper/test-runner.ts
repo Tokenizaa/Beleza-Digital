@@ -63,13 +63,13 @@ export async function onRequestPost({ request, env }: Context) {
     return json({
       error: "scraper_worker_not_configured",
       message:
-        "O runner de scraping não pode ser executado diretamente nesta função. Configure PROSPECTING_WORKER_URL e PROSPECTING_WORKER_SECRET apontando para o Worker prospecting-scheduler (com binding BROWSER) para habilitar a coleta real de fichas do Google Maps.",
+        "O Worker de prospecção não está configurado neste ambiente. A coleta direta via runner requer PROSPECTING_WORKER_URL e PROSPECTING_WORKER_SECRET. Use /api/prospecting/run para enfileirar uma coleta que será processada quando o Worker estiver disponível.",
       required: [
         "PROSPECTING_WORKER_URL (URL pública do Worker prospecting-scheduler)",
         "PROSPECTING_WORKER_SECRET (segredo compartilhado para autenticação interna)",
         "PROSPECTING_BROWSER (binding de navegador configurado no wrangler do Worker)",
       ],
-      alternative: "Use /api/prospecting/run para enfileirar uma coleta via Worker.",
+      alternative: "/api/prospecting/run",
     }, 503);
   }
 
