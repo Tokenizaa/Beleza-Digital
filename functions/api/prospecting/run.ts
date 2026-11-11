@@ -7,6 +7,7 @@ interface Env {
   PROSPECTING_WORKER_URL?: string;
   // Segredo compartilhado para autenticar execuções manuais internas do worker.
   PROSPECTING_WORKER_SECRET?: string;
+  PROSPECTING_SCHEDULER?: { fetch: (request: Request) => Promise<Response> };
 }
 type Context = { request: Request; env: Env };
 
@@ -18,6 +19,24 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
     'x-content-type-options': 'nosniff',
   },
 });
+
+async function invokeProspectingScheduler(env: Env): Promise<Response | null> {
+  if (!env.PROSPECTING_WORKER_SECRET?.trim()) return null;
+  const request = new Request("https://prospecting-scheduler/", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer " + env.PROSPECTING_WORKER_SECRET,
+      "content-type": "application/json",
+    },
+  });
+  if (env.PROSPECTING_SCHEDULER?.fetch) {
+    return env.PROSPECTING_SCHEDULER.fetch(request);
+  }
+  if (env.PROSPECTING_WORKER_URL?.trim()) {
+    return fetch(env.PROSPECTING_WORKER_URL, request);
+  }
+  return null;
+}
 
 async function validatePlatformAdmin(env: Env, authorization: string): Promise<{ ok: true; userId: string } | { ok: false; error: string; status: number }> {
   if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) {
@@ -129,15 +148,11 @@ export async function onRequestPost({ request, env }: Context) {
     // Caso contrário, a tarefa permanece enfileirada para processamento posterior
     // pelo agendador, sem exigir secrets server-side para iniciar a busca.
     const workerConfigured =
-      Boolean(env.PROSPECTING_WORKER_URL?.trim()) &&
-      Boolean(env.PROSPECTING_WORKER_SECRET?.trim());
+      Boolean(env.PROSPECTING_WORKER_SECRET?.trim()) &&
+      Boolean(env.PROSPECTING_SCHEDULER?.fetch || env.PROSPECTING_WORKER_URL?.trim());
     if (workerConfigured) {
       try {
-        const workerResponse = await fetch(env.PROSPECTING_WORKER_URL!, {
-          method: 'POST',
-          headers: { authorization: `Bearer ${env.PROSPECTING_WORKER_SECRET!}`, 'content-type': 'application/json' },
-          signal: AbortSignal.timeout(60000),
-        });
+        const workerResponse = await invokeProspectingScheduler(env);
         const workerBody = await workerResponse.json().catch(() => ({})) as Record<string, unknown>;
         if (!workerResponse.ok || workerBody.status === 'blocked' || workerBody.status === 'failed') {
           workerWarning = String(workerBody.error ?? workerBody.detail ?? `Worker respondeu HTTP ${workerResponse.status}`);
@@ -212,18 +227,11 @@ export async function onRequestPost({ request, env }: Context) {
   let workerResult: { status: string; error?: string; [key: string]: unknown } | null = null;
   let workerError: string | null = null;
   const workerConfigured =
-    Boolean(env.PROSPECTING_WORKER_URL?.trim()) &&
-    Boolean(env.PROSPECTING_WORKER_SECRET?.trim());
+    Boolean(env.PROSPECTING_WORKER_SECRET?.trim()) &&
+    Boolean(env.PROSPECTING_SCHEDULER?.fetch || env.PROSPECTING_WORKER_URL?.trim());
   if (workerConfigured) {
     try {
-      const workerResponse = await fetch(env.PROSPECTING_WORKER_URL, {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${env.PROSPECTING_WORKER_SECRET}`,
-          'content-type': 'application/json',
-        },
-        signal: AbortSignal.timeout(60000),
-      });
+      const workerResponse = await invokeProspectingScheduler(env);
       const workerBody = await workerResponse.json().catch(() => ({})) as Record<string, unknown>;
       // Determina status baseado no body do worker, não apenas no HTTP ok.
       // O worker pode retornar 200 com status 'blocked' no body (ex: binding PROSPECTING_BROWSER ausente).
