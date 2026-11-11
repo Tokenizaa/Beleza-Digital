@@ -4,11 +4,12 @@ import { store } from '../data/store';
 import { establishmentRepository } from '../data/establishmentRepository';
 import { UnifiedAdminDashboard } from './UnifiedAdminDashboard';
 
-type AccessState = 'checking' | 'authorized' | 'denied';
+type AccessState = 'checking' | 'authorized' | 'denied' | 'error';
 
 export function PlatformSalonDashboard() {
   const [access, setAccess] = useState<AccessState>('checking');
   const [checkingMessage, setCheckingMessage] = useState('Verificando acesso ao estabelecimento…');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!supabase) {
@@ -18,6 +19,7 @@ export function PlatformSalonDashboard() {
 
     let active = true;
     let resolving = false;
+    let verifyAgain = false;
     let denying = false;
     const client = supabase;
 
@@ -29,7 +31,10 @@ export function PlatformSalonDashboard() {
     };
 
     const verify = async () => {
-      if (resolving) return;
+      if (resolving) {
+        verifyAgain = true;
+        return;
+      }
       resolving = true;
       try {
         const { data: { session }, error: sessionError } = await client.auth.getSession();
@@ -97,11 +102,15 @@ export function PlatformSalonDashboard() {
       } catch (error) {
         console.error('Falha ao validar acesso ao estabelecimento:', error);
         if (active) {
-          setCheckingMessage('Não foi possível validar sua associação ao estabelecimento.');
-          setAccess('denied');
+          setCheckingMessage('Não foi possível validar seu acesso agora. Verifique sua conexão e tente novamente.');
+          setAccess('error');
         }
       } finally {
         resolving = false;
+        if (verifyAgain && active) {
+          verifyAgain = false;
+          void verify();
+        }
       }
     };
 
@@ -118,10 +127,10 @@ export function PlatformSalonDashboard() {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [retryCount]);
 
   if (access !== 'authorized') {
-    return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">{access === 'denied' ? checkingMessage : 'Verificando acesso ao estabelecimento…'}</main>;
+    return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200"><div className="text-center space-y-4">{access === 'denied' || access === 'error' ? checkingMessage : 'Verificando acesso ao estabelecimento…'}{access === 'error' && <button type="button" onClick={() => setRetryCount((value) => value + 1)} className="block mx-auto rounded-lg border border-neutral-700 px-4 py-2 text-sm hover:bg-neutral-800">Tentar novamente</button>}</div></main>;
   }
 
   return <UnifiedAdminDashboard
