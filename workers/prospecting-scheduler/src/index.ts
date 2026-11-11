@@ -239,6 +239,7 @@ function qualify(prospect: Prospect): {
 function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
+  if (!env.BROWSERLESS_TOKEN?.trim()) return "BROWSERLESS_TOKEN ausente";
   return null;
 }
 
