@@ -1,1 +1,13 @@
-{"compatibility_date":"2026-01-01","main":"workers/prospecting-scheduler/src/index.ts"}
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "beleza-digital-prospecting-scheduler",
+  "main": "workers/prospecting-scheduler/src/index.ts",
+  "compatibility_date": "2026-11-11",
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "vars": {
+    "BROWSERLESS_BASE_URL": "https://production-sfo.browserless.io",
+    "PROSPECTING_BATCH_SIZE": "10"
+  }
+}
