@@ -25,7 +25,7 @@ async function fetchPage(
   extraFilters?: Record<string, string>,
 ): Promise<{ data: unknown[]; total: number }> {
   const url = new URL(`/rest/v1/${table}`, base);
-  url.searchParams.set("select", `${select},count`);
+  url.searchParams.set("select", select);
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
   if (order) url.searchParams.set("order", order);
@@ -98,7 +98,7 @@ export async function onRequestGet({ request, env }: Context) {
     // Carrega tasks (execuções) paginadas
     const tasksResult = await fetchPage(
       base, serviceKey, "prospecting_tasks",
-      "id,task_type,status,created_at,completed_at,last_error,result,payload,campaign_id",
+      "id,task_type,status,created_at,completed_at,last_error,last_error_code,result,payload,campaign_id",
       limit, offset,
       "created_at.desc",
     );
@@ -115,7 +115,9 @@ export async function onRequestGet({ request, env }: Context) {
     const statsEntries = await Promise.all([
       ["executions", "prospecting_tasks", {} as Record<string, string>],
       ["active", "prospecting_tasks", { status: "eq.processing" }],
-      ["failed", "prospecting_tasks", { status: "eq.failed" }],
+      ["failed", "prospecting_tasks", { or: "(status.eq.blocked,status.eq.dead_letter)" }],
+      ["pending", "prospecting_tasks", { status: "eq.pending" }],
+      ["retryable", "prospecting_tasks", { status: "eq.retryable" }],
       ["collected", "prospecting_candidates", {} as Record<string, string>],
     ] as Array<[string, string, Record<string, string>]>);
 
@@ -145,6 +147,7 @@ export async function onRequestGet({ request, env }: Context) {
       created_at: row.created_at,
       completed_at: row.completed_at ?? null,
       last_error: row.last_error ?? null,
+      last_error_code: row.last_error_code ?? null,
       result: row.result ?? null,
       payload: row.payload ?? null,
     }));
@@ -173,6 +176,8 @@ export async function onRequestGet({ request, env }: Context) {
         executions: stats.executions ?? 0,
         active: stats.active ?? 0,
         failed: stats.failed ?? 0,
+        pending: stats.pending ?? 0,
+        retryable: stats.retryable ?? 0,
         collected: stats.collected ?? 0,
       },
       fetchedAt: new Date().toISOString(),
