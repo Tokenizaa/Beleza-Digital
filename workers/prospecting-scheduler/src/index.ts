@@ -1487,7 +1487,7 @@ export default {
     _ctx.waitUntil(execution.then(() => undefined));
     await execution;
   },
-  async fetch(request: Request, env: Env) {
+  async fetch(request: Request, env: Env, ctx: { waitUntil: (promise: Promise<unknown>) => void }) {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/health") {
       const missing = [
@@ -1570,33 +1570,41 @@ export default {
         if (!existing.length) {
           return json({ status: "failed", enqueued: false, error: "A tarefa não foi enfileirada; não houve confirmação de persistência." }, 503);
         }
+        ctx.waitUntil(processBatch(env).catch((error) => {
+          console.error("[prospecting-scheduler] background batch failed", error);
+        }));
         return json({
           status: "pending",
           enqueued: true,
           taskId: String(existing[0].id),
           idempotencyKey,
-          message: "Descoberta já enfileirada anteriormente (duplicata ignorada pela chave idempotente).",
+          message: "Descoberta já enfileirada; processamento retomado em segundo plano.",
           payload: { segment, region, countryCode, dailyDiscoveryLimit: limit, minimumScore: 50, manual: true },
         }, 202);
       }
 
+      ctx.waitUntil(processBatch(env).catch((error) => {
+        console.error("[prospecting-scheduler] background batch failed", error);
+      }));
       return json({
         status: "running",
         enqueued: true,
         taskId: String(rows[0].id),
         idempotencyKey,
-        message: "Tarefa de descoberta enfileirada com sucesso.",
+        message: "Tarefa de descoberta enfileirada; processamento iniciado em segundo plano.",
         payload: { segment, region, countryCode, dailyDiscoveryLimit: limit, minimumScore: 50, manual: true },
       }, 202);
     }
 
-    // Sem parâmetros de discovery: manter comportamento atual de processar o lote existente.
-    try {
-      const counts = await processBatch(env);
-      return json({ status: "ok", enqueued: false, ...counts });
-    } catch (error) {
-      return json({ status: "blocked", enqueued: false, error: error instanceof Error ? error.message : "worker_failed" }, 503);
-    }
+    // Sem parâmetros: dispara o processamento persistido em segundo plano e responde sem esperar o navegador.
+    ctx.waitUntil(processBatch(env).catch((error) => {
+      console.error("[prospecting-scheduler] background batch failed", error);
+    }));
+    return json({
+      status: "accepted",
+      enqueued: false,
+      message: "Fila de prospecção acionada em segundo plano.",
+    }, 202);
   },
 };
 
