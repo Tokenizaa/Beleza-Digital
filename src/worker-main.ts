@@ -15,6 +15,7 @@ import { onRequest as demoRequest } from '../functions/api/demos/[token]';
 import { onRequestPost as startContractPost } from '../functions/api/onboarding/start-contract';
 import { onRequestPost as prospectingRunPost } from '../functions/api/prospecting/run';
 import { onRequestGet as prospectingDashboardGet } from '../functions/api/prospecting/dashboard';
+import { onRequestGet as prospectingDemoLinksGet } from '../functions/api/prospecting/demo-links';
 
 // Adapt Pages Functions handlers to work with Cloudflare Worker fetch signature
 function adaptHandler(handler: any): any {
@@ -38,6 +39,7 @@ const handlerScraperPost = adaptHandler(scraperPost);
 const handlerWebhookPost = adaptHandler(webhookPost);
 const handlerProspectingRunPost = adaptHandler(prospectingRunPost);
 const handlerProspectingDashboardGet = adaptHandler(prospectingDashboardGet);
+const handlerProspectingDemoLinksGet = adaptHandler(prospectingDemoLinksGet);
 
 /**
  * Route to the appropriate API handler based on the URL path.
@@ -80,6 +82,9 @@ function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | 
   }
   if (path === '/api/prospecting/dashboard' && request.method === 'GET') {
     return handlerProspectingDashboardGet(request, env, ctx);
+  }
+  if (path === '/api/prospecting/demo-links' && request.method === 'GET') {
+    return handlerProspectingDemoLinksGet(request, env, ctx);
   }
   if (path === '/api/prospecting/status' && request.method === 'GET') {
     return handleProspectingStatus(env);
