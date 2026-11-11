@@ -20,7 +20,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   },
 });
 
-async function invokeProspectingScheduler(env: Env): Promise<Response | null> {
+async function invokeProspectingScheduler(env: Env): Promise<Response> {
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return null;
   const request = new Request("https://prospecting-scheduler/", {
     method: "POST",
@@ -40,7 +40,7 @@ async function invokeProspectingScheduler(env: Env): Promise<Response | null> {
       signal: AbortSignal.timeout(60000),
     });
   }
-  return null;
+  throw new Error("prospecting_scheduler_not_configured");
 }
 
 async function validatePlatformAdmin(env: Env, authorization: string): Promise<{ ok: true; userId: string } | { ok: false; error: string; status: number }> {
