@@ -9,7 +9,6 @@
 
 // Import API route handlers
 import { onRequestPost as capturePost } from './api/capture';
-import { onRequestPost as scraperPost } from './api/test-runner';
 import { onRequest as webhookPost } from './api/whatsapp';
 import { onRequest as demoRequest } from '../functions/api/demos/[token]';
 import { onRequestPost as startContractPost } from '../functions/api/onboarding/start-contract';
@@ -35,7 +34,6 @@ function adaptHandler(handler: any): any {
 
 // Adapt the handlers
 const handlerCapturePost = adaptHandler(capturePost);
-const handlerScraperPost = adaptHandler(scraperPost);
 const handlerWebhookPost = adaptHandler(webhookPost);
 const handlerProspectingRunPost = adaptHandler(prospectingRunPost);
 const handlerProspectingDashboardGet = adaptHandler(prospectingDashboardGet);
@@ -64,11 +62,6 @@ function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | 
   // /api/capture - URL metadata extraction
   if (path === '/api/capture') {
     return handlerCapturePost(request, env, ctx);
-  }
-
-  // /api/scraper/test-runner - Scraper test
-  if (path === '/api/scraper/test-runner') {
-    return handlerScraperPost(request, env, ctx);
   }
 
   // /api/webhooks/whatsapp - WhatsApp webhook
