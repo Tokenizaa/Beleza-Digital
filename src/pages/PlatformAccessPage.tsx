@@ -59,21 +59,56 @@ export function PlatformAccessPage() {
   useEffect(() => {
     if (!supabase) return;
     const client = supabase;
+    let active = true;
+    let currentUserId: string | null = null;
+    let requestVersion = 0;
+
     const refreshAdmin = async (userId: string) => {
-      const { data: adminRow } = await client.from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
+      currentUserId = userId;
+      const version = ++requestVersion;
+      const { data: adminRow, error: queryError } = await client
+        .from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
+      if (!active || version !== requestVersion || currentUserId !== userId) return;
+      if (queryError) {
+        console.error('Falha ao consultar permissões administrativas:', queryError);
+        setIsPlatformAdmin(false);
+        setError('Não foi possível confirmar suas permissões agora. Tente novamente.');
+        return;
+      }
+      setError('');
       setIsPlatformAdmin(Boolean(adminRow));
     };
-    supabase.auth.getSession().then(({ data }) => {
-      setSessionEmail(data.session?.user.email ?? null);
-      if (data.session) void refreshAdmin(data.session.user.id);
-      else setIsPlatformAdmin(false);
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+
+    client.auth.getSession().then(({ data, error: sessionError }) => {
+      if (!active) return;
+      if (sessionError) {
+        setError('Não foi possível recuperar sua sessão. Atualize a página e tente novamente.');
+        return;
+      }
+      const session = data.session;
       setSessionEmail(session?.user.email ?? null);
       if (session) void refreshAdmin(session.user.id);
-      else setIsPlatformAdmin(false);
+      else {
+        currentUserId = null;
+        requestVersion += 1;
+        setIsPlatformAdmin(false);
+      }
     });
-    return () => data.subscription.unsubscribe();
+
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      setSessionEmail(session?.user.email ?? null);
+      if (session) {
+        void Promise.resolve().then(() => { if (active) void refreshAdmin(session.user.id); });
+      } else {
+        currentUserId = null;
+        requestVersion += 1;
+        setIsPlatformAdmin(false);
+      }
+    });
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
