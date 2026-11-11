@@ -3,7 +3,7 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET?: string;
   PROSPECTING_BATCH_SIZE?: string;
-  BROWSERLESS_TOKEN: string;
+  BROWSERLESS_TOKEN?: string;
   BROWSERLESS_BASE_URL?: string;
   // WhatsApp — Evolution API (futuro) ou manual por enquanto
   // WHATSAPP_EVOLUTION_URL?: string;
@@ -239,7 +239,6 @@ function qualify(prospect: Prospect): {
 function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
-  if (!env.BROWSERLESS_TOKEN?.trim()) return "BROWSERLESS_TOKEN ausente";
   return null;
 }
 
@@ -522,7 +521,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
 
   try {
     const discovery = await discoverGoogleMapsWithBrowserless({
-      token: env.BROWSERLESS_TOKEN,
+      token: env.BROWSERLESS_TOKEN ?? "",
       baseUrl: env.BROWSERLESS_BASE_URL,
       searchQuery,
       limit: Math.min(limit, 30),
