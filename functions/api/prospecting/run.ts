@@ -28,6 +28,7 @@ async function invokeProspectingScheduler(env: Env): Promise<Response | null> {
       authorization: "Bearer " + env.PROSPECTING_WORKER_SECRET,
       "content-type": "application/json",
     },
+    signal: AbortSignal.timeout(10000),
   });
   if (env.PROSPECTING_SCHEDULER?.fetch) {
     return env.PROSPECTING_SCHEDULER.fetch(request);
