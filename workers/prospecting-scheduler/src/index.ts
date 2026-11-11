@@ -525,7 +525,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       token: env.BROWSERLESS_TOKEN,
       baseUrl: env.BROWSERLESS_BASE_URL,
       searchQuery,
-      limit: Math.min(limit, 100),
+      limit: Math.min(limit, 30),
     });
     scrapedResults = discovery.results.map((record) => ({
       ...record,
