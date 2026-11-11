@@ -68,17 +68,20 @@ export function PlatformAccessPage() {
       currentUserId = userId;
       const version = ++requestVersion;
       setAdminStatus('checking');
-      const { data: adminRow, error: queryError } = await client
-        .from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
-      if (!active || version !== requestVersion || currentUserId !== userId) return;
-      if (queryError) {
+      setPlans([]);
+      try {
+        const { data: adminRow, error: queryError } = await client
+          .from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
+        if (!active || version !== requestVersion || currentUserId !== userId) return;
+        if (queryError) throw queryError;
+        setError('');
+        setAdminStatus(adminRow ? 'admin' : 'salon');
+      } catch (queryError) {
+        if (!active || version !== requestVersion || currentUserId !== userId) return;
         console.error('Falha ao consultar permissões administrativas:', queryError);
         setAdminStatus('error');
         setError('Não foi possível confirmar suas permissões agora. Tente novamente.');
-        return;
       }
-      setError('');
-      setAdminStatus(adminRow ? 'admin' : 'salon');
     };
 
     client.auth.getSession().then(({ data, error: sessionError }) => {
@@ -259,7 +262,7 @@ export function PlatformAccessPage() {
                 <p role="status" className="text-sm text-neutral-400">Verificando suas permissões administrativas...</p>
               ) : adminStatus === 'error' ? (
                 <div className="rounded-xl border border-rose-900/70 p-4 space-y-3">
-                  <p role="alert" className="text-sm text-rose-300">Não foi possível validar sua permissão administrativa. Sua sessão continua ativa.</p>
+                  <p role="alert" className="text-sm text-rose-300">{error || 'Não foi possível validar sua permissão administrativa. Sua sessão continua ativa.'}</p>
                   <button type="button" onClick={() => setAdminRetryCount((value) => value + 1)} className="rounded-lg border border-neutral-700 px-3 py-2 text-sm hover:bg-neutral-800">Tentar novamente</button>
                 </div>
               ) : (
@@ -291,7 +294,7 @@ export function PlatformAccessPage() {
               <button type="button" onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError(''); setMessage(''); }} className="w-full text-sm text-neutral-400 hover:text-white">{mode === 'signup' ? 'Já tem uma conta? Entrar' : 'Ainda não tem conta? Cadastrar salão'}</button>
             </form>
           )}
-          {error && sessionEmail && <p role="alert" className="mt-4 rounded-lg bg-rose-950/50 p-3 text-sm text-rose-300">{error}</p>}
+          {error && sessionEmail && adminStatus !== 'error' && <p role="alert" className="mt-4 rounded-lg bg-rose-950/50 p-3 text-sm text-rose-300">{error}</p>}
           {message && sessionEmail && <p role="status" className="mt-4 rounded-lg bg-neutral-800 p-3 text-sm text-neutral-300">{message}</p>}
         </div>
         <p className="mt-5 text-center text-xs text-neutral-500">Cada salão possui sua própria conta e seus próprios dados. A confirmação do pagamento é processada no servidor.</p>
