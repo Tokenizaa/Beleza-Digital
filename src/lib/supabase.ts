@@ -35,7 +35,7 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabasePublishableKey, {
       auth: {
         persistSession: true,
-        autoRefreshToken: false, // desliga renovação automática para evitar loop de 400 em dev local
+        autoRefreshToken: true, // mantém a sessão válida durante o uso do painel
         detectSessionInUrl: false, // desliga detecção de sessão na URL em dev local
       },
     })
