@@ -25,6 +25,13 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Regenerate lockfile for validation
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Upload generated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-package-lock
+          path: package-lock.json
       - name: Install
         run: npm ci
       - name: TypeScript
