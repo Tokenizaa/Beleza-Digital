@@ -191,7 +191,7 @@ export async function onRequestPost({ request, env }: Context) {
       source_provider: 'google-maps-browserless',
       source_config: { source: 'google-maps-public-listings', immediate: true },
       qualification_rules: { minimum_score: 50 },
-      schedule: {}, // sem interval_minutes → não é campanha recorrente
+      schedule: { one_time: true }, // campanha pontual; recorrência exige interval_minutes explícito
       daily_discovery_limit: limit,
       last_run_at: null,
       next_run_at: now,
