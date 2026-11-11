@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "beleza-digital-prospecting-scheduler",
+  "name": "prospecting-scheduler",
   "main": "workers/prospecting-scheduler/src/index.ts",
   "compatibility_date": "2026-11-11",
   "triggers": {
