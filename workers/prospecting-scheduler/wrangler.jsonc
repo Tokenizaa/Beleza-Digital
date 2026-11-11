@@ -8,6 +8,6 @@
   },
   "vars": {
     "BROWSERLESS_BASE_URL": "https://production-sfo.browserless.io",
-    "PROSPECTING_BATCH_SIZE": "10"
+    "PROSPECTING_BATCH_SIZE": "2"
   }
 }
