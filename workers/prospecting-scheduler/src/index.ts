@@ -1,7 +1,7 @@
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
-  PROSPECTING_WORKER_SECRET: string;
+  PROSPECTING_WORKER_SECRET?: string;
   PROSPECTING_BATCH_SIZE?: string;
   BROWSERLESS_TOKEN: string;
   BROWSERLESS_BASE_URL?: string;
@@ -1353,10 +1353,18 @@ async function scheduleDueCampaigns(env: Env) {
 
     const campaignSchedule = campaign.schedule && typeof campaign.schedule === "object"
       ? campaign.schedule as Record<string, unknown> : {};
-    const intervalRaw = Number(campaignSchedule.interval_minutes ?? 1440);
-    const interval = Number.isFinite(intervalRaw)
+    const oneTime = campaignSchedule.one_time === true;
+    const intervalRaw = Number(campaignSchedule.interval_minutes);
+    const recurring = Number.isFinite(intervalRaw) && intervalRaw >= 5;
+    if (!oneTime && !recurring) {
+      // Legacy campaigns without an explicit schedule are not silently converted
+      // into daily scraping jobs. New one-off campaigns must declare one_time=true.
+      skipped++;
+      continue;
+    }
+    const interval = recurring
       ? Math.max(5, Math.min(Math.floor(intervalRaw), 10080))
-      : 1440;
+      : null;
     const limitRaw = Number(campaign.daily_discovery_limit ?? 100);
     const dailyDiscoveryLimit = Number.isFinite(limitRaw)
       ? Math.max(1, Math.min(Math.floor(limitRaw), 10000))
@@ -1399,15 +1407,17 @@ async function scheduleDueCampaigns(env: Env) {
     if (!taskRows.length) throw new Error("campaign_discovery_enqueue_unconfirmed");
     queued++;
 
-    const nextRun = new Date(Math.max(now.getTime(), new Date(dueAt).getTime()) + interval * 60_000).toISOString();
+    const campaignPatch = oneTime
+      ? { status: "completed", last_run_at: now.toISOString(), next_run_at: null, updated_at: now.toISOString() }
+      : {
+          last_run_at: now.toISOString(),
+          next_run_at: new Date(Math.max(now.getTime(), new Date(dueAt).getTime()) + (interval ?? 1440) * 60_000).toISOString(),
+          updated_at: now.toISOString(),
+        };
     const advance = await db(env, "prospecting_campaigns?id=eq." + encodeURIComponent(campaignId) + "&status=eq.active&next_run_at=eq." + encodeURIComponent(dueAt) + "&select=id", {
       method: "PATCH",
       headers: { prefer: "return=representation" },
-      body: JSON.stringify({
-        last_run_at: now.toISOString(),
-        next_run_at: nextRun,
-        updated_at: now.toISOString(),
-      }),
+      body: JSON.stringify(campaignPatch),
     });
     if (!advance.ok) throw new Error("campaign_advance_http_" + advance.status);
     const rows = await advance.json() as unknown[];
