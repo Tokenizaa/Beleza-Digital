@@ -37,7 +37,8 @@ export function PlatformAccessPage() {
   const initialMode = queryParams.get('mode') || 'signup';
 
   const [mode, setMode] = useState<'signup' | 'login'>(initialMode === 'login' ? 'login' : 'signup');
-  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [adminStatus, setAdminStatus] = useState<'checking' | 'admin' | 'salon' | 'error'>('checking');
+  const [adminRetryCount, setAdminRetryCount] = useState(0);
   const [ownerName, setOwnerName] = useState('');
   const [salonName, setSalonName] = useState(initialSalonName);
   const [slug, setSlug] = useState(slugify(initialSalonName));
@@ -66,17 +67,18 @@ export function PlatformAccessPage() {
     const refreshAdmin = async (userId: string) => {
       currentUserId = userId;
       const version = ++requestVersion;
+      setAdminStatus('checking');
       const { data: adminRow, error: queryError } = await client
         .from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
       if (!active || version !== requestVersion || currentUserId !== userId) return;
       if (queryError) {
         console.error('Falha ao consultar permissões administrativas:', queryError);
-        setIsPlatformAdmin(false);
+        setAdminStatus('error');
         setError('Não foi possível confirmar suas permissões agora. Tente novamente.');
         return;
       }
       setError('');
-      setIsPlatformAdmin(Boolean(adminRow));
+      setAdminStatus(adminRow ? 'admin' : 'salon');
     };
 
     client.auth.getSession().then(({ data, error: sessionError }) => {
@@ -91,7 +93,7 @@ export function PlatformAccessPage() {
       else {
         currentUserId = null;
         requestVersion += 1;
-        setIsPlatformAdmin(false);
+        setAdminStatus('checking');
       }
     });
 
@@ -102,30 +104,30 @@ export function PlatformAccessPage() {
       } else {
         currentUserId = null;
         requestVersion += 1;
-        setIsPlatformAdmin(false);
+        setAdminStatus('checking');
       }
     });
     return () => {
       active = false;
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [adminRetryCount]);
 
   useEffect(() => {
-    // Redirect platform admins to the admin panel immediately when detected
-    if (sessionEmail && isPlatformAdmin && window.location.pathname !== '/plataforma/admin') {
+    // Redirect only after the permission lookup has positively identified an administrator.
+    if (sessionEmail && adminStatus === 'admin' && window.location.pathname !== '/plataforma/admin') {
       window.location.replace('/plataforma/admin');
     }
-  }, [sessionEmail, isPlatformAdmin]);
+  }, [sessionEmail, adminStatus]);
 
   useEffect(() => {
-    if (!supabase || !sessionEmail || isPlatformAdmin) return;
+    if (!supabase || !sessionEmail || adminStatus !== 'salon') return;
     supabase.from('billing_plans').select('id,slug,name,description,price_brl_cents,billing_period,access_days,max_booking_horizon_days')
       .eq('is_active', true).order('display_order').then(({ data, error: queryError }) => {
         if (queryError) setError('Não foi possível carregar os planos disponíveis.');
         else setPlans((data ?? []) as Plan[]);
       });
-  }, [sessionEmail, isPlatformAdmin]);
+  }, [sessionEmail, adminStatus]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -171,6 +173,7 @@ export function PlatformAccessPage() {
         if (roleError) throw new Error('Não foi possível confirmar o tipo desta conta. Tente novamente.');
         const isAdminAccount = Boolean(adminRow);
         setSessionEmail(data.user.email ?? email);
+        setAdminStatus(isAdminAccount ? 'admin' : 'salon');
         if (isAdminAccount) {
           window.location.replace('/plataforma/admin');
           return;
@@ -218,7 +221,7 @@ export function PlatformAccessPage() {
       if (signOutError) throw signOutError;
       setPayment(null);
       setSessionEmail(null);
-      setIsPlatformAdmin(false);
+      setAdminStatus('checking');
       setPlans([]);
       setMode('login');
       setMessage('Sessão encerrada. Entre com outra conta.');
@@ -238,7 +241,7 @@ export function PlatformAccessPage() {
       <div className="mx-auto max-w-xl">
         <a href="/" className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"><ArrowLeft size={16} /> Voltar ao site</a>
         <div className="mt-8 rounded-2xl border border-neutral-800 bg-neutral-900 p-6 sm:p-8">
-          <div className="mb-6 flex items-center gap-3"><div className="rounded-xl bg-amber-400/10 p-3 text-amber-300"><Building2 /></div><div><p className="text-xs uppercase tracking-widest text-neutral-500">Plataforma de sites personalizados</p><h1 className="text-2xl font-semibold">{sessionEmail ? (isPlatformAdmin ? 'Administração geral' : 'Área do estabelecimento') : mode === 'signup' ? 'Criar conta' : 'Entrar na plataforma'}</h1></div></div>
+          <div className="mb-6 flex items-center gap-3"><div className="rounded-xl bg-amber-400/10 p-3 text-amber-300"><Building2 /></div><div><p className="text-xs uppercase tracking-widest text-neutral-500">Plataforma de sites personalizados</p><h1 className="text-2xl font-semibold">{sessionEmail ? (adminStatus === 'admin' ? 'Administração geral' : adminStatus === 'checking' ? 'Verificando acesso...' : adminStatus === 'error' ? 'Falha na validação' : 'Área do estabelecimento') : mode === 'signup' ? 'Criar conta' : 'Entrar na plataforma'}</h1></div></div>
 
           {sessionEmail ? (
             <div className="space-y-5">
@@ -246,11 +249,18 @@ export function PlatformAccessPage() {
               <button type="button" disabled={busy} onClick={logout} className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:text-white disabled:opacity-50">
                 <LogOut size={16} /> Trocar de conta
               </button>
-              {isPlatformAdmin ? (
+              {adminStatus === 'admin' ? (
                 <div className="rounded-xl border border-emerald-800 p-4">
                   <p className="font-medium">Administrador geral ativo</p>
                   <p className="mt-1 text-sm text-neutral-400">Esta conta tem permissão administrativa geral da plataforma.</p>
                   <p className="mt-3 text-sm text-amber-300">Redirecionando para o painel administrativo...</p>
+                </div>
+              ) : adminStatus === 'checking' ? (
+                <p role="status" className="text-sm text-neutral-400">Verificando suas permissões administrativas...</p>
+              ) : adminStatus === 'error' ? (
+                <div className="rounded-xl border border-rose-900/70 p-4 space-y-3">
+                  <p role="alert" className="text-sm text-rose-300">Não foi possível validar sua permissão administrativa. Sua sessão continua ativa.</p>
+                  <button type="button" onClick={() => setAdminRetryCount((value) => value + 1)} className="rounded-lg border border-neutral-700 px-3 py-2 text-sm hover:bg-neutral-800">Tentar novamente</button>
                 </div>
               ) : (
                 <>
