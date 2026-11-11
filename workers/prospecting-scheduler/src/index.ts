@@ -239,7 +239,6 @@ function qualify(prospect: Prospect): {
 function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
-  if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
   if (!env.BROWSERLESS_TOKEN?.trim()) return "BROWSERLESS_TOKEN ausente";
   return null;
 }
@@ -1480,6 +1479,25 @@ export default {
     await execution;
   },
   async fetch(request: Request, env: Env) {
+    const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/health") {
+      const missing = [
+        !env.SUPABASE_URL?.trim() ? "SUPABASE_URL" : null,
+        !env.SUPABASE_SERVICE_ROLE_KEY?.trim() ? "SUPABASE_SERVICE_ROLE_KEY" : null,
+        !env.BROWSERLESS_TOKEN?.trim() ? "BROWSERLESS_TOKEN" : null,
+      ].filter(Boolean);
+      return json({
+        status: missing.length ? "blocked" : "ready",
+        provider: "browserless",
+        checks: {
+          supabaseConfigured: Boolean(env.SUPABASE_URL?.trim() && env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
+          browserlessConfigured: Boolean(env.BROWSERLESS_TOKEN?.trim()),
+          manualTriggerConfigured: Boolean(env.PROSPECTING_WORKER_SECRET?.trim()),
+        },
+        missing,
+        timestamp: new Date().toISOString(),
+      }, missing.length ? 503 : 200);
+    }
     if (request.method !== "POST") return json({ error: "not_found" }, 404);
     const supplied = request.headers.get("authorization") ?? "";
     if (!env.PROSPECTING_WORKER_SECRET || supplied !== `Bearer ${env.PROSPECTING_WORKER_SECRET}`) {
