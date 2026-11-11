@@ -7,11 +7,11 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -27,23 +27,6 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - name: Regenerate lockfile for validation
-        run: npm install --package-lock-only --ignore-scripts
-      - name: Commit synchronized lockfile to same-repository PR
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          if ! git diff --cached --quiet; then
-            git commit -m "chore: synchronize npm lockfile"
-            git push origin "HEAD:${{ github.head_ref }}"
-          fi
-      - name: Upload generated lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-package-lock
-          path: package-lock.json
       - name: Install
         run: npm ci
       - name: TypeScript
@@ -52,3 +35,7 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: Validate scheduler Worker bundle
+        run: npx wrangler deploy --dry-run --config workers/prospecting-scheduler/wrangler.jsonc
+      - name: Validate main Worker bundle
+        run: npx wrangler deploy --dry-run --config wrangler.jsonc
