@@ -188,7 +188,7 @@ export async function onRequestPost({ request, env }: Context) {
       segment,
       region,
       country_code: countryCode,
-      source_provider: 'google-maps-cloudflare-browser-playwright',
+      source_provider: 'google-maps-browserless',
       source_config: { source: 'google-maps-public-listings', immediate: true },
       qualification_rules: { minimum_score: 50 },
       schedule: {}, // sem interval_minutes → não é campanha recorrente
