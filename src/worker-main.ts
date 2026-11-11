@@ -90,25 +90,33 @@ function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | 
 }
 
 async function handleProspectingStatus(env: any): Promise<Response> {
+  const scheduler = env.PROSPECTING_SCHEDULER;
   const workerUrl = typeof env.PROSPECTING_WORKER_URL === 'string' ? env.PROSPECTING_WORKER_URL.trim() : '';
-  if (!workerUrl) {
-    return new Response(JSON.stringify({
-      status: 'not_configured',
-      provider: 'browserless',
-      message: 'O Worker de prospecção ainda não está conectado a este ambiente.',
-    }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
-    });
-  }
 
   try {
-    const healthUrl = new URL('/health', workerUrl);
-    const response = await fetch(healthUrl.toString(), {
-      method: 'GET',
-      headers: { accept: 'application/json' },
-      signal: AbortSignal.timeout(8000),
-    });
+    let response: Response;
+    if (scheduler?.fetch) {
+      response = await scheduler.fetch(new Request('https://prospecting-scheduler/health', {
+        method: 'GET',
+        headers: { accept: 'application/json' },
+      }));
+    } else if (workerUrl) {
+      const healthUrl = new URL('/health', workerUrl);
+      response = await fetch(healthUrl.toString(), {
+        method: 'GET',
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      });
+    } else {
+      return new Response(JSON.stringify({
+        status: 'not_connected',
+        provider: 'browserless',
+        message: 'O binding do Worker de prospecção ainda não está disponível neste deploy.',
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+      });
+    }
     const body = await response.json().catch(() => ({ status: 'invalid_health_response' }));
     return new Response(JSON.stringify(body), {
       status: response.status,
