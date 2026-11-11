@@ -156,9 +156,11 @@ export function ScrapingConsole() {
     setError("");
     setNotice("");
     try {
-      const response = await fetch("/api/scraper/test-runner", {
+      const accessToken = await token();
+      const response = await fetch("/api/prospecting/run", {
         method: "POST",
         headers: {
+          authorization: "Bearer " + accessToken,
           "content-type": "application/json",
           accept: "application/json",
         },
@@ -167,19 +169,18 @@ export function ScrapingConsole() {
           region: region.trim(),
           limit,
           countryCode: countryCode.trim().toUpperCase(),
+          createCampaign: false,
+          executionId: crypto.randomUUID(),
         }),
       });
-      if (!response.ok) throw new Error("Falha ao executar o runner do scraper.");
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || result.detail || "Falha ao enfileirar o teste Browserless.");
       setRawScrapeResult(result);
       setSelectedRawPlaceIndex(0);
-
-      // Calcular qualificação dupla imediata para a primeira ficha
-      if (result.results && result.results[0]) {
-        evaluateRawPlace(result.results[0]);
-      }
+      setNotice(result.message || "Teste Browserless enfileirado. Acompanhe o processamento na fila.");
+      await refresh(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao testar o runner.");
+      setError(err instanceof Error ? err.message : "Erro ao iniciar o teste Browserless.");
     } finally {
       setTestingRunner(false);
     }
@@ -229,7 +230,7 @@ export function ScrapingConsole() {
       const response = await fetch("/api/prospecting/run", {
         method: "POST",
         headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ segment: segment.trim(), region: region.trim(), countryCode: countryCode.trim().toUpperCase(), limit }),
+        body: JSON.stringify({ segment: segment.trim(), region: region.trim(), countryCode: countryCode.trim().toUpperCase(), limit, createCampaign: false }),
       });
       const body = await response.json() as { message?: string; error?: string };
       if (!response.ok) throw new Error(body.error || "Não foi possível executar o benchmark.");
@@ -303,7 +304,7 @@ export function ScrapingConsole() {
               className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/40 bg-cyan-950/60 px-4 py-2.5 text-xs font-bold text-cyan-300 hover:bg-cyan-900/60 transition shadow-md shadow-cyan-950/40 disabled:opacity-50"
             >
               {testingRunner ? <LoaderCircle className="h-4 w-4 animate-spin text-cyan-400" /> : <Terminal className="h-4 w-4 text-cyan-400" />}
-              Testar runner.ts (JSON Bruto POA)
+              Testar coleta Browserless
             </button>
 
             {/* Benchmark Oficial de Porto Alegre */}
