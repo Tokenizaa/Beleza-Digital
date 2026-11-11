@@ -33,7 +33,11 @@ async function invokeProspectingScheduler(env: Env): Promise<Response | null> {
     return env.PROSPECTING_SCHEDULER.fetch(request);
   }
   if (env.PROSPECTING_WORKER_URL?.trim()) {
-    return fetch(env.PROSPECTING_WORKER_URL, request);
+    return fetch(env.PROSPECTING_WORKER_URL, {
+      method: "POST",
+      headers: request.headers,
+      signal: AbortSignal.timeout(60000),
+    });
   }
   return null;
 }
