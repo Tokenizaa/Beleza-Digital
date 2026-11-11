@@ -189,8 +189,17 @@ export default {
       return routeToApi(request, env, ctx, url);
     }
 
-    // This should not be reached with the current rules configuration
-    // (worker only runs for /api/*), but included as a safety fallback
-    return new Response('Not Found', { status: 404 });
+    // Non-API routes: serve the SPA so client-side routing
+    // (/plataforma/admin, /plataforma/admin/prospeccao, etc.) works on direct access.
+    try {
+      return await env.ASSETS.fetch(request);
+    } catch {
+      // Fall back to index.html so React Router can handle the route.
+      try {
+        return await env.ASSETS.fetch(new Request(`${url.origin}/index.html`, { headers: request.headers }));
+      } catch {
+        return new Response('Not Found', { status: 404 });
+      }
+    }
   }
 };
