@@ -21,7 +21,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 });
 
 async function invokeProspectingScheduler(env: Env): Promise<Response> {
-  if (!env.PROSPECTING_WORKER_SECRET?.trim()) return null;
+  if (!env.PROSPECTING_WORKER_SECRET?.trim()) throw new Error("prospecting_worker_secret_missing");
   const request = new Request("https://prospecting-scheduler/", {
     method: "POST",
     headers: {
