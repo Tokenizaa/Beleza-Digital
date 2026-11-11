@@ -1334,40 +1334,94 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
 }
 
 async function scheduleDueCampaigns(env: Env) {
-  // Commercial campaigns classify and prioritize records already collected.
-  // They must never initiate scraping: "Raspar agora" owns discovery independently.
-  // The scheduler only advances the due_at timestamp - it does NOT enqueue discover tasks.
-  // Manual discovery is acionada via API /api/prospecting/run?createCampaign=false.
   const now = new Date();
-  const due = await db(env, `prospecting_campaigns?status=eq.active&next_run_at=lte.${encodeURIComponent(now.toISOString())}&select=id,name,segment,region,country_code,source_provider,source_config,qualification_rules,schedule,daily_discovery_limit,next_run_at&order=next_run_at.asc&limit=20`);
-  if (!due.ok) throw new Error(`campaign_scan_http_${due.status}`);
+  const due = await db(env, "prospecting_campaigns?status=eq.active&next_run_at=lte." + encodeURIComponent(now.toISOString()) + "&select=id,name,segment,region,country_code,source_provider,source_config,qualification_rules,schedule,daily_discovery_limit,next_run_at&order=next_run_at.asc&limit=20");
+  if (!due.ok) throw new Error("campaign_scan_http_" + due.status);
   const campaigns = await due.json() as Array<Record<string, unknown>>;
+  let queued = 0;
   let advanced = 0;
   let skipped = 0;
 
   for (const campaign of campaigns) {
     const campaignId = String(campaign.id ?? "");
     const dueAt = String(campaign.next_run_at ?? "");
-    if (!campaignId || !dueAt) { skipped++; continue; }
+    const segment = String(campaign.segment ?? "").trim();
+    const region = String(campaign.region ?? "").trim();
+    if (!campaignId || !dueAt || !segment || !region) {
+      skipped++;
+      continue;
+    }
 
-    // Apenas avançar o cronômetro da campanha - NÃO enfileirar tasks de descoberta.
-    // A descoberta manual é acionada via API /api/prospecting/run?createCampaign=false.
-    const schedule = campaign.schedule && typeof campaign.schedule === "object"
+    const campaignSchedule = campaign.schedule && typeof campaign.schedule === "object"
       ? campaign.schedule as Record<string, unknown> : {};
-    const rawInterval = Number(schedule.interval_minutes ?? 1440);
-    const interval = Number.isFinite(rawInterval) ? Math.max(5, Math.min(Math.floor(rawInterval), 10080)) : 1440;
+    const intervalRaw = Number(campaignSchedule.interval_minutes ?? 1440);
+    const interval = Number.isFinite(intervalRaw)
+      ? Math.max(5, Math.min(Math.floor(intervalRaw), 10080))
+      : 1440;
+    const limitRaw = Number(campaign.daily_discovery_limit ?? 100);
+    const dailyDiscoveryLimit = Number.isFinite(limitRaw)
+      ? Math.max(1, Math.min(Math.floor(limitRaw), 10000))
+      : 100;
+    const rules = campaign.qualification_rules && typeof campaign.qualification_rules === "object"
+      ? campaign.qualification_rules as Record<string, unknown> : {};
+    const minimumScoreRaw = Number(rules.minimum_score ?? rules.minimumScore ?? 50);
+    const minimumScore = Number.isFinite(minimumScoreRaw)
+      ? Math.max(0, Math.min(100, Math.floor(minimumScoreRaw)))
+      : 50;
+    const idempotencyKey = "campaign:" + campaignId + ":discover:" + dueAt;
+
+    const enqueued = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+      method: "POST",
+      headers: { prefer: "resolution=ignore-duplicates,return=representation" },
+      body: JSON.stringify({
+        campaign_id: campaignId,
+        task_type: "discover",
+        status: "pending",
+        idempotency_key: idempotencyKey,
+        payload: {
+          campaignId,
+          segment,
+          region,
+          countryCode: String(campaign.country_code ?? "BR"),
+          dailyDiscoveryLimit,
+          minimumScore,
+          scheduled: true,
+          scheduledFor: dueAt,
+        },
+      }),
+    });
+    if (!enqueued.ok) throw new Error("campaign_discovery_enqueue_http_" + enqueued.status);
+    let taskRows = await enqueued.json() as Array<{ id: number }>;
+    if (!taskRows.length) {
+      const existing = await db(env, "prospecting_tasks?idempotency_key=eq." + encodeURIComponent(idempotencyKey) + "&select=id&limit=1");
+      if (!existing.ok) throw new Error("campaign_discovery_reconcile_http_" + existing.status);
+      taskRows = await existing.json() as Array<{ id: number }>;
+    }
+    if (!taskRows.length) throw new Error("campaign_discovery_enqueue_unconfirmed");
+    queued++;
+
     const nextRun = new Date(Math.max(now.getTime(), new Date(dueAt).getTime()) + interval * 60_000).toISOString();
-    const advance = await db(env, `prospecting_campaigns?id=eq.${encodeURIComponent(campaignId)}&status=eq.active&next_run_at=eq.${encodeURIComponent(dueAt)}&select=id`, {
+    const advance = await db(env, "prospecting_campaigns?id=eq." + encodeURIComponent(campaignId) + "&status=eq.active&next_run_at=eq." + encodeURIComponent(dueAt) + "&select=id", {
       method: "PATCH",
       headers: { prefer: "return=representation" },
-      body: JSON.stringify({ last_run_at: now.toISOString(), next_run_at: nextRun, updated_at: now.toISOString() }),
+      body: JSON.stringify({
+        last_run_at: now.toISOString(),
+        next_run_at: nextRun,
+        updated_at: now.toISOString(),
+      }),
     });
-    if (!advance.ok) throw new Error(`campaign_advance_http_${advance.status}`);
+    if (!advance.ok) throw new Error("campaign_advance_http_" + advance.status);
     const rows = await advance.json() as unknown[];
     if (rows.length) advanced++;
     else skipped++;
   }
-  return { campaignsScanned: campaigns.length, campaignsAdvanced: advanced, campaignsSkipped: skipped };
+
+  return {
+    campaignsScanned: campaigns.length,
+    campaignsQueued: queued,
+    campaignsAdvanced: advanced,
+    campaignsSkipped: skipped,
+  };
 }
 
 async function processBatch(env: Env) {
