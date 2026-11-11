@@ -541,7 +541,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
 
   // Se após todas as tentativas ainda houver erro, marcar como bloqueado
   if (lastError) {
-    const errorMessage = lastError.message ?? "browser_scraping_failed";
+    const errorMessage = lastError.message ?? "browserless_scraping_failed";
     const isRateLimit = /429|rate limit|over capacity|throttl/i.test(errorMessage);
     const isTransient = isRateLimit || /timeout|timed out|network|ERR_|target page|frame was detached|temporarily|browserless_http_5\d\d/i.test(errorMessage);
     const attemptsRemain = task.attempt_count < task.max_attempts;
@@ -555,12 +555,12 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       await updateTask(env, task, workerId, {
         status: "retryable",
         available_at: availableAt,
-        last_error_code: isRateLimit ? "browser_rate_limited" : "browser_transient_error",
+        last_error_code: isRateLimit ? "browserless_rate_limited" : "browserless_transient_error",
         last_error: `Coleta temporariamente indisponível no passo '${step}'. Nova tentativa após ${delaySeconds}s. ${errorMessage}`.slice(0, 1000),
         completed_at: null,
         result: {
           outcome: "retryable",
-          reason: isRateLimit ? "browser_rate_limited" : "browser_transient_error",
+          reason: isRateLimit ? "browserless_rate_limited" : "browserless_transient_error",
           failedStep: step,
           attempt: task.attempt_count,
           maxAttempts: task.max_attempts,
@@ -573,7 +573,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const terminalStatus = isTransient ? "dead_letter" : "blocked";
     await updateTask(env, task, workerId, {
       status: terminalStatus,
-      last_error_code: isTransient ? "browser_retries_exhausted" : "browser_scraping_failed",
+      last_error_code: isTransient ? "browserless_retries_exhausted" : "browserless_scraping_failed",
       last_error: "Falha na coleta via Browserless no passo '" + step + "': " + errorMessage.slice(0, 1000),
       completed_at: new Date().toISOString(),
       result: {
