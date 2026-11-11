@@ -13,6 +13,8 @@ import { onRequestPost as scraperPost } from './api/test-runner';
 import { onRequest as webhookPost } from './api/whatsapp';
 import { onRequest as demoRequest } from '../functions/api/demos/[token]';
 import { onRequestPost as startContractPost } from '../functions/api/onboarding/start-contract';
+import { onRequestPost as prospectingRunPost } from '../functions/api/prospecting/run';
+import { onRequestGet as prospectingDashboardGet } from '../functions/api/prospecting/dashboard';
 
 // Adapt Pages Functions handlers to work with Cloudflare Worker fetch signature
 function adaptHandler(handler: any): any {
@@ -34,6 +36,8 @@ function adaptHandler(handler: any): any {
 const handlerCapturePost = adaptHandler(capturePost);
 const handlerScraperPost = adaptHandler(scraperPost);
 const handlerWebhookPost = adaptHandler(webhookPost);
+const handlerProspectingRunPost = adaptHandler(prospectingRunPost);
+const handlerProspectingDashboardGet = adaptHandler(prospectingDashboardGet);
 
 /**
  * Route to the appropriate API handler based on the URL path.
@@ -70,10 +74,15 @@ function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | 
     return handlerWebhookPost(request, env, ctx);
   }
 
-  // /api/prospecting - Prospecting routes
-  if (path.startsWith('/api/prospecting')) {
-    const subPath = path.replace('/api/prospecting', '') || '/';
-    return handleProspectingApi(request, env, ctx, subPath);
+  // Prospecting routes are backed by the authenticated API handlers and Supabase queue.
+  if (path === '/api/prospecting/run' && request.method === 'POST') {
+    return handlerProspectingRunPost(request, env, ctx);
+  }
+  if (path === '/api/prospecting/dashboard' && request.method === 'GET') {
+    return handlerProspectingDashboardGet(request, env, ctx);
+  }
+  if (path === '/api/prospecting/status' && request.method === 'GET') {
+    return handleProspectingStatus(env);
   }
 
   return new Response(JSON.stringify({ error: 'api_route_not_found' }), {
@@ -82,101 +91,41 @@ function routeToApi(request: Request, env: any, ctx: any, url: URL): Response | 
   });
 }
 
-/**
- * Handle prospecting API sub-paths.
- * These are the routes under /api/prospecting/
- */
-async function handleProspectingApi(
-  request: Request,
-  env: any,
-  ctx: any,
-  subPath: string
-): Promise<Response> {
-  // GET /api/prospecting/status - Check prospecting worker status
-  if (subPath === '/status' && request.method === 'GET') {
+async function handleProspectingStatus(env: any): Promise<Response> {
+  const workerUrl = typeof env.PROSPECTING_WORKER_URL === 'string' ? env.PROSPECTING_WORKER_URL.trim() : '';
+  if (!workerUrl) {
     return new Response(JSON.stringify({
-      status: 'active',
-      message: 'Prospecting API is running',
-      timestamp: new Date().toISOString()
+      status: 'not_configured',
+      provider: 'browserless',
+      message: 'O Worker de prospecção ainda não está conectado a este ambiente.',
     }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      status: 503,
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
     });
   }
 
-  // GET /api/prospecting/results - Get prospecting results
-  if (subPath === '/results' && request.method === 'GET') {
+  try {
+    const healthUrl = new URL('/health', workerUrl);
+    const response = await fetch(healthUrl.toString(), {
+      method: 'GET',
+      headers: { accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    const body = await response.json().catch(() => ({ status: 'invalid_health_response' }));
+    return new Response(JSON.stringify(body), {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  } catch (error) {
     return new Response(JSON.stringify({
-      results: [],
-      message: 'No results available yet'
+      status: 'unreachable',
+      provider: 'browserless',
+      message: error instanceof Error ? error.message : 'Não foi possível consultar o Worker de prospecção.',
     }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      status: 502,
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
     });
   }
-
-  // POST /api/prospecting/search - Trigger new search
-  if (subPath === '/search' && request.method === 'POST') {
-    return new Response(JSON.stringify({
-      status: 'accepted',
-      message: 'Search queued'
-    }), {
-      status: 202,
-      headers: { 'Content-Type': 'application/json; charset=utf-8' }
-    });
-  }
-
-  // GET /api/prospecting/demo-links - Get demo links for scraping demo
-  if (subPath === '/demo-links' && request.method === 'GET') {
-    // Return demo links for scraping - in production this would come from database
-    return new Response(JSON.stringify({
-      links: [
-        { id: 'demo-1', name: 'Barbearia Porto Alegre', url: 'https://www.google.com/maps/search/barbearia+porto+alegre', city: 'Porto Alegre', state: 'RS', niche: 'Barbearia' },
-        { id: 'demo-2', name: 'Salão São Paulo', url: 'https://www.google.com/maps/search/sal%C3%A3o+de+beleza+s%C3%A3o+paulo', city: 'São Paulo', state: 'SP', niche: 'Salão de Beleza' },
-        { id: 'demo-3', name: 'Barbearia Rio', url: 'https://www.google.com/maps/search/barbearia+rio+de+janeiro', city: 'Rio de Janeiro', state: 'RJ', niche: 'Barbearia' },
-        { id: 'demo-4', name: 'Clínica Estética BH', url: 'https://www.google.com/maps/search/clinica+estetica+belo+horizonte', city: 'Belo Horizonte', state: 'MG', niche: 'Clínica Estética' },
-        { id: 'demo-5', name: 'Barbearia Curitiba', url: 'https://www.google.com/maps/search/barbearia+curitiba', city: 'Curitiba', state: 'PR', niche: 'Barbearia' }
-      ]
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json; charset=utf-8' }
-    });
-  }
-
-  // POST /api/prospecting/run - Execute prospecting scraping
-  if (subPath === '/run' && request.method === 'POST') {
-    try {
-      const body = await request.json();
-      const { links, niche, city, state, quantity } = body;
-
-      // In production, this would trigger the Cloudflare Browser/Playwright worker
-      // For now, return a mock response
-      return new Response(JSON.stringify({
-        status: 'started',
-        message: 'Prospecção iniciada com sucesso',
-        taskId: `prospecting-${Date.now()}`,
-        estimatedTime: '2-5 minutos',
-        linksCount: links?.length || 0
-      }), {
-        status: 202,
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
-      });
-    } catch (e) {
-      return new Response(JSON.stringify({
-        status: 'error',
-        message: 'Erro ao iniciar prospecção',
-        error: e instanceof Error ? e.message : 'Erro desconhecido'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
-      });
-    }
-  }
-
-  return new Response(JSON.stringify({ error: 'prospecting_route_not_found' }), {
-    status: 404,
-    headers: { 'Content-Type': 'application/json; charset=utf-8' }
-  });
 }
 
 export default {
