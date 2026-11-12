@@ -95,9 +95,22 @@ export async function onRequestGet({ request, env }: Context) {
   const rows = await tasksResponse.json() as Array<{
     id: number; prospect_id: string | null; result: Record<string, unknown>; created_at: string;
   }>;
+  if (!rows.length) return json({ links: [] });
+  const nowIso = new Date().toISOString();
+  const taskIds = rows.map((row) => String(row.id)).join(",");
+  const activeLinksUrl = base + "/rest/v1/site_demo_public_links?publish_task_id=in.(" +
+    taskIds + ")&status=eq.active&expires_at=gt." + encodeURIComponent(nowIso) +
+    "&select=publish_task_id";
+  const activeLinksResponse = await fetch(activeLinksUrl, {
+    headers, signal: AbortSignal.timeout(8000),
+  });
+  if (!activeLinksResponse.ok) return json({ error: "demo_links_unavailable" }, 503);
+  const activeLinks = await activeLinksResponse.json() as Array<{ publish_task_id: number }>;
+  const activeTaskIds = new Set(activeLinks.map((link) => String(link.publish_task_id)));
   const now = Date.now();
   const origin = new URL(request.url).origin;
   const links = rows.flatMap((row) => {
+    if (!activeTaskIds.has(String(row.id))) return [];
     const result = row.result ?? {};
     const token = typeof result.publicToken === "string" ? result.publicToken : "";
     const expiresAt = typeof result.expiresAt === "string" ? result.expiresAt : "";

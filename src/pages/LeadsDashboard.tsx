@@ -486,6 +486,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
           region,
           limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
           countryCode: 'BR',
+          createCampaign: false,
           executionId,
         }),
         signal: AbortSignal.timeout(60000),

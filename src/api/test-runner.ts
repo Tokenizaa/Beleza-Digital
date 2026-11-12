@@ -1,7 +1,7 @@
 interface Env {
   SUPABASE_URL?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
-  // Endpoint do Worker de prospecção (com BROWSER binding) que executa a captura.
+  // Endpoint do Worker de prospecção com Browserless que executa a captura.
   PROSPECTING_WORKER_URL?: string;
   PROSPECTING_WORKER_SECRET?: string;
 }
@@ -21,7 +21,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
  *
  * Este endpoint não executa Puppeteer diretamente na Pages Function (edge não tem
  * binding BROWSER nem Puppeteer). Em vez disso, delega a execução real ao
- * Worker de prospecção (PROSPECTING_WORKER_URL), que possui o binding BROWSER
+ * Worker de prospecção (PROSPECTING_WORKER_URL), que usa Browserless via API HTTP
  * e roda a captura de forma isolada.
  *
  * Se o Worker não estiver configurado, retorna um erro informativo orientando a
@@ -32,11 +32,11 @@ export async function onRequestPost({ request, env }: Context) {
     return json({
       error: "scraper_worker_not_configured",
       message:
-        "O runner de scraping não pode ser executado diretamente nesta função. Configure PROSPECTING_WORKER_URL e PROSPECTING_WORKER_SECRET apontando para o Worker prospecting-scheduler (com binding BROWSER) para habilitar a coleta real de fichas do Google Maps.",
+        "O runner de scraping não pode ser executado diretamente nesta função. Configure PROSPECTING_WORKER_URL e PROSPECTING_WORKER_SECRET apontando para o Worker prospecting-scheduler (com Browserless) para habilitar a coleta real de fichas do Google Maps.",
       required: [
         "PROSPECTING_WORKER_URL (URL pública do Worker prospecting-scheduler)",
         "PROSPECTING_WORKER_SECRET (segredo compartilhado para autenticação interna)",
-        "PROSPECTING_BROWSER (binding de navegador configurado no wrangler do Worker)",
+        "BROWSERLESS_TOKEN (segredo Browserless configurado no Worker de prospecção)",
       ],
       alternative: "Use /api/prospecting/run para enfileirar uma coleta via Worker.",
     }, 503);

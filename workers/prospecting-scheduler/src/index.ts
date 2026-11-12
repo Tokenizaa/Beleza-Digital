@@ -1,9 +1,10 @@
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
-  PROSPECTING_WORKER_SECRET: string;
+  PROSPECTING_WORKER_SECRET?: string;
   PROSPECTING_BATCH_SIZE?: string;
-  PROSPECTING_BROWSER: any;
+  BROWSERLESS_TOKEN?: string;
+  BROWSERLESS_BASE_URL?: string;
   // WhatsApp — Evolution API (futuro) ou manual por enquanto
   // WHATSAPP_EVOLUTION_URL?: string;
   // WHATSAPP_EVOLUTION_API_KEY?: string;
@@ -17,7 +18,7 @@ export interface Env {
 }
 
 // Import rich extractor and normalizer from migrated mais-clientes-v2 logic
-import { extractPlaceDetails } from './extractor';
+import { discoverGoogleMapsWithBrowserless } from "./browserless";
 import {
   normalizeAddress,
   normalizePhone,
@@ -238,8 +239,7 @@ function qualify(prospect: Prospect): {
 function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
-  if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
-  if (!env.PROSPECTING_BROWSER) return "PROSPECTING_BROWSER ausente";
+  if (!env.BROWSERLESS_TOKEN?.trim()) return "BROWSERLESS_TOKEN ausente";
   return null;
 }
 
@@ -512,186 +512,39 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     return "succeeded";
   }
 
-  // Add retry with exponential backoff and jitter to handle 429 rate limit errors.
-  // One Browser Run attempt per task execution. Transient failures return to
-  // the durable queue with available_at backoff instead of hammering Browser Run.
-  const MAX_RETRIES = 0;
-  const BASE_DELAY_MS = 2_000;
-  const MAX_DELAY_MS = 60_000;
-  let lastError: Error | null = null;
-  let step = "init";
-  let bindingType = "unknown";
-  let bindingIsString = false;
-  let bindingLength = 0;
-  let scrapedResults: Array<Record<string, unknown>> = [];
-  let browser: any;
-
-  for (let retryAttempt = 0; retryAttempt <= MAX_RETRIES; retryAttempt++) {
-  // Build search query for Google Maps / local business directories
   const segment = String(campaign.segment ?? "barbearia e salão");
   const region = String(campaign.region ?? "São Paulo - SP");
   const countryCode = String(campaign.countryCode ?? "BR");
-  const searchQuery = `${segment} ${region}`.trim();
+  const searchQuery = [segment, region].join(" ").trim();
+  let lastError: Error | null = null;
+  let step = "browserless_function";
+  let scrapedResults: Array<Record<string, unknown>> = [];
 
-  // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
-  // No Docker, container, VPS, or external Python service is required.
   try {
-    const browserBindingValue = env.PROSPECTING_BROWSER;
-    step = "browser_connect";
-    bindingType = typeof browserBindingValue;
-    bindingIsString = typeof browserBindingValue === "string";
-    bindingLength = bindingIsString ? browserBindingValue.length : 0;
-    if (!browserBindingValue) throw new Error("prospecting_browser_binding_missing");
-
-    const { launch } = await import("@cloudflare/playwright");
-    browser = await launch(browserBindingValue);
-    step = "browser_launched";
-    const page = await browser.newPage();
-
-    step = "nav_google_maps";
-    const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
-    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-    await page.waitForSelector('[role="feed"]', { timeout: 15000 });
-
-    // Coleta links únicos com paginação robusta, rolagem virtual e detecção de fim de lista
-    const listingMap = new Map<string, Record<string, unknown>>();
-    let stagnantRounds = 0;
-    let previousCount = 0;
-    const targetLimit = Math.min(limit, 100);
-
-    for (let round = 0; round < 45 && listingMap.size < targetLimit; round++) {
-      const visibleListings = await page.evaluate(() => {
-        const output: Array<Record<string, unknown>> = [];
-        const seen = new Set<string>();
-        document.querySelectorAll('a[href*="/maps/place/"]').forEach((node) => {
-          const anchor = node as HTMLAnchorElement;
-          const href = anchor.href.split("&")[0];
-          if (!href || seen.has(href)) return;
-          seen.add(href);
-          const container = anchor.closest('[role="article"]') || anchor.closest('.Nv2PK') || anchor.parentElement?.parentElement || anchor.parentElement || anchor;
-          const cardText = ((container as HTMLElement | null)?.innerText || anchor.innerText || "").replace(/\s+/g, " ").trim();
-          const name = (anchor.getAttribute("aria-label") || anchor.querySelector('.qBF1Pd, .fontHeadlineSmall')?.textContent || anchor.textContent || "").replace(/\s+/g, " ").trim();
-          if (!name || !href) return;
-          output.push({ name: name.slice(0, 240), url: href, cardText: cardText.slice(0, 2500) });
-        });
-        return output;
-      });
-
-      for (const listing of visibleListings) {
-        const href = String(listing.url || "");
-        if (href && !listingMap.has(href)) listingMap.set(href, listing);
-        if (listingMap.size >= targetLimit) break;
-      }
-
-      // Verifica se o Google Maps exibiu aviso de término de lista
-      const isEndOfList = await page.evaluate(() => {
-        const text = document.body?.innerText || '';
-        return /você chegou ao final da lista|you've reached the end of the list|não há mais resultados/i.test(text);
-      });
-      if (isEndOfList && listingMap.size > 0) {
-        break;
-      }
-
-      if (listingMap.size === previousCount) {
-        stagnantRounds++;
-      } else {
-        stagnantRounds = 0;
-      }
-      previousCount = listingMap.size;
-      if (stagnantRounds >= 5) break;
-
-      // Rolagem progressiva e acionamento de evento de wheel para forçar o carregamento dinâmico
-      await page.evaluate(() => {
-        const feed = document.querySelector('[role="feed"]') || document.querySelector('div.m6QErb[aria-label]');
-        if (feed) {
-          feed.scrollTop += 900;
-          setTimeout(() => { feed.scrollTop = feed.scrollHeight; }, 100);
-        }
-      }).catch(() => {});
-      await page.mouse.wheel(0, 1500).catch(() => {});
-      await page.waitForTimeout(stagnantRounds > 0 ? 1200 : 900);
-    }
-
-    const listings = Array.from(listingMap.values()).slice(0, Math.min(limit, 100));
-    scrapedResults = [];
-    for (let index = 0; index < listings.length; index++) {
-      const listing = listings[index];
-      const listingUrl = String(listing.url || "");
-      if (!listingUrl) continue;
-      step = "detail_" + (index + 1);
-      try {
-        await page.goto(listingUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
-        await page.waitForTimeout(700);
-        const detail = await extractPlaceDetails(page);
-        scrapedResults.push({
-          ...listing,
-          ...detail,
-          name: detail.name || listing.name,
-          sourceUrl: detail.sourceUrl || listingUrl,
-          city: region.split(/\s+-\s+/)[0]?.trim() || null,
-          region: region.split(/\s+-\s+/)[1]?.trim() || region,
-          countryCode,
-          provider: "google-maps-cloudflare-playwright",
-          searchQuery,
-          fieldStatus: detail.fieldStatus,
-        });
-      } catch (detailError) {
-        // Mantém a listagem como evidência parcial; não inventa dados ausentes.
-        scrapedResults.push({
-          ...listing,
-          sourceUrl: listingUrl,
-          city: region.split(/\s+-\s+/)[0]?.trim() || null,
-          region: region.split(/\s+-\s+/)[1]?.trim() || region,
-          countryCode,
-          provider: "google-maps-cloudflare-playwright",
-          searchQuery,
-          fieldStatus: { detailPage: "failed", error: String(detailError instanceof Error ? detailError.message : detailError).slice(0, 250) },
-        });
-      }
-    }
-    lastError = null;
-    await browser?.close().catch(() => {});
+    const discovery = await discoverGoogleMapsWithBrowserless({
+      token: env.BROWSERLESS_TOKEN ?? "",
+      baseUrl: env.BROWSERLESS_BASE_URL,
+      searchQuery,
+      limit: Math.min(limit, 30),
+    });
+    scrapedResults = discovery.results.map((record) => ({
+      ...record,
+      city: first(record, ["city", "locality"]) ?? region.split(/\s+-\s+/)[0]?.trim() ?? null,
+      region: first(record, ["region", "state", "province"]) ?? region.split(/\s+-\s+/)[1]?.trim() ?? region,
+      countryCode,
+      provider: "google-maps-browserless",
+      searchQuery,
+    }));
+    step = "browserless_completed";
   } catch (error) {
-      await browser?.close().catch(() => {});
-      lastError = error instanceof Error ? error : new Error(String(error));
-      const errorMessage = lastError.message ?? "";
-
-      // Verificar se é um erro de taxa limite (429) que merece retry
-      const isRateLimit = /429|rate limit|over capacity|browser_run|throttl/i.test(errorMessage);
-
-      if (!isRateLimit || retryAttempt === MAX_RETRIES) {
-        // Interrompe o retry; o estado será persistido como bloqueado abaixo.
-        break;
-      }
-
-      // Extrair Retry-After do erro se disponível
-      let retryAfterSeconds: number | null = null;
-      const retryAfterMatch = errorMessage.match(/retry after (\d+)/i);
-      if (retryAfterMatch) {
-        retryAfterSeconds = Number(retryAfterMatch[1]);
-      }
-
-      // Calcular delay com backoff exponencial e jitter
-      const baseDelay = Math.min(BASE_DELAY_MS * (2 ** retryAttempt), MAX_DELAY_MS);
-      const delay = retryAfterSeconds
-        ? Math.min(retryAfterSeconds * 1000, BASE_DELAY_MS * (2 ** retryAttempt))
-        : baseDelay;
-      const jitter = Math.random() * 1000; // até 1s de jitter
-      const sleepDelay = delay + jitter;
-
-      // Log e aguardar antes da próxima tentativa
-      console.info(`[discoverCampaignTask] Rate limit detected, retry attempt ${retryAttempt + 1}/${MAX_RETRIES}. Waiting ${sleepDelay}ms before retry. Error: ${errorMessage.slice(0, 200)}`);
-
-      await new Promise(resolve => setTimeout(resolve, sleepDelay));
-    }
-    await browser?.close().catch(() => {});
+    lastError = error instanceof Error ? error : new Error(String(error));
   }
 
   // Se após todas as tentativas ainda houver erro, marcar como bloqueado
   if (lastError) {
-    const errorMessage = lastError.message ?? "browser_scraping_failed";
-    const isRateLimit = /429|rate limit|over capacity|browser_run|throttl/i.test(errorMessage);
-    const isTransient = isRateLimit || /timeout|timed out|network|ERR_|target page|frame was detached|temporarily/i.test(errorMessage);
+    const errorMessage = lastError.message ?? "browserless_scraping_failed";
+    const isRateLimit = /429|rate limit|over capacity|throttl/i.test(errorMessage);
+    const isTransient = isRateLimit || /timeout|timed out|network|ERR_|target page|frame was detached|temporarily|browserless_http_5\d\d/i.test(errorMessage);
     const attemptsRemain = task.attempt_count < task.max_attempts;
 
     if (isTransient && attemptsRemain) {
@@ -703,12 +556,12 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       await updateTask(env, task, workerId, {
         status: "retryable",
         available_at: availableAt,
-        last_error_code: isRateLimit ? "browser_rate_limited" : "browser_transient_error",
+        last_error_code: isRateLimit ? "browserless_rate_limited" : "browserless_transient_error",
         last_error: `Coleta temporariamente indisponível no passo '${step}'. Nova tentativa após ${delaySeconds}s. ${errorMessage}`.slice(0, 1000),
         completed_at: null,
         result: {
           outcome: "retryable",
-          reason: isRateLimit ? "browser_rate_limited" : "browser_transient_error",
+          reason: isRateLimit ? "browserless_rate_limited" : "browserless_transient_error",
           failedStep: step,
           attempt: task.attempt_count,
           maxAttempts: task.max_attempts,
@@ -721,16 +574,14 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const terminalStatus = isTransient ? "dead_letter" : "blocked";
     await updateTask(env, task, workerId, {
       status: terminalStatus,
-      last_error_code: isTransient ? "browser_retries_exhausted" : "browser_scraping_failed",
-      last_error: `Falha na coleta via Cloudflare Browser Run no passo '${step}' (binding type=${bindingType}, isString=${bindingIsString}, length=${bindingLength}): ${errorMessage}`.slice(0, 1000),
+      last_error_code: isTransient ? "browserless_retries_exhausted" : "browserless_scraping_failed",
+      last_error: "Falha na coleta via Browserless no passo '" + step + "': " + errorMessage.slice(0, 1000),
       completed_at: new Date().toISOString(),
       result: {
         outcome: terminalStatus,
-        reason: isTransient ? "browser_retries_exhausted" : "browser_scraping_failed",
+        reason: isTransient ? "browserless_retries_exhausted" : "browserless_scraping_failed",
         failedStep: step,
-        bindingType,
-        bindingIsString,
-        bindingLength,
+        provider: "browserless",
         attempt: task.attempt_count,
         maxAttempts: task.max_attempts,
       },
@@ -816,7 +667,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
         campaign_id: campaign.campaignId ?? null,
-        provider: "google-maps-cloudflare-playwright",
+        provider: "google-maps-browserless",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
         business_name: businessName,
@@ -917,7 +768,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, qualified, provider: "google-maps-playwright", searchQuery },
+    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, qualified, provider: "google-maps-browserless", searchQuery },
   });
   return "succeeded";
 }
@@ -1482,40 +1333,104 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
 }
 
 async function scheduleDueCampaigns(env: Env) {
-  // Commercial campaigns classify and prioritize records already collected.
-  // They must never initiate scraping: "Raspar agora" owns discovery independently.
-  // The scheduler only advances the due_at timestamp - it does NOT enqueue discover tasks.
-  // Manual discovery is acionada via API /api/prospecting/run?createCampaign=false.
   const now = new Date();
-  const due = await db(env, `prospecting_campaigns?status=eq.active&next_run_at=lte.${encodeURIComponent(now.toISOString())}&select=id,name,segment,region,country_code,source_provider,source_config,qualification_rules,schedule,daily_discovery_limit,next_run_at&order=next_run_at.asc&limit=20`);
-  if (!due.ok) throw new Error(`campaign_scan_http_${due.status}`);
+  const due = await db(env, "prospecting_campaigns?status=eq.active&next_run_at=lte." + encodeURIComponent(now.toISOString()) + "&select=id,name,segment,region,country_code,source_provider,source_config,qualification_rules,schedule,daily_discovery_limit,next_run_at&order=next_run_at.asc&limit=20");
+  if (!due.ok) throw new Error("campaign_scan_http_" + due.status);
   const campaigns = await due.json() as Array<Record<string, unknown>>;
+  let queued = 0;
   let advanced = 0;
   let skipped = 0;
 
   for (const campaign of campaigns) {
     const campaignId = String(campaign.id ?? "");
     const dueAt = String(campaign.next_run_at ?? "");
-    if (!campaignId || !dueAt) { skipped++; continue; }
+    const segment = String(campaign.segment ?? "").trim();
+    const region = String(campaign.region ?? "").trim();
+    if (!campaignId || !dueAt || !segment || !region) {
+      skipped++;
+      continue;
+    }
 
-    // Apenas avançar o cronômetro da campanha - NÃO enfileirar tasks de descoberta.
-    // A descoberta manual é acionada via API /api/prospecting/run?createCampaign=false.
-    const schedule = campaign.schedule && typeof campaign.schedule === "object"
+    const campaignSchedule = campaign.schedule && typeof campaign.schedule === "object"
       ? campaign.schedule as Record<string, unknown> : {};
-    const rawInterval = Number(schedule.interval_minutes ?? 1440);
-    const interval = Number.isFinite(rawInterval) ? Math.max(5, Math.min(Math.floor(rawInterval), 10080)) : 1440;
-    const nextRun = new Date(Math.max(now.getTime(), new Date(dueAt).getTime()) + interval * 60_000).toISOString();
-    const advance = await db(env, `prospecting_campaigns?id=eq.${encodeURIComponent(campaignId)}&status=eq.active&next_run_at=eq.${encodeURIComponent(dueAt)}&select=id`, {
+    const oneTime = campaignSchedule.one_time === true;
+    const intervalRaw = Number(campaignSchedule.interval_minutes);
+    const recurring = Number.isFinite(intervalRaw) && intervalRaw >= 5;
+    if (!oneTime && !recurring) {
+      // Legacy campaigns without an explicit schedule are not silently converted
+      // into daily scraping jobs. New one-off campaigns must declare one_time=true.
+      skipped++;
+      continue;
+    }
+    const interval = recurring
+      ? Math.max(5, Math.min(Math.floor(intervalRaw), 10080))
+      : null;
+    const limitRaw = Number(campaign.daily_discovery_limit ?? 100);
+    const dailyDiscoveryLimit = Number.isFinite(limitRaw)
+      ? Math.max(1, Math.min(Math.floor(limitRaw), 10000))
+      : 100;
+    const rules = campaign.qualification_rules && typeof campaign.qualification_rules === "object"
+      ? campaign.qualification_rules as Record<string, unknown> : {};
+    const minimumScoreRaw = Number(rules.minimum_score ?? rules.minimumScore ?? 50);
+    const minimumScore = Number.isFinite(minimumScoreRaw)
+      ? Math.max(0, Math.min(100, Math.floor(minimumScoreRaw)))
+      : 50;
+    const idempotencyKey = "campaign:" + campaignId + ":discover:" + dueAt;
+
+    const enqueued = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+      method: "POST",
+      headers: { prefer: "resolution=ignore-duplicates,return=representation" },
+      body: JSON.stringify({
+        campaign_id: campaignId,
+        task_type: "discover",
+        status: "pending",
+        idempotency_key: idempotencyKey,
+        payload: {
+          campaignId,
+          segment,
+          region,
+          countryCode: String(campaign.country_code ?? "BR"),
+          dailyDiscoveryLimit,
+          minimumScore,
+          scheduled: true,
+          scheduledFor: dueAt,
+        },
+      }),
+    });
+    if (!enqueued.ok) throw new Error("campaign_discovery_enqueue_http_" + enqueued.status);
+    let taskRows = await enqueued.json() as Array<{ id: number }>;
+    if (!taskRows.length) {
+      const existing = await db(env, "prospecting_tasks?idempotency_key=eq." + encodeURIComponent(idempotencyKey) + "&select=id&limit=1");
+      if (!existing.ok) throw new Error("campaign_discovery_reconcile_http_" + existing.status);
+      taskRows = await existing.json() as Array<{ id: number }>;
+    }
+    if (!taskRows.length) throw new Error("campaign_discovery_enqueue_unconfirmed");
+    queued++;
+
+    const campaignPatch = oneTime
+      ? { status: "completed", last_run_at: now.toISOString(), next_run_at: null, updated_at: now.toISOString() }
+      : {
+          last_run_at: now.toISOString(),
+          next_run_at: new Date(Math.max(now.getTime(), new Date(dueAt).getTime()) + (interval ?? 1440) * 60_000).toISOString(),
+          updated_at: now.toISOString(),
+        };
+    const advance = await db(env, "prospecting_campaigns?id=eq." + encodeURIComponent(campaignId) + "&status=eq.active&next_run_at=eq." + encodeURIComponent(dueAt) + "&select=id", {
       method: "PATCH",
       headers: { prefer: "return=representation" },
-      body: JSON.stringify({ last_run_at: now.toISOString(), next_run_at: nextRun, updated_at: now.toISOString() }),
+      body: JSON.stringify(campaignPatch),
     });
-    if (!advance.ok) throw new Error(`campaign_advance_http_${advance.status}`);
+    if (!advance.ok) throw new Error("campaign_advance_http_" + advance.status);
     const rows = await advance.json() as unknown[];
     if (rows.length) advanced++;
     else skipped++;
   }
-  return { campaignsScanned: campaigns.length, campaignsAdvanced: advanced, campaignsSkipped: skipped };
+
+  return {
+    campaignsScanned: campaigns.length,
+    campaignsQueued: queued,
+    campaignsAdvanced: advanced,
+    campaignsSkipped: skipped,
+  };
 }
 
 async function processBatch(env: Env) {
@@ -1573,7 +1488,26 @@ export default {
     _ctx.waitUntil(execution.then(() => undefined));
     await execution;
   },
-  async fetch(request: Request, env: Env) {
+  async fetch(request: Request, env: Env, ctx: { waitUntil: (promise: Promise<unknown>) => void }) {
+    const url = new URL(request.url);
+    if (request.method === "GET" && url.pathname === "/health") {
+      const missing = [
+        !env.SUPABASE_URL?.trim() ? "SUPABASE_URL" : null,
+        !env.SUPABASE_SERVICE_ROLE_KEY?.trim() ? "SUPABASE_SERVICE_ROLE_KEY" : null,
+        !env.BROWSERLESS_TOKEN?.trim() ? "BROWSERLESS_TOKEN" : null,
+      ].filter(Boolean);
+      return json({
+        status: missing.length ? "blocked" : "ready",
+        provider: "browserless",
+        checks: {
+          supabaseConfigured: Boolean(env.SUPABASE_URL?.trim() && env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
+          browserlessConfigured: Boolean(env.BROWSERLESS_TOKEN?.trim()),
+          manualTriggerConfigured: Boolean(env.PROSPECTING_WORKER_SECRET?.trim()),
+        },
+        missing,
+        timestamp: new Date().toISOString(),
+      }, missing.length ? 503 : 200);
+    }
     if (request.method !== "POST") return json({ error: "not_found" }, 404);
     const supplied = request.headers.get("authorization") ?? "";
     if (!env.PROSPECTING_WORKER_SECRET || supplied !== `Bearer ${env.PROSPECTING_WORKER_SECRET}`) {
@@ -1637,33 +1571,41 @@ export default {
         if (!existing.length) {
           return json({ status: "failed", enqueued: false, error: "A tarefa não foi enfileirada; não houve confirmação de persistência." }, 503);
         }
+        ctx.waitUntil(processBatch(env).catch((error) => {
+          console.error("[prospecting-scheduler] background batch failed", error);
+        }));
         return json({
           status: "pending",
           enqueued: true,
           taskId: String(existing[0].id),
           idempotencyKey,
-          message: "Descoberta já enfileirada anteriormente (duplicata ignorada pela chave idempotente).",
+          message: "Descoberta já enfileirada; processamento retomado em segundo plano.",
           payload: { segment, region, countryCode, dailyDiscoveryLimit: limit, minimumScore: 50, manual: true },
         }, 202);
       }
 
+      ctx.waitUntil(processBatch(env).catch((error) => {
+        console.error("[prospecting-scheduler] background batch failed", error);
+      }));
       return json({
         status: "running",
         enqueued: true,
         taskId: String(rows[0].id),
         idempotencyKey,
-        message: "Tarefa de descoberta enfileirada com sucesso.",
+        message: "Tarefa de descoberta enfileirada; processamento iniciado em segundo plano.",
         payload: { segment, region, countryCode, dailyDiscoveryLimit: limit, minimumScore: 50, manual: true },
       }, 202);
     }
 
-    // Sem parâmetros de discovery: manter comportamento atual de processar o lote existente.
-    try {
-      const counts = await processBatch(env);
-      return json({ status: "ok", enqueued: false, ...counts });
-    } catch (error) {
-      return json({ status: "blocked", enqueued: false, error: error instanceof Error ? error.message : "worker_failed" }, 503);
-    }
+    // Sem parâmetros: dispara o processamento persistido em segundo plano e responde sem esperar o navegador.
+    ctx.waitUntil(processBatch(env).catch((error) => {
+      console.error("[prospecting-scheduler] background batch failed", error);
+    }));
+    return json({
+      status: "accepted",
+      enqueued: false,
+      message: "Fila de prospecção acionada em segundo plano.",
+    }, 202);
   },
 };
 
