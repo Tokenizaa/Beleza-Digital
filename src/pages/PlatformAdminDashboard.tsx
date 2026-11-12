@@ -5,60 +5,92 @@ import { store } from "../data/store";
 
 interface PlatformAdminDashboardProps { initialSection?: UnifiedAdminSection; }
 
+type AccessStatus = "checking" | "authorized" | "error";
+
 export function PlatformAdminDashboard({ initialSection = "prospeccao-hoje" }: PlatformAdminDashboardProps) {
-  const [authorized, setAuthorized] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [status, setStatus] = useState<AccessStatus>("checking");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    // CONSISTÊNCIA: Quando Supabase está configurado, exigir sessão real.
-    // Quando não está configurado, permitir sessão sintética (modo demo),
-    // para evitar o redirecionamento quebrado que existia antes.
     let active = true;
-    const verify = async () => {
-      if (isSupabaseConfigured && supabase) {
-        // Modo Supabase real: verificar sessão + platform_admins
-        const client = supabase;
-        const { data: { session } } = await client.auth.getSession();
-        if (!session) {
-          if (active) window.location.replace("/plataforma/acesso?mode=login");
-          return;
-        }
-        const { data, error } = await client.from("platform_admins")
-          .select("user_id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        if (!active) return;
-        if (error || !data) {
-          await client.auth.signOut();
-          window.location.replace("/plataforma/acesso?mode=login");
-          return;
-        }
-        setAuthorized(true);
-      } else {
-        // Modo demo/synthetic: verificar sessão da store
-        const storeSession = store.getCurrentSession();
-        if (storeSession && storeSession.role) {
-          setAuthorized(true);
-        } else {
-          // Nenhuma sessão válida — redirecionar para login sintético
-          window.location.replace("/plataforma/acesso?mode=login");
-        }
-      }
-      setChecking(false);
-    };
-    void verify();
-  }, [isSupabaseConfigured]);
+    let requestVersion = 0;
+    const client = supabase;
 
-  if (checking || !authorized) {
-    return <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">Verificando acesso administrativo…</main>;
+    const verify = async () => {
+      const version = ++requestVersion;
+      setStatus("checking");
+
+      if (isSupabaseConfigured && client) {
+        try {
+          const { data: { session }, error: sessionError } = await client.auth.getSession();
+          if (!active || version !== requestVersion) return;
+          if (sessionError) throw sessionError;
+          if (!session) {
+            window.location.replace("/plataforma/acesso?mode=login");
+            return;
+          }
+
+          const { data, error } = await client.from("platform_admins")
+            .select("user_id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+          if (!active || version !== requestVersion) return;
+          if (error) throw error;
+          if (!data) {
+            window.location.replace("/plataforma/acesso?mode=login&reason=admin-required");
+            return;
+          }
+          setStatus("authorized");
+        } catch (error) {
+          console.error("Falha ao validar administrador da plataforma:", error);
+          if (active && version === requestVersion) setStatus("error");
+        }
+        return;
+      }
+
+      const storeSession = store.getCurrentSession();
+      if (storeSession && storeSession.role) {
+        if (active && version === requestVersion) setStatus("authorized");
+      } else {
+        window.location.replace("/plataforma/acesso?mode=login");
+      }
+    };
+
+    void verify();
+    const subscription = client?.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        window.location.replace("/plataforma/acesso?mode=login");
+        return;
+      }
+      // Evita executar consultas Supabase dentro do callback síncrono do Auth.
+      void Promise.resolve().then(() => { if (active) void verify(); });
+    }).data.subscription;
+
+    return () => {
+      active = false;
+      subscription?.unsubscribe();
+    };
+  }, [retryCount]);
+
+  if (status !== "authorized") {
+    return (
+      <main className="min-h-screen grid place-items-center bg-neutral-950 text-neutral-200">
+        <div className="text-center space-y-4">
+          {status === "error" ? "Não foi possível validar sua permissão administrativa. Sua sessão foi preservada." : "Verificando acesso administrativo…"}
+          {status === "error" && (
+            <button type="button" onClick={() => setRetryCount((value) => value + 1)} className="block mx-auto rounded-lg border border-neutral-700 px-4 py-2 text-sm hover:bg-neutral-800">
+              Tentar novamente
+            </button>
+          )}
+        </div>
+      </main>
+    );
   }
-  // Renderiza o painel unificado.
-  // Usa a seção de prospecção como inicial, pois é o módulo principal do admin.
-  // Módulo de Gestão do Salão (salao-*) é excluído: admin da plataforma não acessa funções de salão.
+
   return <UnifiedAdminDashboard
     initialSection={initialSection}
     preAuthenticated
     excludeModules={['salao']}
-    onBackToApp={() => { void supabase?.auth.signOut(); window.location.assign("/") }}
+    onBackToApp={() => { void client?.auth.signOut({ scope: "local" }); window.location.assign("/") }}
   />;
 }
