@@ -3,6 +3,8 @@ import { useStore } from '../data/store';
 import { AdminPage } from './AdminPage';
 import { SuperAdminPage } from './SuperAdminPage';
 import { LeadsDashboard } from './LeadsDashboard';
+import { ScrapingConsole } from './ScrapingConsole';
+import { CrmWhatsAppChat } from '../components/CrmWhatsAppChat';
 import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
 import { SITE_TEMPLATES_LIST, SiteVariationId } from '../types/templates';
 import { AdminTab, SuperAdminTab } from '../types';
@@ -15,6 +17,7 @@ import {
   Instagram,
   Settings,
   Compass,
+  Search,
   Users,
   Activity,
   Building2,
@@ -33,7 +36,9 @@ import {
   Building,
   KeyRound,
   Eye,
-  Store
+  Store,
+  Database,
+  MessageSquare
 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { adminPathForSection, adminSectionFromLocation } from '../lib/admin-routing';
@@ -47,8 +52,11 @@ export type UnifiedAdminSection =
   | 'salao-instagram'
   | 'salao-configuracoes'
   | 'prospeccao-hoje'
+  | 'prospeccao-buscar'
   | 'prospeccao-crm'
   | 'prospeccao-automacao'
+  | 'prospeccao-scraping'
+  | 'prospeccao-whatsapp'
   | 'rede-saloes'
   | 'rede-novo'
   | 'rede-admins'
@@ -171,11 +179,12 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
     if (map[tab]) navigateToSection(map[tab]);
   };
 
-  const handleLeadsDashboardTabChange = (tab: 'hoje' | 'buscar' | 'empresas') => {
-    const map: Record<'hoje' | 'buscar' | 'empresas', UnifiedAdminSection> = {
+  const handleLeadsDashboardTabChange = (tab: 'hoje' | 'buscar' | 'empresas' | 'whatsapp') => {
+    const map: Record<'hoje' | 'buscar' | 'empresas' | 'whatsapp', UnifiedAdminSection> = {
       hoje: 'prospeccao-hoje',
-      buscar: 'prospeccao-hoje',
+      buscar: 'prospeccao-buscar',
       empresas: 'prospeccao-crm',
+      whatsapp: 'prospeccao-whatsapp',
     };
     if (map[tab]) navigateToSection(map[tab]);
   };
@@ -288,13 +297,23 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
       );
     }
 
+    if (activeSection === 'prospeccao-scraping') {
+      return <ScrapingConsole />;
+    }
+
+    if (activeSection === 'prospeccao-whatsapp') {
+      return <CrmWhatsAppChat />;
+    }
+
     if (
       activeSection === 'prospeccao-hoje' ||
+      activeSection === 'prospeccao-buscar' ||
       activeSection === 'prospeccao-crm' ||
       activeSection === 'prospeccao-automacao'
     ) {
       const tabMap: Record<string, 'hoje' | 'buscar' | 'empresas'> = {
         'prospeccao-hoje': 'hoje',
+        'prospeccao-buscar': 'buscar',
         'prospeccao-crm': 'empresas',
         'prospeccao-automacao': 'hoje',
       };
@@ -625,7 +644,10 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                   <div className="space-y-0.5 pl-2 border-l border-neutral-800 ml-3">
                     {[
                       { id: 'prospeccao-hoje', label: 'Painel do Dia (Hoje)', icon: Compass },
+                      { id: 'prospeccao-buscar', label: 'Nova Busca & Raspagem', icon: Search },
                       { id: 'prospeccao-crm', label: 'Pipeline CRM & Empresas', icon: Users },
+                      { id: 'prospeccao-whatsapp', label: 'Bot WhatsApp & Chat', icon: MessageSquare },
+                      { id: 'prospeccao-scraping', label: 'Console de Scraping', icon: Database },
                     ].map((sub) => {
                       const Icon = sub.icon;
                       const isActive = activeSection === sub.id;
